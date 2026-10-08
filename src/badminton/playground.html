@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<!--@@KIT:head.html@@-->
+<title>규칙 놀이터 - 배드민턴</title>
+<style>
+/*@@KIT:base.css@@*/
+html,body{overflow:hidden;background:var(--turf-950);color:#fff}
+.page{position:fixed;inset:0;display:flex;flex-direction:column}
+.top{flex:none;display:flex;align-items:stretch;min-height:60px;background:#0b120f;border-bottom:1px solid rgba(255,255,255,.06)}
+.top .ttl{flex:1;display:flex;align-items:center;padding:0 18px;font-weight:700;font-size:14px;color:rgba(255,255,255,.72);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.stat{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:4px 18px;border-left:1px solid rgba(255,255,255,.08);min-width:92px}
+.stat small{font-size:11px;font-weight:800;color:rgba(255,255,255,.55)}
+.stat b{font-family:var(--display);font-weight:400;font-size:24px;color:var(--volt);line-height:1.1;font-variant-numeric:tabular-nums;white-space:nowrap}
+.stat b .bl{color:#8fb6ff} .stat b .rd{color:#ffa08a}
+.main{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:16px;padding:14px 16px}
+.left{min-width:0;min-height:0;display:flex;flex-direction:column;gap:10px}
+.modes{display:flex;gap:8px;flex-wrap:wrap}
+.modes button{min-height:48px;padding:0 18px;border-radius:14px;border:0;background:rgba(255,255,255,.08);color:#fff;font-weight:800;font-size:16px;display:flex;align-items:center;gap:10px}
+.modes button b{font-family:var(--display);font-weight:400;color:var(--volt)}
+.modes button.on{background:var(--volt);color:var(--turf-950)} .modes button.on b{color:var(--turf-950)}
+.stagebox{position:relative;flex:1;min-height:0;display:flex;align-items:center;justify-content:center}
+.stagebox .vis{width:100%;max-height:100%}
+.stagebox svg.board{max-height:calc(100vh - 230px)}
+.whistle{position:absolute;left:50%;top:18px;transform:translateX(-50%);font-family:var(--display);font-size:22px;padding:8px 20px;border-radius:999px;white-space:nowrap;box-shadow:var(--shadow);pointer-events:none;transition:opacity .2s;max-width:94%;overflow:hidden;text-overflow:ellipsis}
+.whistle.ok{background:#fff;color:var(--ok)} .whistle.foul{background:var(--foul);color:#fff} .whistle.info{background:rgba(7,28,21,.9);color:#fff;font-family:Pretendard;font-weight:800;font-size:16px}
+.whistle.hide{opacity:0}
+.side{min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:10px}
+.box{background:rgba(255,255,255,.05);border-radius:16px;padding:14px 16px}
+.box h3{font-size:13px;color:rgba(255,255,255,.55);margin:0 0 8px;font-weight:800}
+.now{font-size:17px;font-weight:800;line-height:1.6}
+.now em{font-style:normal;color:var(--volt)}
+.why{font-size:14.5px;line-height:1.6;color:rgba(255,255,255,.75);margin-top:6px}
+.mis{list-style:none;padding:0;margin:0;display:grid;gap:8px}
+.mis li{display:flex;align-items:center;gap:10px;font-size:15px;line-height:1.35}
+.mis i{flex:none;width:26px;height:26px;border-radius:50%;border:2px solid rgba(255,255,255,.3)}
+.mis li.done i{background:#3fcf7f;border-color:#3fcf7f}
+.mis span{flex:1}
+.mis b{font-family:var(--display);font-weight:400;color:var(--volt)}
+.opts2{display:flex;gap:8px;flex-wrap:wrap}
+.ctl{display:grid;gap:12px}
+.ctl label{display:grid;grid-template-columns:76px 1fr 64px;gap:10px;align-items:center;font-weight:800;font-size:14px}
+.ctl output{font-family:var(--display);color:var(--volt);font-size:18px;text-align:right}
+input[type=range]{width:100%;height:44px;accent-color:var(--volt)}
+.power{position:relative;height:16px;border-radius:8px;background:rgba(255,255,255,.12);overflow:hidden}
+.power i{position:absolute;left:0;top:0;bottom:0;width:0;background:linear-gradient(90deg,#3fcf7f,var(--volt),#ff6b52)}
+.hold{min-height:64px;border-radius:16px;border:0;background:var(--volt);color:var(--turf-950);font-family:var(--display);font-size:24px;user-select:none;-webkit-user-select:none;touch-action:none}
+.hold:active{transform:scale(.98)}
+.remember{margin:0;padding-left:20px}
+.remember li{font-size:15px;line-height:1.6}
+.overlay{position:absolute;inset:0;background:rgba(7,28,21,.72);display:flex;align-items:center;justify-content:center;padding:16px;z-index:5;border-radius:24px}
+.overlay.off{display:none}
+.intro{background:#fff;color:var(--ink);border-radius:24px;padding:24px 26px;max-width:620px;box-shadow:var(--shadow)}
+.intro h2{margin:.2em 0 .4em}
+.intro .cols{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:12px 0 16px}
+.intro .cols div{background:#f1f4ee;border-radius:14px;padding:10px 12px;font-size:14.5px;line-height:1.55}
+.intro .cols b{display:block;font-family:var(--display);font-weight:400;font-size:18px;color:var(--turf-600);margin-bottom:2px}
+@media (max-width:900px),(orientation:portrait){
+  html,body{overflow:auto}
+  .page{position:static;min-height:100%}
+  .main{grid-template-columns:1fr}
+  .stagebox svg.board{max-height:none}
+  .stat{min-width:0;padding:4px 10px}
+  .top .ttl{display:none}
+  .intro .cols{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="top">
+    <div class="ttl">03 규칙 놀이터 · 직접 서브해 보기</div>
+    <div class="stat"><small>점수</small><b id="stScore"><span class="bl">0</span> : <span class="rd">0</span></b></div>
+    <div class="stat"><small>맞힘</small><b id="stOk">0</b></div>
+    <div class="stat"><small>다시 생각</small><b id="stMiss">0</b></div>
+  </div>
+  <div class="main">
+    <div class="left">
+      <div class="modes" role="tablist">
+        <button class="on" data-mode="a" role="tab"><b>A</b>서브 자리 찾기</button>
+        <button data-mode="b" role="tab"><b>B</b>서브 넣기</button>
+      </div>
+      <div class="stagebox">
+        <div class="vis" id="visA">
+          <svg id="cA" style="touch-action:none"></svg>
+          <div class="whistle info" id="wA">시작하기를 눌러요</div>
+          <div class="model-note">개념을 익히기 위한 놀이 모형이에요. 랠리의 승패는 무작위로 정해져요.</div>
+          <div class="overlay" id="introA"><div class="intro">
+            <div class="kicker"><b>A</b>서브 자리 찾기</div>
+            <h2 class="dsp" style="font-weight:400">점수를 보고 서브 자리를 찾아요</h2>
+            <div class="cols">
+              <div><b>1. 누가</b>복식에서는 서브할 선수를 눌러요.</div>
+              <div><b>2. 어디서</b>서버가 설 서비스 코트를 눌러요.</div>
+              <div><b>3. 어디로</b>셔틀이 떨어질 곳을 눌러 서브해요.</div>
+            </div>
+            <p style="font-size:16px;margin:0 0 14px">랠리가 끝나면 점수가 바뀌어요. 바뀐 점수에 맞게 다시 찾아요.</p>
+            <button class="btn volt" id="goA">시작하기</button>
+          </div></div>
+        </div>
+        <div class="vis" id="visB" style="display:none">
+          <svg id="cB"></svg>
+          <div class="whistle info" id="wB">높이와 각도를 정하고, 서브 버튼을 누르고 있다가 떼요</div>
+          <div class="model-note">셔틀은 공기 저항을 크게 받아 빨리 느려져요. 실제 비행과 비슷하게 계산한 모형이에요.</div>
+        </div>
+      </div>
+    </div>
+    <aside class="side">
+      <div class="box">
+        <h3>지금 할 일</h3>
+        <div class="now" id="now"></div>
+        <div class="why" id="why"></div>
+      </div>
+      <div class="box" id="setA">
+        <h3>경기 종류</h3>
+        <div class="opts2"><button class="vbtn on" data-game="singles">단식</button><button class="vbtn" data-game="doubles">복식</button><button class="vbtn" id="resetA">처음부터</button></div>
+      </div>
+      <div class="box" id="setB" style="display:none">
+        <h3>서브 정하기</h3>
+        <div class="ctl">
+          <div class="opts2"><button class="vbtn on" data-bgame="singles">단식 서브</button><button class="vbtn" data-bgame="doubles">복식 서브</button></div>
+          <label>치는 높이<input type="range" id="rgH" min="0.5" max="1.6" step="0.05" value="0.9"><output id="oH">0.90 m</output></label>
+          <label>각도<input type="range" id="rgA" min="0" max="60" step="1" value="18"><output id="oA">18°</output></label>
+          <div class="power"><i id="pw"></i></div>
+          <button class="hold" id="hold">눌렀다 떼면 서브!</button>
+        </div>
+      </div>
+      <div class="box">
+        <h3>미션</h3>
+        <ul class="mis" id="mis"></ul>
+      </div>
+      <div class="box">
+        <h3>기억할 규칙</h3>
+        <ol class="remember" id="remember"></ol>
+      </div>
+      <button class="btn volt" data-nav="referee">04 내가 심판으로 →</button>
+    </aside>
+  </div>
+</div>
+
+<script>
+/*@@KIT:kit.js@@*/
+</script>
+<script>
+/*@@KIT:court.js@@*/
+</script>
+
+<script>
+/* ===== 공통: 상단 숫자, 미션 ===== */
+var K = CT.K;
+var ST = {ok:0, miss:0};
+var MIS = {
+  a:[{id:'pos', t:'서브 자리 맞히기', n:5}, {id:'land', t:'서비스 코트에 서브 넣기', n:5}, {id:'dbl', t:'복식에서 서버 연속으로 맞히기', n:3}],
+  b:[{id:'short', t:'숏 서브: 쇼트 서비스 라인 바로 뒤(1 m 안)', n:1}, {id:'long', t:'롱 서브: 뒤쪽 끝(1 m 안)', n:1}, {id:'legal', t:'높이 규칙 지키며 서브 성공', n:5}]
+};
+var PROG = {pos:0, land:0, dbl:0, short:0, long:0, legal:0};
+var REM = {
+  a:['서브하는 쪽 점수 <b>짝수(0 포함)</b>는 오른쪽, <b>홀수</b>는 왼쪽', '서브는 <b>대각선</b> 서비스 코트로', '단식 서비스 코트: <b>길고 좁게</b>', '복식 서비스 코트: <b>짧고 넓게</b>', '복식: 서브한 편이 이기면 <b>같은 서버가 자리 바꿔</b> 또 서브'],
+  b:['치는 순간 셔틀 전체가 <b>1.15 m 아래</b>', '<b>쇼트 서비스 라인</b>을 넘겨야 해요', '단식은 <b>뒤 경계선</b>까지, 복식은 <b>롱 서비스 라인</b>까지', '네트에 스쳐도 서비스 코트 안이면 <b>정상</b>']
+};
+var mode = 'a';
+function stat(){
+  document.getElementById('stOk').textContent = ST.ok;
+  document.getElementById('stMiss').textContent = ST.miss;
+}
+function drawMis(){
+  document.getElementById('mis').innerHTML = MIS[mode].map(function(m){ var v = Math.min(PROG[m.id], m.n); return '<li class="' + (v >= m.n ? 'done' : '') + '"><i></i><span>' + m.t + '</span><b>' + v + '/' + m.n + '</b></li>'; }).join('');
+  document.getElementById('remember').innerHTML = REM[mode].map(function(r){ return '<li>' + r + '</li>'; }).join('');
+}
+function now(h, w){ document.getElementById('now').innerHTML = h; document.getElementById('why').innerHTML = w || ''; }
+function whistle(el, text, kind){ el.className = 'whistle ' + kind; el.textContent = text; }
+function animate(dur, fn, done){
+  var t0 = performance.now();
+  (function step(n){ var u = Math.min(1, (n - t0) / dur); fn(u); if(u < 1) requestAnimationFrame(step); else if(done) done(); })(t0);
+}
+</script>
+
+<script>
+/* ===== A: 서브 자리 찾기 ===== */
+try{
+var A = (function(){
+  var svg = document.getElementById('cA'), c = new CT.Top(svg, {labels:true}), E = CT.E, w = document.getElementById('wA');
+  var game = 'singles', S, phase = 'off', streak = 0, busy = false;
+  var P = {}, sh = c.shuttle(); sh.show(false);
+  var hintG = E('g', null, c.gMarks);
+  function mk(){
+    c.gActors.replaceChildren(); c.actors = {}; P = {};
+    if(game === 'singles'){ P.b1 = c.player('b1', 'blue', 7); P.r1 = c.player('r1', 'red', 3); }
+    else { P.b1 = c.player('b1', 'blue', 'A'); P.b2 = c.player('b2', 'blue', 'B'); P.r1 = c.player('r1', 'red', 'C'); P.r2 = c.player('r2', 'red', 'D'); }
+  }
+  function reset(){
+    S = {sc:[0, 0], sv:0, pos:[{right:'b1', left:'b2'}, {right:'r1', left:'r2'}], lastWinnerWasServer:null, last:null};
+    streak = 0; mk(); placeAll(false); sh.show(false);
+    c.clearZones(); hintG.replaceChildren();
+    score(); phase = 'start'; start();
+  }
+  function score(){ document.getElementById('stScore').innerHTML = '<span class="bl">' + S.sc[0] + '</span> : <span class="rd">' + S.sc[1] + '</span>'; }
+  function sideK(k){ return k === 0 ? 'L' : 'R'; }
+  function half(){ return S.sc[S.sv] % 2 === 0 ? 'right' : 'left'; }
+  function spot(k, h, which){
+    var r = CT.area(sideK(k), game, true, h);
+    var x = k === 0 ? (which === 'recv' ? 4.0 : 3.9) : (which === 'recv' ? 9.4 : 9.5);
+    return {x:x, y:(r.y0 + r.y1) / 2};
+  }
+  function placeAll(animated, done){
+    var tg = {};
+    [0, 1].forEach(function(k){
+      if(game === 'singles'){ tg[k === 0 ? 'b1' : 'r1'] = spot(k, half()); }
+      else { ['right', 'left'].forEach(function(h){ tg[S.pos[k][h]] = spot(k, h); }); }
+    });
+    var fr = {}; for(var id in P) fr[id] = {x:P[id].x, y:P[id].y};
+    animate(animated && !PE.reduce ? 650 : 1, function(u){ u = u * u * (3 - 2 * u); for(var id in tg){ P[id].pos(CT.lerp(fr[id].x, tg[id].x, u), CT.lerp(fr[id].y, tg[id].y, u)); } }, done);
+  }
+  function serverId(){ return game === 'singles' ? (S.sv === 0 ? 'b1' : 'r1') : S.pos[S.sv][half()]; }
+  function recvId(){ return game === 'singles' ? (S.sv === 0 ? 'r1' : 'b1') : S.pos[1 - S.sv][half()]; }
+  function name(id){ return {b1:game === 'singles' ? '파랑 7번' : 'A', b2:'B', r1:game === 'singles' ? '빨강 3번' : 'C', r2:'D'}[id]; }
+  var TEAM = ['파랑', '빨강'];
+  function start(){
+    c.clearZones(); hintG.replaceChildren(); for(var id in P) P[id].ring(false);
+    var n = S.sc[S.sv];
+    var head = '<em>' + TEAM[S.sv] + '</em> 서브 · ' + TEAM[S.sv] + ' 점수 <em>' + n + '</em>';
+    if(game === 'doubles'){ phase = 'who'; now(head + '<br>서브할 선수를 눌러요.', S.last || '점수가 짝수(0 포함)면 오른쪽, 홀수면 왼쪽 서비스 코트에 선 선수가 서브해요.'); whistle(w, '1. 누가 서브할까요?', 'info'); }
+    else { phase = 'where'; showCourts(); now(head + '<br>서버가 설 서비스 코트를 눌러요.', S.last || '네트를 바라보는 서버의 몸을 기준으로 오른쪽·왼쪽을 정해요.'); whistle(w, '서버는 어느 칸에 설까요?', 'info'); }
+  }
+  function showCourts(){
+    c.clearZones();
+    ['right', 'left'].forEach(function(h){ c.zone(CT.area(sideK(S.sv), game, true, h), 'rgba(255,255,255,.08)', '#ffffff'); });
+  }
+  function rectHit(p, r){ return CT.inside(p, r); }
+  function onTap(p){
+    if(busy) return;
+    if(phase === 'who'){
+      var hit = null; for(var id in P){ if(Math.hypot(P[id].x - p.x, P[id].y - p.y) < .65) hit = id; }
+      if(!hit) return;
+      var right = serverId();
+      if(hit === right){
+        ST.ok++; streak++; PROG.dbl = Math.max(PROG.dbl, streak); P[hit].ring(true, '#ffd23f');
+        whistle(w, name(hit) + ' 맞아요!', 'ok');
+        phase = 'where'; showCourts();
+        now('<em>' + name(hit) + '</em>가 설 서비스 코트를 눌러요.', '');
+      } else {
+        ST.miss++; streak = 0;
+        whistle(w, name(hit) + '가 아니에요', 'foul');
+        now('서브할 선수를 다시 골라요.', whyWho());
+      }
+      stat(); drawMis(); return;
+    }
+    if(phase === 'where'){
+      var h = null;
+      ['right', 'left'].forEach(function(k){ if(rectHit(p, CT.area(sideK(S.sv), game, true, k))) h = k; });
+      if(!h) return;
+      if(h === half()){
+        ST.ok++; PROG.pos++; whistle(w, (h === 'right' ? '오른쪽' : '왼쪽') + ' 맞아요!', 'ok');
+        busy = true;
+        placeAll(true, function(){
+          busy = false; phase = 'aim'; c.clearZones();
+          c.zone(CT.area(sideK(1 - S.sv), game, true, half()), 'rgba(255,210,63,.0)', 'rgba(255,255,255,.35)');
+          P[serverId()].ring(true, '#ffd23f'); P[recvId()].ring(true, '#ffffff');
+          now('셔틀이 떨어질 곳을 눌러 서브해요.', '대각선 서비스 코트 안에 떨어져야 해요. ' + (game === 'singles' ? '단식은 길고 좁게.' : '복식은 짧고 넓게.'));
+          whistle(w, '3. 어디로 서브할까요?', 'info');
+        });
+      } else {
+        ST.miss++;
+        var n = S.sc[S.sv];
+        whistle(w, '반대쪽이에요', 'foul');
+        now('서버가 설 칸을 다시 골라요.', TEAM[S.sv] + ' 점수 ' + n + '은(는) ' + (n % 2 ? '홀수' : (n === 0 ? '0, 짝수' : '짝수')) + '라서 <b>' + (n % 2 ? '왼쪽' : '오른쪽') + '</b>이에요. 네트를 바라보는 서버 몸 기준이에요.');
+      }
+      stat(); drawMis(); return;
+    }
+    if(phase === 'aim'){
+      phase = 'fly'; busy = true;
+      var s = P[serverId()], from = {x:s.x + (S.sv === 0 ? .3 : -.3), y:s.y, z:.9};
+      var D = Math.hypot(p.x - from.x, p.y - from.y), ux = (p.x - from.x) / D, uy = (p.y - from.y) / D;
+      var pts = CT.fly(.9, CT.aim(.9, 30, D), 30), T = pts[pts.length - 1].t, k = 0;
+      sh.show(true);
+      animate(PE.reduce ? 1 : T * 900, function(u){
+        var tt = u * T; while(k < pts.length - 1 && pts[k+1].t <= tt) k++;
+        var q = pts[k]; sh.set(from.x + ux * q.d, from.y + uy * q.d, q.z, Math.atan2(uy, ux) * 180 / Math.PI);
+      }, function(){ busy = false; judgeServe(p); });
+    }
+  }
+  function whyWho(){
+    var id = serverId(), n = S.sc[S.sv];
+    if(S.lastWinnerWasServer) return '서브한 편이 득점했어요. 그래서 <b>같은 서버 ' + name(id) + '</b>가 자리를 바꿔 계속 서브해요.';
+    return '점수 ' + n + '은(는) ' + (n % 2 ? '홀수' : '짝수') + '라서 <b>' + (n % 2 ? '왼쪽' : '오른쪽') + '에 서 있는 ' + name(id) + '</b>가 서브해요.';
+  }
+  function judgeServe(p){
+    var r = CT.area(sideK(1 - S.sv), game, true, half()), R = .0135;
+    var dx = Math.max(r.x0 - p.x, 0, p.x - r.x1), dy = Math.max(r.y0 - p.y, 0, p.y - r.y1), ok = Math.hypot(dx, dy) <= R;
+    var why = '';
+    hintG.replaceChildren();
+    E('circle', {cx:p.x, cy:p.y, r:.22, fill:'none', stroke:ok ? '#3fcf7f' : '#ff6b52', 'stroke-width':.06}, hintG);
+    c.clearZones(); c.zone(r, ok ? 'rgba(63,207,127,.25)' : 'rgba(255,210,63,.22)', ok ? '#3fcf7f' : '#ffd23f');
+    if(ok){ ST.ok++; PROG.land++; whistle(w, '인! 좋은 서브', 'ok'); }
+    else {
+      ST.miss++;
+      var nearNet = S.sv === 0 ? p.x < r.x0 : p.x > r.x1;
+      var tooLong = S.sv === 0 ? p.x > r.x1 : p.x < r.x0;
+      var otherHalf = CT.inside(p, CT.area(sideK(1 - S.sv), game, true, half() === 'right' ? 'left' : 'right'));
+      if(otherHalf) why = '대각선이 아닌 칸이에요. 서브는 대각선 서비스 코트로 넣어요.';
+      else if(nearNet && (S.sv === 0 ? p.x > K.NET : p.x < K.NET)) why = '쇼트 서비스 라인보다 짧아요.';
+      else if(tooLong) why = game === 'doubles' && (S.sv === 0 ? p.x <= K.LEN : p.x >= 0) ? '복식 서브는 롱 서비스 라인까지예요. 짧고 넓게!' : '뒤 경계선을 넘었어요.';
+      else if(game === 'singles' && (p.y >= 0 && p.y <= K.WID)) why = '단식 서브는 안쪽 사이드라인까지예요. 길고 좁게!';
+      else why = '서비스 코트 밖이에요.';
+      whistle(w, '폴트: ' + why.split('.')[0], 'foul');
+    }
+    stat(); drawMis();
+    now(ok ? '서브 성공! 랠리를 진행해요.' : '서비스 폴트예요. 상대가 1점을 얻어요.', ok ? '' : why);
+    busy = true;
+    setTimeout(function(){ rally(ok); }, ok ? 900 : 1700);
+  }
+  function rally(served){
+    var srv = S.sv, winner = served ? (Math.random() < .5 ? 0 : 1) : 1 - srv;
+    S.sc[winner]++;
+    var msg;
+    if(winner === srv){
+      S.lastWinnerWasServer = true;
+      if(game === 'doubles'){ var p = S.pos[srv], t = p.right; p.right = p.left; p.left = t; }
+      msg = TEAM[winner] + ' 득점! 서브한 편이 이겼어요.' + (game === 'doubles' ? ' 같은 서버가 계속 서브해요.' : '');
+    } else {
+      S.lastWinnerWasServer = false; S.sv = winner;
+      msg = TEAM[winner] + ' 득점! 서브권이 ' + TEAM[winner] + '에게 넘어가요.' + (game === 'doubles' ? ' 아무도 자리를 바꾸지 않아요.' : '');
+    }
+    S.last = msg;
+    whistle(w, (served ? '랠리 끝: ' : '') + TEAM[winner] + ' 득점', 'info');
+    score(); sh.show(false); hintG.replaceChildren();
+    var won = S.sc[winner] >= 21 && S.sc[winner] - S.sc[1 - winner] >= 2 || S.sc[winner] >= 30;
+    setTimeout(function(){
+      busy = false;
+      if(won){ now('<em>' + TEAM[winner] + '</em>이 게임을 이겼어요!', '처음부터 버튼으로 새 게임을 해요.'); phase = 'over'; return; }
+      if(game === 'singles') start(); else start();
+    }, 900);
+  }
+  svg.addEventListener('pointerdown', function(ev){ try{ onTap(c.toLocal(ev)); }catch(e){ PE_ERR(e, '서브 자리 찾기'); } });
+  Array.prototype.forEach.call(document.querySelectorAll('[data-game]'), function(b){ b.onclick = function(){ game = b.dataset.game; Array.prototype.forEach.call(document.querySelectorAll('[data-game]'), function(x){ x.classList.toggle('on', x === b); }); reset(); }; });
+  document.getElementById('resetA').onclick = reset;
+  document.getElementById('goA').onclick = function(){ document.getElementById('introA').classList.add('off'); reset(); };
+  mk(); S = {sc:[0, 0], sv:0, pos:[{right:'b1', left:'b2'}, {right:'r1', left:'r2'}]}; placeAll(false);
+  return {enter:function(){ if(phase === 'off') now('<em>시작하기</em>를 눌러요.', '점수를 보고 서버가 설 자리와 서브를 넣을 곳을 찾아요.'); else start(); }};
+})();
+}catch(e){ PE_ERR(e, '서브 자리 찾기'); }
+</script>
+
+<script>
+/* ===== B: 서브 넣기 ===== */
+try{
+var B = (function(){
+  var svg = document.getElementById('cB'), c = new CT.Side(svg, {view:{x:2.4, y:-3.4, w:11.6, h:3.75}, height:true}), E = CT.E, w = document.getElementById('wB');
+  var bgame = 'singles', busy = false;
+  var srv = c.player('s', 'blue', 7, {mirror:false}); srv.pos(3.9); srv.setPose('serveSet');
+  var rcv = c.player('r', 'red', 3, {mirror:true}); rcv.pos(10.6); rcv.setPose('ready');
+  var sh = c.shuttle(), zoneG = E('g', null, c.gBack), markG = E('g', null, c.gMarks);
+  function zone(){
+    zoneG.replaceChildren();
+    var x1 = bgame === 'singles' ? K.LEN : K.LEN - K.DL;
+    E('rect', {x:K.NET + K.SS, y:-.02, width:x1 - (K.NET + K.SS), height:.36, fill:'rgba(255,210,63,.5)'}, zoneG);
+    c.label((K.NET + K.SS + x1) / 2, -.62, (bgame === 'singles' ? '단식' : '복식') + ' 서비스 코트', '#ffd23f', 'middle', .26, zoneG);
+    c.label(K.NET + K.SS, -.95, '쇼트 서비스 라인', 'rgba(255,255,255,.8)', 'middle', .2, zoneG);
+    c.label(x1, -.95, bgame === 'singles' ? '뒤 경계선' : '롱 서비스 라인', 'rgba(255,255,255,.8)', 'middle', .2, zoneG);
+  }
+  var H = .9, ANG = 18;
+  function holdShow(){ sh.show(true); sh.set(4.75, H, -90); }
+  function poseMix(a, b, u){ var o = {}; for(var k in a) o[k] = a[k] + (((b[k] - a[k] + 540) % 360) - 180) * u; return o; }
+  document.getElementById('rgH').oninput = function(e){ H = +e.target.value; document.getElementById('oH').textContent = H.toFixed(2) + ' m'; document.getElementById('oH').style.color = H >= 1.15 ? '#ff8a6b' : ''; if(!busy) holdShow(); };
+  document.getElementById('rgA').oninput = function(e){ ANG = +e.target.value; document.getElementById('oA').textContent = ANG + '°'; };
+  Array.prototype.forEach.call(document.querySelectorAll('[data-bgame]'), function(b){ b.onclick = function(){ bgame = b.dataset.bgame; Array.prototype.forEach.call(document.querySelectorAll('[data-bgame]'), function(x){ x.classList.toggle('on', x === b); }); zone(); }; });
+  /* 힘 모으기 */
+  var pw = 0, dirp = 1, charging = false, raf = 0, bar = document.getElementById('pw'), hold = document.getElementById('hold');
+  function charge(){ pw += dirp * 1.6; if(pw >= 100){ pw = 100; dirp = -1; } if(pw <= 0){ pw = 0; dirp = 1; } bar.style.width = pw + '%'; if(charging) raf = requestAnimationFrame(charge); }
+  hold.addEventListener('pointerdown', function(e){ if(busy) return; e.preventDefault(); charging = true; pw = 0; dirp = 1; cancelAnimationFrame(raf); charge(); });
+  function release(){ if(!charging) return; charging = false; cancelAnimationFrame(raf); serve(pw); }
+  hold.addEventListener('pointerup', release); hold.addEventListener('pointerleave', release); hold.addEventListener('pointercancel', release);
+  function serve(power){
+    busy = true; markG.replaceChildren();
+    var v = 4 + power / 100 * 24;
+    var high = H >= K.SERVE;
+    var A0 = CT.POSE.serveSet, A1 = high ? CT.POSE.serveHigh : CT.POSE.serveHit, A2 = CT.POSE.serveEnd;
+    animate(PE.reduce ? 1 : 260, function(u){ srv.setPose(poseMix(A0, A1, u)); }, function(){
+      if(high){
+        whistle(w, '폴트: 치는 순간 ' + H.toFixed(2) + ' m, 1.15 m보다 높아요', 'foul');
+        srv.ring(true, '#ff6b52'); ST.miss++; stat();
+        now('높이 폴트예요.', '치는 순간 셔틀 전체가 바닥에서 1.15 m보다 아래에 있어야 해요. 높이를 낮춰 다시 해 봐요.');
+        setTimeout(function(){ srv.ring(false); srv.setPose('serveSet'); holdShow(); busy = false; }, 1600);
+        return;
+      }
+      animate(PE.reduce ? 1 : 300, function(u){ srv.setPose(poseMix(A1, A2, u)); });
+      flyIt(v);
+    });
+  }
+  function flyIt(v){
+    var x0 = 4.75, pts = CT.fly(H, v, ANG), out = [], res = null;
+    for(var i = 0; i < pts.length; i++){
+      var q = pts[i], x = x0 + q.d;
+      if(i && out[out.length - 1].x < K.NET && x >= K.NET && q.z < K.NETH){ res = 'net'; out.push({t:q.t, x:K.NET - .06, z:q.z, ang:-90}); break; }
+      out.push({t:q.t, x:x, z:q.z, ang:Math.atan2(q.vz, q.vd) * 180 / Math.PI});
+    }
+    if(res === 'net'){ var L = out[out.length - 1], tt = L.t, z = L.z; while(z > 0){ tt += .02; z = Math.max(0, z - .1); out.push({t:tt, x:L.x - .02, z:z, ang:-90}); } }
+    var T = out[out.length - 1].t, k = 0, shook = false;
+    animate(PE.reduce ? 1 : T * 1000, function(u){
+      var tt = u * T; while(k < out.length - 1 && out[k+1].t <= tt) k++;
+      var q = out[k]; sh.set(q.x, q.z, q.ang);
+      if(res === 'net' && !shook && q.ang === -90){ shook = true; c.netShake(); }
+    }, function(){ land(out[out.length - 1].x, res, out); });
+  }
+  function land(x, res, out){
+    var x0 = K.NET + K.SS, x1 = bgame === 'singles' ? K.LEN : K.LEN - K.DL, ok = false, msg, why = '';
+    if(res === 'net'){ msg = '폴트: 네트를 넘지 못했어요'; why = '힘을 더 주거나 각도를 높여 봐요.'; }
+    else if(x < x0){ msg = '폴트: 쇼트 서비스 라인보다 짧아요'; why = '네트는 넘었지만 쇼트 서비스 라인 앞에 떨어졌어요.'; }
+    else if(x > x1){ msg = '폴트: ' + (bgame === 'singles' ? '뒤 경계선' : '복식 롱 서비스 라인') + '을 넘었어요'; why = bgame === 'doubles' && x <= K.LEN ? '랠리라면 인이지만, 복식 서브는 롱 서비스 라인까지예요.' : '힘을 조금 줄여 봐요.'; }
+    else { ok = true; }
+    E('circle', {cx:x, cy:.05, r:.12, fill:'none', stroke:ok ? '#3fcf7f' : '#ff6b52', 'stroke-width':.05}, markG);
+    var pl = out.filter(function(_, i){ return i % 4 === 0; }).map(function(p){ return p.x.toFixed(2) + ',' + (-p.z).toFixed(2); }).join(' ');
+    E('polyline', {points:pl, fill:'none', stroke:'rgba(255,210,63,.6)', 'stroke-width':.035, 'stroke-dasharray':'.12 .08'}, markG);
+    if(ok){
+      ST.ok++; PROG.legal++;
+      var kind = x <= x0 + 1 ? 'short' : x >= x1 - 1 ? 'long' : null;
+      if(kind) PROG[kind]++;
+      msg = kind === 'short' ? '인! 네트 앞에 떨어지는 숏 서브' : kind === 'long' ? '인! 끝까지 보내는 롱 서브' : '인! 서비스 코트 안';
+      why = '셔틀은 ' + (x - K.NET).toFixed(1) + ' m 지점에 떨어졌어요.';
+    } else ST.miss++;
+    whistle(w, msg, ok ? 'ok' : 'foul'); now(ok ? '서브 성공!' : '서비스 폴트예요.', why);
+    stat(); drawMis();
+    setTimeout(function(){ srv.setPose('serveSet'); holdShow(); busy = false; }, 900);
+  }
+  zone(); holdShow();
+  return {enter:function(){ now('높이와 각도를 정하고 <em>서브</em> 버튼을 눌렀다 떼요.', '오래 누를수록 힘이 세졌다 약해졌다 해요. 알맞은 힘에서 떼요.'); }};
+})();
+}catch(e){ PE_ERR(e, '서브 넣기'); }
+</script>
+
+<script>
+try{
+  Array.prototype.forEach.call(document.querySelectorAll('[data-mode]'), function(b){
+    b.onclick = function(){
+      mode = b.dataset.mode;
+      Array.prototype.forEach.call(document.querySelectorAll('[data-mode]'), function(x){ x.classList.toggle('on', x === b); });
+      document.getElementById('visA').style.display = mode === 'a' ? '' : 'none';
+      document.getElementById('visB').style.display = mode === 'b' ? '' : 'none';
+      document.getElementById('setA').style.display = mode === 'a' ? '' : 'none';
+      document.getElementById('setB').style.display = mode === 'b' ? '' : 'none';
+      drawMis(); (mode === 'a' ? A : B).enter();
+    };
+  });
+  stat(); drawMis(); A.enter();
+}catch(e){ PE_ERR(e, '놀이터'); }
+</script>
+</body>
+</html>

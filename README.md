@@ -7,6 +7,7 @@ https://isaaclee9903-lang.github.io/seongan-pe/
 | 종목 | 학년·영역 | 주소 |
 |---|---|---|
 | 태그럭비 (2차시) | 중2 · 스포츠-전략형-영역형 | `lessons/tag-rugby/` |
+| 배드민턴 (2차시) | 중2 · 스포츠-전략형-네트형 | `lessons/badminton/` |
 
 ## 수업 한 개의 구성 (태그럭비 기준)
 첫 화면은 경기장 지도이고, 아래쪽 전광판에서 구간을 고릅니다. 각 페이지는 가로로 넘기는 카드 또는 한 화면 활동입니다.
@@ -19,10 +20,21 @@ https://isaaclee9903-lang.github.io/seongan-pe/
 | 04 내가 심판 | `referee.html` | 경기 장면 12개를 보고 정상/반칙과 반칙 종류 판정 |
 | 05 경기장 밖 과학 | `science.html` | 럭비공 모양의 역사, 기체 압력, 불규칙 바운드, 스핀 패스, 상대 운동 |
 
+## 배드민턴 구성
+| 구간 | 파일 | 내용 |
+|---|---|---|
+| 01 영상으로 보기 | `video.html` | 규칙·서비스·기본기 영상 4편, 멈춤 퀴즈 15문항. 옛 '허리 높이' 서브 규칙이 나오기 전에 멈춰 지금 규칙(1.15 m)을 알려 줌 |
+| 02 규칙 읽기 | `rules.html` | 카드 13장: 코트와 라인, 눌러서 인·아웃 판정, 전광판(듀스·30점), 바른 서브, 서브 위치, 복식 순서, 폴트 6장면, 렛 + 퀴즈 7문항 |
+| 03 규칙 놀이터 | `playground.html` | A 서브 자리 찾기(단식·복식, 점수 → 서버·자리·서비스 코트), B 서브 넣기(높이·각도·힘) |
+| 04 내가 심판 | `referee.html` | 장면 12개(위에서 본 인·아웃 4 + 옆에서 본 네트·서브·몸 맞음 등 8), 정상/폴트 종류/렛 판정 |
+| 05 코트 밖 과학 | `science.html` | 셔틀 구조, 뒤집히는 이유, 스매시 기록과 단위, 급감속 실험, 기온과 비거리, 속도 시험, 라켓 줄 탄성, 규칙의 역사 |
+
 ## 만들기
 ```
 python tools/build.py tag-rugby        # src/ → lessons/ (단독 HTML)
+python tools/build.py badminton
 python -m http.server 8790             # 미리보기
 python tools/qa.py rules               # 가로·세로 화면 모음 사진 (tools/_qa/)
+python tools/qa.py rules --lesson badminton
 ```
 `lessons/` 안의 HTML은 직접 고치지 말고 `src/`를 고친 뒤 다시 빌드합니다.

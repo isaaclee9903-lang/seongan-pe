@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<!--@@KIT:head.html@@-->
+<title>규칙 읽기 - 배드민턴</title>
+<style>
+/*@@KIT:base.css@@*/
+.legend{list-style:none;padding:0;margin:14px 0;display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.legend li{display:flex;gap:10px;align-items:center;background:#fff;border:1px solid var(--line);border-radius:12px;padding:8px 12px;font-size:16px;line-height:1.4;font-weight:600}
+.legend .b{flex:none;width:28px;height:28px;border-radius:50%;background:var(--turf-900);color:var(--volt);font-family:var(--display);font-size:15px;display:grid;place-items:center}
+@media (max-width:700px){.legend{grid-template-columns:1fr}}
+.dims{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0 2px}
+.dims span{background:var(--turf-900);color:#fff;border-radius:10px;padding:6px 12px;font-weight:700;font-size:15px}
+.dims b{color:var(--volt);font-family:var(--display);font-weight:400;font-size:18px;margin-left:4px}
+.verdict{position:absolute;left:50%;top:22px;transform:translateX(-50%);font-family:var(--display);font-size:22px;padding:8px 18px;border-radius:999px;white-space:nowrap;box-shadow:var(--shadow);pointer-events:none}
+.verdict.ok{background:#fff;color:var(--ok)} .verdict.foul{background:var(--foul);color:#fff} .verdict.idle{background:rgba(7,28,21,.85);color:#fff;font-family:Pretendard;font-weight:800;font-size:16px}
+.steps{list-style:none;padding:0;margin:14px 0;display:grid;gap:10px}
+.steps li{display:grid;grid-template-columns:auto 1fr;gap:14px;align-items:center;background:#fff;border:1px solid var(--line);border-radius:14px;padding:10px 14px}
+.steps .n{font-family:var(--display);font-size:22px;line-height:1;color:var(--turf-950);background:var(--volt);border-radius:10px;width:38px;height:38px;display:grid;place-items:center}
+.steps p{margin:0;font-size:calc(var(--fs) - 1px);line-height:1.55}
+/* 전광판 */
+.sb{background:#0b120f;border-radius:22px;padding:18px;box-shadow:var(--shadow);color:#fff}
+.sb .row{display:grid;grid-template-columns:1fr auto 1fr;gap:12px;align-items:center}
+.sb .tm{display:flex;flex-direction:column;align-items:center;gap:10px}
+.sb .nm{font-weight:800;font-size:15px;display:flex;align-items:center;gap:8px}
+.sb .nm i{width:12px;height:12px;border-radius:50%}
+.sb .dg{font-family:var(--display);font-size:clamp(64px,8vw,104px);line-height:1;color:var(--volt);font-variant-numeric:tabular-nums;background:#141d19;border-radius:16px;padding:8px 18px;min-width:2.2em;text-align:center}
+.sb .colon{font-family:var(--display);font-size:48px;color:rgba(255,255,255,.3)}
+.sb .sv{font-size:12px;font-weight:800;color:var(--turf-950);background:var(--volt);border-radius:999px;padding:2px 10px;visibility:hidden}
+.sb .sv.on{visibility:visible}
+.sb .add{min-height:52px;min-width:150px;border-radius:14px;border:0;font-weight:800;font-size:16px;color:#fff}
+.sb .add.b{background:var(--blue)} .sb .add.r{background:var(--red)}
+.sb .msg{margin-top:14px;background:#141d19;border-radius:14px;padding:12px 16px;font-size:17px;font-weight:700;line-height:1.55;min-height:56px}
+.sb .msg b{color:var(--volt)}
+.sb .tools{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.stepper{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:12px 0}
+.stepper button{width:52px;height:52px;border-radius:14px;border:0;background:var(--turf-900);color:#fff;font-size:26px;font-weight:800}
+.stepper .v{font-family:var(--display);font-size:46px;min-width:70px;text-align:center;color:var(--turf-900)}
+.big-call{font-family:var(--display);font-size:26px;line-height:1.3;margin:6px 0 10px}
+.big-call em{font-style:normal;color:var(--turf-600)}
+.duo{display:grid;grid-template-columns:1fr 1fr;gap:14px;max-width:1240px;margin:0 auto}
+.duo .vis{padding:8px}
+.duo .tagline{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 6px 4px;color:#fff;font-weight:800;font-size:16px}
+.duo .tagline b{font-family:var(--display);font-weight:400;font-size:22px;color:var(--volt)}
+@media (orientation:portrait),(max-width:900px){.duo{grid-template-columns:1fr}}
+.ban{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;max-width:1240px;margin:0 auto}
+.ban .card{background:#fff;border:1px solid var(--line);border-radius:18px;overflow:hidden;display:flex;flex-direction:column}
+.ban .card .vis{border-radius:0;box-shadow:none;padding:6px}
+.ban .card svg.board{border-radius:10px}
+.ban .card h3{margin:12px 16px 2px;font-size:18px;display:flex;gap:8px;align-items:center}
+.ban .card p{margin:0 16px 14px;font-size:15px;line-height:1.6;color:var(--muted)}
+@media (orientation:portrait),(max-width:900px){.ban{grid-template-columns:1fr 1fr}}
+@media (max-width:560px){.ban{grid-template-columns:1fr}}
+.log{background:var(--turf-950);color:#fff;border-radius:14px;padding:12px 16px;font-size:16px;line-height:1.6;min-height:78px;margin-top:10px}
+.log b{color:var(--volt)}
+.sheet{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:16px 0}
+.sheet div{background:#fff;border:1px solid var(--line);border-radius:14px;padding:12px 14px;font-size:16px;line-height:1.55;display:flex;gap:10px}
+.sheet b.k{flex:none;font-family:var(--display);font-weight:400;color:var(--turf-600);font-size:18px;min-width:22px}
+@media (max-width:700px){.sheet{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="deck" id="deck" data-title="02 규칙 읽기">
+<!--@@KIT:deck_top.html@@-->
+
+  <!-- 1. 표지 -->
+  <section class="slide" data-title="표지">
+    <div class="split">
+      <div class="txt">
+        <div class="kicker rise"><b>02</b>규칙 읽기 · 1차시</div>
+        <h1 class="big rise d1">네트 너머로,<br>바닥에 닿기 전에</h1>
+        <p class="lead rise d2">배드민턴은 셔틀콕이 내 코트 바닥에 떨어지기 전에 쳐서 네트 너머로 넘기는 경기예요. 코트의 선, 점수, 서비스, 반칙을 그림으로 하나씩 익혀 봐요.</p>
+        <div class="pillrow rise d3"><span class="pill">코트와 라인</span><span class="pill">인·아웃</span><span class="pill">점수</span><span class="pill">서비스</span><span class="pill">복식 순서</span><span class="pill">폴트·렛</span></div>
+      </div>
+      <div class="vis rise d1">
+        <svg id="sIntro"></svg>
+        <div class="bar"><span class="cap grow">파랑이 서브하고, 빨강이 높이 넘기고, 파랑이 스매시로 점수를 얻어요.</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 2. 코트와 라인 -->
+  <section class="slide" data-title="코트와 라인">
+    <div class="split">
+      <div class="vis rise">
+        <svg id="tCourt"></svg>
+        <div class="bar">
+          <button class="vbtn on" data-cz="names">라인 이름</button>
+          <button class="vbtn" data-cz="sg">단식 경기</button>
+          <button class="vbtn" data-cz="db">복식 경기</button>
+          <button class="vbtn" data-cz="ssv">단식 서브</button>
+          <button class="vbtn" data-cz="dsv">복식 서브</button>
+        </div>
+        <div class="model-note" id="czNote">번호를 보고 오른쪽 이름과 맞춰 보세요.</div>
+      </div>
+      <div class="txt">
+        <div class="kicker">코트와 라인</div>
+        <h2>선이 많은 이유: 경기마다 쓰는 선이 달라요</h2>
+        <div class="dims"><span>길이<b>13.40 m</b></span><span>복식 너비<b>6.10 m</b></span><span>단식 너비<b>5.18 m</b></span><span>네트 가운데<b>1.524 m</b></span></div>
+        <ul class="legend">
+          <li><span class="b">1</span>쇼트 서비스 라인 (네트에서 1.98 m)</li>
+          <li><span class="b">2</span>복식 롱 서비스 라인 (복식 서브만)</li>
+          <li><span class="b">3</span>뒤 경계선</li>
+          <li><span class="b">4</span>센터라인</li>
+          <li><span class="b">5</span>단식 사이드라인 (안쪽)</li>
+          <li><span class="b">6</span>복식 사이드라인 (바깥쪽)</li>
+        </ul>
+        <p>단식은 <b>안쪽 사이드라인</b>, 복식은 <b>바깥쪽 사이드라인</b>까지 써요. 복식 롱 서비스 라인은 <span class="mark">서브할 때만</span> 쓰고, 랠리가 시작되면 뒤 경계선까지 모두 코트예요.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3. 인과 아웃 -->
+  <section class="slide" data-title="인과 아웃">
+    <div class="split text-first">
+      <div class="vis rise">
+        <svg id="tLine" style="touch-action:none;cursor:crosshair"></svg>
+        <div class="verdict idle" id="lineVerdict">코트 아무 곳이나 눌러 셔틀을 떨어뜨려 보세요</div>
+        <div class="bar">
+          <button class="vbtn on" data-lm="sg">단식 경기</button>
+          <button class="vbtn" data-lm="db">복식 경기</button>
+          <button class="vbtn" data-lm="dsv">복식 서브</button>
+          <span class="cap grow" id="lineCap">오른쪽 코트의 뒤쪽 모서리를 크게 본 그림이에요.</span>
+        </div>
+      </div>
+      <div class="txt">
+        <div class="kicker">인과 아웃</div>
+        <h2>라인에 닿으면 <button class="term">인</button></h2>
+        <p>셔틀콕이 처음 바닥에 닿는 곳(코르크)이 <b>라인에 조금이라도 걸치면 인</b>이에요. 라인은 그 라인이 둘러싸는 코트의 일부이기 때문이에요.</p>
+        <div class="rule"><span class="ico">판정</span><p>인 → 친 쪽 득점 · 아웃 → 받은 쪽 득점</p></div>
+        <p>노란 돋보기 안의 갈색 점이 코르크가 바닥에 닿은 자리예요. 같은 자리라도 <b>단식·복식·서브</b>에 따라 판정이 달라지는지 확인해 보세요.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4. 점수 -->
+  <section class="slide" data-title="점수">
+    <div class="split">
+      <div class="rise">
+        <div class="sb">
+          <div class="row">
+            <div class="tm"><div class="nm"><i style="background:var(--blue)"></i>파랑 <span class="sv" id="svB">서브</span></div><div class="dg" id="dgB">0</div><button class="add b" id="addB">파랑 득점 +1</button></div>
+            <div class="colon">:</div>
+            <div class="tm"><div class="nm"><i style="background:var(--red)"></i>빨강 <span class="sv" id="svR">서브</span></div><div class="dg" id="dgR">0</div><button class="add r" id="addR">빨강 득점 +1</button></div>
+          </div>
+          <div class="msg" id="sbMsg">랠리를 이긴 쪽이 1점을 얻어요. 버튼을 눌러 게임을 진행해 보세요.</div>
+          <div class="tools"><button class="vbtn" id="sb2020">20 : 20 으로</button><button class="vbtn" id="sb2929">29 : 29 로</button><button class="vbtn" id="sb00">처음부터</button></div>
+        </div>
+      </div>
+      <div class="txt">
+        <div class="kicker">점수 얻기</div>
+        <h2><button class="term">랠리포인트</button>: 이긴 쪽이 1점</h2>
+        <p>서브를 누가 했든 <b>랠리를 이긴 쪽이 1점</b>을 얻고, 다음 서브도 그쪽이 해요.</p>
+        <ol class="steps">
+          <li><span class="n">21</span><p>먼저 <b>21점</b>을 얻으면 한 게임을 이겨요.</p></li>
+          <li><span class="n">2</span><p><b>20 : 20</b>이 되면 <b>2점 차</b>로 앞서야 이겨요(<button class="term">듀스</button>).</p></li>
+          <li><span class="n">30</span><p><b>29 : 29</b>가 되면 <b>30점</b>을 먼저 얻는 쪽이 이겨요.</p></li>
+          <li><span class="n">3</span><p>경기는 <b>3게임 중 2게임</b>을 먼저 이기면 끝나요.</p></li>
+        </ol>
+        <p class="note">2027년 1월부터 국제 대회는 15점 3게임으로 바뀌어요(14 : 14부터 2점 차, 20 : 20이면 21점에서 끝). 학교 수업에서는 11점이나 15점 한 게임처럼 짧게 하기도 해요.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 5. 퀴즈 1 -->
+  <section class="slide is-quiz" data-title="퀴즈 1">
+    <div class="solo">
+      <div class="kicker">중간 점검</div>
+      <h2>여기까지 확인해요</h2>
+      <div class="quiz" data-q="q1"></div>
+      <div class="quiz" data-q="q2"></div>
+      <div class="quiz" data-q="q3"></div>
+    </div>
+  </section>
+
+  <!-- 6. 바른 서비스 -->
+  <section class="slide" data-title="바른 서비스">
+    <div class="split">
+      <div class="vis rise">
+        <svg id="sServe"></svg>
+        <div class="verdict ok" id="serveVerdict">바른 서브</div>
+        <div class="bar"><button class="vbtn on" data-sv="ok">바른 서브</button><button class="vbtn" data-sv="high">너무 높은 서브</button><span class="cap grow">노란 점선이 바닥에서 1.15 m 높이예요.</span></div>
+      </div>
+      <div class="txt">
+        <div class="kicker">서비스</div>
+        <h2>서브는 낮게, 대각선으로</h2>
+        <ol class="steps">
+          <li><span class="n">1</span><p>서버와 리시버는 <b>대각선</b> 서비스 코트 안에 서요. 라인을 밟지 않아요.</p></li>
+          <li><span class="n">2</span><p>칠 때까지 <b>두 발 모두 바닥</b>에 닿아 있어야 해요.</p></li>
+          <li><span class="n">3</span><p>치는 순간 셔틀 전체가 바닥에서 <b>1.15 m보다 아래</b>에 있어야 해요.</p></li>
+          <li><span class="n">4</span><p>셔틀의 <b>코르크(머리)</b>를 먼저 쳐요.</p></li>
+          <li><span class="n">5</span><p>라켓은 멈칫하지 않고 <b>계속 앞으로</b> 움직여요.</p></li>
+        </ol>
+        <p class="note">학교 수업에서는 "치는 순간 셔틀이 허리(가장 아래 갈비뼈)보다 아래, 라켓 머리는 아래쪽"이라는 규칙을 쓰기도 해요. 세계배드민턴연맹(BWF)도 미리 정하면 쓸 수 있게 허락한 규칙이에요.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 7. 서브 위치 -->
+  <section class="slide" data-title="서브 위치">
+    <div class="split">
+      <div class="vis rise">
+        <svg id="tPos"></svg>
+        <div class="bar"><span class="cap grow">파랑 7번이 서브해요. 왼쪽 버튼으로 7번의 점수를 바꿔 보세요.</span></div>
+      </div>
+      <div class="txt">
+        <div class="kicker">어디서 서브할까</div>
+        <h2>짝수는 오른쪽, 홀수는 왼쪽</h2>
+        <p>서브하는 쪽의 <b>점수</b>를 보면 서는 자리가 정해져요. 0점도 짝수로 쳐요. 오른쪽·왼쪽은 <b>네트를 바라보는 내 몸</b>을 기준으로 해요.</p>
+        <div class="stepper"><button id="posMinus" aria-label="점수 빼기">−</button><span class="v" id="posV">0</span><button id="posPlus" aria-label="점수 더하기">+</button></div>
+        <div class="big-call" id="posCall"></div>
+        <div class="rule"><span class="ico">받는 쪽</span><p>리시버는 서버의 <b>대각선</b> 서비스 코트에 서요.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 8. 단식과 복식 서비스 코트 -->
+  <section class="slide" data-title="서비스 코트">
+    <div class="wide">
+      <div class="kicker">서비스 코트</div>
+      <h2>단식은 길고 좁게, 복식은 짧고 넓게</h2>
+      <div class="duo">
+        <div class="vis rise"><svg id="tSvcS"></svg><div class="tagline"><span>단식 서비스 코트</span><b>길고 좁게</b></div><div class="model-note">뒤 경계선까지, 안쪽 사이드라인까지</div></div>
+        <div class="vis rise d1"><svg id="tSvcD"></svg><div class="tagline"><span>복식 서비스 코트</span><b>짧고 넓게</b></div><div class="model-note">복식 롱 서비스 라인까지, 바깥쪽 사이드라인까지</div></div>
+      </div>
+      <p style="max-width:1240px;margin:16px auto 0">두 경우 모두 서브는 <b>쇼트 서비스 라인을 넘어야</b> 해요. 네트 바로 앞에 떨어지면 폴트예요. 서브가 네트에 스치고 넘어가도 서비스 코트 안에 떨어지면 <b>그대로 경기를 이어 가요</b>(테니스와 달라요).</p>
+    </div>
+  </section>
+
+  <!-- 9. 복식 서비스 순서 -->
+  <section class="slide" data-title="복식 순서">
+    <div class="split">
+      <div class="vis rise">
+        <svg id="tDbl"></svg>
+        <div class="bar"><button class="vbtn" id="dblB">파랑 득점</button><button class="vbtn" id="dblR">빨강 득점</button><button class="vbtn" id="dbl0">처음부터</button><span class="cap grow" id="dblScore"></span></div>
+      </div>
+      <div class="txt">
+        <div class="kicker">복식 서비스 순서</div>
+        <h2>서브한 편이 이기면 같은 사람이 자리 바꿔 또</h2>
+        <ol class="steps">
+          <li><span class="n">1</span><p><b>서브한 편이 득점</b>: 같은 서버가 파트너와 <b>자리를 바꿔</b> 계속 서브해요.</p></li>
+          <li><span class="n">2</span><p><b>받은 편이 득점</b>: 서브권이 넘어가요. 아무도 자리를 바꾸지 않고, 점수(짝·홀)에 맞는 자리에 선 사람이 서브해요.</p></li>
+          <li><span class="n">3</span><p>리시브하는 편은 <b>자리를 바꾸지 않아요</b>.</p></li>
+        </ol>
+        <div class="log" id="dblLog"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 10. 폴트 -->
+  <section class="slide" data-title="폴트">
+    <div class="wide">
+      <div class="kicker">폴트 → 상대 득점</div>
+      <h2>이렇게 되면 <button class="term">폴트</button></h2>
+      <div class="ban">
+        <div class="card"><div class="vis"><svg id="f1"></svg></div><h3><span class="call foul">폴트</span>네트 터치</h3><p>셔틀이 살아 있는 동안 라켓·몸·옷이 네트에 닿으면 안 돼요.</p></div>
+        <div class="card"><div class="vis"><svg id="f2"></svg></div><h3><span class="call foul">폴트</span>네트 넘어 치기</h3><p>셔틀이 아직 상대 쪽에 있을 때 네트 위로 넘어가 치면 안 돼요.</p></div>
+        <div class="card"><div class="vis"><svg id="f3"></svg></div><h3><span class="call foul">폴트</span>몸에 맞음</h3><p>셔틀이 몸이나 옷에 맞으면 맞은 사람의 폴트예요. 나갈 셔틀이었어도 마찬가지예요.</p></div>
+        <div class="card"><div class="vis"><svg id="f4"></svg></div><h3><span class="call foul">폴트</span>두 번 치기</h3><p>한 편은 한 번만 쳐서 넘겨요. 한 사람이 두 번, 또는 복식 두 사람이 이어서 치면 폴트예요.</p></div>
+        <div class="card"><div class="vis"><svg id="f5"></svg></div><h3><span class="call foul">폴트</span>네트를 못 넘김</h3><p>셔틀이 네트에 걸리거나 네트 아래로 지나가면 친 사람의 폴트예요.</p></div>
+        <div class="card"><div class="vis"><svg id="f6"></svg></div><h3><span class="call foul">폴트</span>아웃</h3><p>코트 밖 바닥에 떨어지면 친 사람의 폴트예요. 천장이나 벽에 맞아도 폴트예요.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 11. 렛 -->
+  <section class="slide" data-title="렛">
+    <div class="split">
+      <div class="vis rise">
+        <svg id="sLet"></svg>
+        <div class="bar"><span class="cap grow">랠리 중 셔틀이 네트 위에 걸려 멈췄어요. 누구의 잘못도 아니니 다시 해요.</span></div>
+      </div>
+      <div class="txt">
+        <div class="kicker">렛</div>
+        <h2><button class="term">렛</button>: 점수 없이 다시 하기</h2>
+        <p>누구 잘못도 아닌 일이 생기면 그 랠리는 없던 일로 하고, <b>직전에 서브한 사람이 다시 서브</b>해요.</p>
+        <ol class="steps">
+          <li><span class="n">1</span><p>리시버가 <b>준비하기 전에</b> 서브했을 때</p></li>
+          <li><span class="n">2</span><p>랠리 중 셔틀이 <b>네트 위에 걸려</b> 멈췄을 때</p></li>
+          <li><span class="n">3</span><p>옆 코트의 셔틀이 <b>날아 들어와</b> 방해했을 때</p></li>
+        </ol>
+        <div class="rule"><span class="ico">예절</span><p>수업에서는 우리가 직접 심판이에요. 내 쪽 판정은 정직하게, 서로 의견이 다르면 렛으로 다시 해요.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 12. 퀴즈 2 -->
+  <section class="slide is-quiz" data-title="퀴즈 2">
+    <div class="solo">
+      <div class="kicker">마무리 점검</div>
+      <h2>서비스와 폴트 확인</h2>
+      <div class="quiz" data-q="q4"></div>
+      <div class="quiz" data-q="q5"></div>
+      <div class="quiz" data-q="q6"></div>
+      <div class="quiz" data-q="q7"></div>
+    </div>
+  </section>
+
+  <!-- 13. 결과 -->
+  <section class="slide" data-title="결과">
+    <div class="solo">
+      <div class="kicker">결과</div>
+      <h2>오늘의 규칙 한 장</h2>
+      <div id="score"></div>
+      <div class="sheet">
+        <div><b class="k">1</b><span>단식은 안쪽, 복식은 바깥쪽 사이드라인까지. 뒤는 둘 다 뒤 경계선까지</span></div>
+        <div><b class="k">2</b><span>셔틀이 라인에 닿으면 인</span></div>
+        <div><b class="k">3</b><span>랠리를 이긴 쪽이 1점. 21점, 20 : 20부터 2점 차, 29 : 29면 30점</span></div>
+        <div><b class="k">4</b><span>서브는 대각선으로, 치는 순간 셔틀은 1.15 m 아래</span></div>
+        <div><b class="k">5</b><span>서브하는 쪽 점수가 짝수면 오른쪽, 홀수면 왼쪽</span></div>
+        <div><b class="k">6</b><span>복식 서브 코트는 짧고 넓게(롱 서비스 라인까지)</span></div>
+        <div><b class="k">7</b><span>복식: 서브한 편이 이기면 같은 서버가 자리 바꿔 또 서브</span></div>
+        <div><b class="k">8</b><span>네트 터치, 네트 넘어 치기, 몸에 맞음, 두 번 치기는 폴트</span></div>
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:8px">
+        <button class="btn volt" data-nav="playground">03 규칙 놀이터에서 직접 서브해 보기 →</button>
+      </div>
+    </div>
+  </section>
+
+<!--@@KIT:deck_bottom.html@@-->
+</div>
+
+<script>
+/*@@KIT:kit.js@@*/
+</script>
+<script>
+/*@@KIT:court.js@@*/
+</script>
+
+<script>
+/* ===== 선생님이 고치기 쉬운 데이터 ===== */
+var GLOSSARY = {
+  '인': '셔틀콕이 코트 안이나 라인 위에 떨어진 것. 친 쪽이 1점을 얻어요.',
+  '랠리포인트': '서브권과 상관없이 랠리를 이긴 쪽이 1점을 얻는 방식이에요.',
+  '듀스': '20 : 20처럼 같은 점수가 되어 2점 차가 날 때까지 이어 가는 것. 29 : 29면 30점에서 끝나요.',
+  '폴트': '규칙을 어긴 것. 폴트를 한 쪽의 상대가 1점을 얻어요.',
+  '렛': '누구의 잘못도 아닌 일이 생겼을 때 점수 없이 랠리를 다시 하는 것이에요.'
+};
+var QUIZ = {
+  q1: {type:'ox', src:'영상 1 · 인과 아웃', q:'셔틀콕이 사이드라인 위에 떨어지면 라인을 밟았으니 아웃이다.', a:false,
+       ex:'라인은 코트의 일부예요. 셔틀이 라인에 조금이라도 닿으면 인이에요.'},
+  q2: {type:'mc', q:'파랑이 서브했는데 빨강이 랠리를 이겼어요. 어떻게 될까요?',
+       opts:['점수 없이 서브권만 빨강에게 간다', '빨강이 1점을 얻고 다음 서브도 빨강이 한다', '파랑이 다시 서브한다'], a:1,
+       ex:'랠리포인트 방식이라 서브권과 상관없이 랠리를 이긴 쪽이 1점을 얻고, 다음 서브도 해요.'},
+  q3: {type:'chips', q:'20 : 20이 되면 [[0]] 차로 앞서야 이기고, 29 : 29가 되면 [[1]]점을 먼저 얻은 쪽이 이겨요.',
+       chips:['1점', '2점', '3점', '21', '25', '30'], a:['2점', '30'],
+       ex:'20 : 20부터는 2점 차가 나야 끝나고, 아무리 길어져도 30점을 먼저 얻으면 끝나요.'},
+  q4: {type:'mc', src:'영상 2 · 서브 위치', q:'단식에서 서브하는 사람의 점수가 <b>5점</b>이에요. 어디에서 서브할까요?',
+       opts:['오른쪽 서비스 코트', '왼쪽 서비스 코트', '아무 데서나'], a:1,
+       ex:'5는 홀수라서 왼쪽에서 서브하고, 리시버는 대각선 쪽에서 받아요.'},
+  q5: {type:'mc', q:'복식에서 <b>서브한 편이 득점</b>했어요. 다음 서브는?',
+       opts:['같은 서버가 파트너와 자리를 바꿔 다시 서브', '파트너가 서브', '상대 편이 서브'], a:0,
+       ex:'서브한 편이 이기면 같은 사람이 자리를 바꿔 계속 서브해요. 받는 편은 자리를 바꾸지 않아요.'},
+  q6: {type:'ox', q:'서브가 네트에 스치고 넘어가 서비스 코트 안에 떨어지면 렛이라서 다시 서브한다.', a:false,
+       ex:'배드민턴에는 테니스 같은 서비스 렛이 없어요. 서비스 코트 안에 떨어지면 정상이고 경기를 이어 가요.'},
+  q7: {type:'mc', q:'다음 중 <b>폴트가 아닌</b> 것은?',
+       opts:['스매시한 뒤 라켓이 네트에 닿았다', '내 쪽에서 친 뒤 라켓이 네트에 닿지 않고 네트 위로 넘어갔다', '아직 상대 쪽에 있는 셔틀을 네트 넘어 쳤다', '셔틀이 내 어깨에 맞고 떨어졌다'], a:1,
+       ex:'처음 친 곳이 내 쪽이고 네트에 닿지 않았다면, 따라 휘두른 라켓(팔로스루)이 네트 위로 넘어가도 괜찮아요.'}
+};
+</script>
+
+<script>
+try{
+  var deck = PE.deck(document.getElementById('deck'));
+  PE.glossary(GLOSSARY);
+  var MSG = ['모두 맞혔어요. 이제 규칙 놀이터에서 직접 서브해 봐요!', '잘했어요. 틀린 문제를 한 번 더 보고 가요.', '틀린 문제를 다시 보고, 그림을 한 번 더 살펴봐요.'];
+  var quiz = PE.quiz(QUIZ, {onAnswer:function(){ PE.renderScore(document.getElementById('score'), quiz, deck, MSG); }});
+  PE.renderScore(document.getElementById('score'), quiz, deck, MSG);
+}catch(e){ PE_ERR(e, '읽기·퀴즈'); }
+</script>
+
+<script>
+/* ===== 장면 그림 ===== */
+var SC = {};
+var K = CT.K;
+function mkSide(id, view, scn, o){ var c = new CT.Side(document.getElementById(id), {view:view, height:o && o.height, netLabel:o && o.netLabel}); var s = new CT.Scene(c, scn, o); SC[id] = s; return s; }
+function mkTop(id, view, scn, o){ var c = new CT.Top(document.getElementById(id), {view:view, singles:o && o.singles}); var s = new CT.Scene(c, scn, o); SC[id] = s; return s; }
+
+function H(pose, x, mirror){ var h = CT.headOf(pose); return [x + (mirror ? -h.x : h.x), h.z]; }
+function T(from, to, ang){ return CT.hitTime(from, to[0], to[1], ang); }
+
+/* 1. 표지: 서브 → 클리어 → 스매시 */
+try{
+  var rH = H('overHit', 11.0, true), bS = H('serveHit', 4.4), bH = H('smashHit', 2.4);
+  var t1 = .6 + T(bS, rH, 50), t2 = t1 + T(rH, bH, 26), t3 = t2 + .75;
+  var s1 = mkSide('sIntro', {x:-.5, y:-4.75, w:14.4, h:5.1}, {dur:t3 + 2.2, hold:{who:'a'},
+    actors:[
+      {id:'a', team:'blue', num:7, keys:[[0,4.4],[1.0,4.4],[t2 - .4,2.4]], pose:[[0,'serveSet'],[.35,'serveSet'],[.6,'serveHit'],[.95,'serveEnd'],[1.5,'ready'],[t2 - .3,'overSet'],[t2,'smashHit'],[t2 + .3,'follow'],[t2 + 1.2,'ready']]},
+      {id:'b', team:'red', num:3, keys:[[0,9.6],[t1 - .5,11.0],[t1 + .6,11.0],[t2 + .4,10.4]], pose:[[0,'ready'],[t1 - .45,'ready'],[t1 - .25,'overSet'],[t1,'overHit'],[t1 + .3,'follow'],[t1 + 1.0,'ready'],[t2 + .4,'ready'],[t2 + .65,'lunge']]}
+    ],
+    shots:[{t:.6, from:'a', to:rH[0], toZ:rH[1], ang:50}, {t:t1, from:'prev', to:bH[0], toZ:bH[1], ang:26}, {t:t2, from:'prev', to:9.6, ang:-2}],
+    events:[{t:t3, type:'say', who:'a', text:'득점!', dur:1.8, tone:'volt'}]
+  }, {loop:true, netLabel:false});
+  CT.loopWhenVisible(s1, document.getElementById('sIntro'));
+}catch(e){ PE_ERR(e, '표지 그림'); }
+
+/* 2. 코트와 라인 */
+try{
+  (function(){
+    var c = new CT.Top(document.getElementById('tCourt'), {labels:true}), E = CT.E, g = c.gMarks;
+    var B = [[1, 8.71, 1.55], [2, 12.66, 1.55], [3, 13.37, 4.6], [4, 10.6, 3.05], [5, 11.4, 5.64 - .03], [6, 9.6, 6.07]];
+    var dims = E('g', null, c.gFx), badges = E('g', null, c.gFx);
+    B.forEach(function(b){ var gg = E('g', {transform:'translate(' + b[1] + ' ' + b[2] + ')'}, badges); E('circle', {r:.27, fill:'#0c2a20', stroke:'#ffd23f', 'stroke-width':.05}, gg); c.label(0, .02, String(b[0]), '#ffd23f', 'middle', .32, gg); });
+    function dimH(x0, x1, y, t){ E('line', {x1:x0, y1:y, x2:x1, y2:y, stroke:'#ffd23f', 'stroke-width':.035}, dims); [x0, x1].forEach(function(x){ E('line', {x1:x, y1:y - .12, x2:x, y2:y + .12, stroke:'#ffd23f', 'stroke-width':.035}, dims); }); c.label((x0 + x1) / 2, y, t, '#ffd23f', 'middle', .28, dims); }
+    function dimV(y0, y1, x, t){ E('line', {x1:x, y1:y0, x2:x, y2:y1, stroke:'#ffd23f', 'stroke-width':.035}, dims); [y0, y1].forEach(function(y){ E('line', {x1:x - .12, y1:y, x2:x + .12, y2:y, stroke:'#ffd23f', 'stroke-width':.035}, dims); }); c.label(x, (y0 + y1) / 2, t, '#ffd23f', 'middle', .26, dims); }
+    var NOTE = {names:'번호를 보고 오른쪽 이름과 맞춰 보세요.', sg:'단식 경기 코트: 안쪽 사이드라인과 뒤 경계선 안쪽 전체', db:'복식 경기 코트: 바깥쪽 사이드라인과 뒤 경계선 안쪽 전체', ssv:'단식 서브가 떨어져야 하는 곳(대각선 한 칸): 길고 좁게', dsv:'복식 서브가 떨어져야 하는 곳(대각선 한 칸): 짧고 넓게'};
+    function show(m){
+      c.clearZones(); dims.replaceChildren();
+      badges.style.display = m === 'names' ? '' : 'none';
+      var col = 'rgba(255,210,63,.32)';
+      if(m === 'sg' || m === 'db'){ var gm = m === 'sg' ? 'singles' : 'doubles'; c.zone(CT.area('L', gm), col); c.zone(CT.area('R', gm), col); }
+      if(m === 'ssv' || m === 'dsv'){ var gm2 = m === 'ssv' ? 'singles' : 'doubles'; ['right', 'left'].forEach(function(h){ c.zone(CT.area('L', gm2, true, h), h === 'right' ? col : 'rgba(255,255,255,.12)'); c.zone(CT.area('R', gm2, true, h), h === 'right' ? col : 'rgba(255,255,255,.12)'); }); }
+      if(m === 'names'){ dimH(0, K.LEN, -.42, '13.40 m'); dimV(0, K.WID, -.45, '6.10 m'); }
+      if(m === 'sg'){ dimV(K.SW, K.WID - K.SW, K.LEN + .45, '5.18 m'); }
+      if(m === 'ssv'){ dimH(K.NET + K.SS, K.LEN, -.42, '4.72 m'); }
+      if(m === 'dsv'){ dimH(K.NET + K.SS, K.LEN - K.DL, -.42, '3.96 m'); dimH(K.LEN - K.DL, K.LEN, 6.55, '0.76'); }
+      if(m === 'db' || m === 'names'){ dimH(K.NET, K.NET + K.SS, 6.55, '1.98 m'); }
+      document.getElementById('czNote').textContent = NOTE[m];
+      Array.prototype.forEach.call(document.querySelectorAll('[data-cz]'), function(b){ b.classList.toggle('on', b.dataset.cz === m); });
+    }
+    Array.prototype.forEach.call(document.querySelectorAll('[data-cz]'), function(b){ b.onclick = function(){ show(b.dataset.cz); }; });
+    show('names');
+  })();
+}catch(e){ PE_ERR(e, '코트 그림'); }
+
+/* 3. 인과 아웃: 눌러서 셔틀 떨어뜨리기 */
+try{
+  (function(){
+    var svg = document.getElementById('tLine');
+    var c = new CT.Top(svg, {view:{x:10.0, y:-.75, w:4.6, h:3.1}}), E = CT.E;
+    var mode = 'sg', drop = null, R = .0135;
+    var cork = E('circle', {r:R, fill:'#8b5a2b', stroke:'#4a2c10', 'stroke-width':.003}, c.gFoot); cork.style.display = 'none';
+    var ring = E('circle', {r:.11, fill:'none', stroke:'#ffd23f', 'stroke-width':.025}, c.gMarks); ring.style.display = 'none';
+    var zoomG = null, v = document.getElementById('lineVerdict');
+    function rectOf(m){ return m === 'sg' ? CT.area('R', 'singles') : m === 'db' ? CT.area('R', 'doubles') : CT.area('R', 'doubles', true, 'all'); }
+    function dist(p, r){ var dx = Math.max(r.x0 - p.x, 0, p.x - r.x1), dy = Math.max(r.y0 - p.y, 0, p.y - r.y1); return Math.hypot(dx, dy); }
+    function judge(){
+      c.clearZones(); c.zone(rectOf(mode), 'rgba(255,210,63,.16)', '#ffd23f');
+      if(!drop) return;
+      var ok = dist(drop, rectOf(mode)) <= R;
+      var r = rectOf(mode), onLine = ok && (drop.x > r.x1 - K.LW - R || drop.x < r.x0 + K.LW + R || drop.y < r.y0 + K.LW + R || drop.y > r.y1 - K.LW - R);
+      v.className = 'verdict ' + (ok ? 'ok' : 'foul');
+      v.textContent = ok ? (onLine ? '인: 라인에 닿았어요' : '인') : (mode === 'dsv' ? '아웃: 서비스 폴트' : '아웃');
+    }
+    function setDrop(p){
+      drop = p; cork.style.display = ''; ring.style.display = '';
+      cork.setAttribute('cx', p.x); cork.setAttribute('cy', p.y); ring.setAttribute('cx', p.x); ring.setAttribute('cy', p.y);
+      if(zoomG) zoomG.remove();
+      var cx = p.x < 12.3 ? p.x + 1.15 : p.x - 1.15, cy = p.y < .8 ? p.y + 1.05 : p.y - .85;
+      zoomG = c.zoom(p.x, p.y, cx, cy, .62, 9);
+      judge();
+    }
+    svg.addEventListener('pointerdown', function(ev){ try{ setDrop(c.toLocal(ev)); }catch(e){ PE_ERR(e, '인·아웃'); } });
+    var CAP = {sg:'단식 경기: 안쪽 사이드라인 바깥은 아웃이에요.', db:'복식 경기: 바깥쪽 사이드라인과 뒤 경계선까지 인이에요.', dsv:'복식 서브: 롱 서비스 라인 뒤에 떨어지면 서비스 폴트예요.'};
+    Array.prototype.forEach.call(document.querySelectorAll('[data-lm]'), function(b){ b.onclick = function(){ mode = b.dataset.lm; Array.prototype.forEach.call(document.querySelectorAll('[data-lm]'), function(x){ x.classList.toggle('on', x === b); }); document.getElementById('lineCap').textContent = CAP[mode]; judge(); }; });
+    judge();
+    setTimeout(function(){ if(!drop){ setDrop({x:13.36, y:.47}); v.className = 'verdict ok'; } }, 50);
+  })();
+}catch(e){ PE_ERR(e, '인·아웃'); }
+
+/* 4. 전광판 */
+try{
+  (function(){
+    var s = [0, 0], server = 0, over = false;
+    var dg = [document.getElementById('dgB'), document.getElementById('dgR')], msg = document.getElementById('sbMsg');
+    var NAME = ['파랑', '빨강'];
+    function won(a, b){ return a >= 30 || (a >= 21 && a - b >= 2); }
+    function draw(text){
+      dg[0].textContent = s[0]; dg[1].textContent = s[1];
+      document.getElementById('svB').classList.toggle('on', server === 0 && !over);
+      document.getElementById('svR').classList.toggle('on', server === 1 && !over);
+      msg.innerHTML = text;
+    }
+    function add(k){
+      if(over) return;
+      s[k]++; server = k; var o = 1 - k, t;
+      if(won(s[k], s[o])){ over = true; t = '<b>' + NAME[k] + ' 승리!</b> ' + (s[k] === 30 && s[o] === 29 ? '29 : 29에서는 30점을 먼저 얻은 쪽이 이겨요.' : s[k] > 21 ? '20 : 20 뒤에 2점 차로 앞섰어요.' : '21점을 먼저 얻었어요.'); }
+      else if(s[k] === 29 && s[o] === 29){ t = '<b>29 : 29</b> 다음 1점을 얻는 쪽이 이겨요. 2점 차가 아니어도 30점이면 끝!'; }
+      else if(s[k] >= 20 && s[o] >= 20){ t = s[k] === s[o] ? '<b>' + s[k] + ' : ' + s[o] + ' 듀스.</b> 2점 차로 앞서야 이겨요.' : '<b>' + NAME[k] + ' 1점 앞섬.</b> 한 점 더 얻으면 승리, 잃으면 다시 동점이에요.'; }
+      else if(s[k] === 20){ t = '<b>' + NAME[k] + '의 게임 포인트.</b> 다음 1점이면 21점으로 이겨요.'; }
+      else t = NAME[k] + ' 득점! 서브권도 ' + NAME[k] + '에게 가요.';
+      draw(t);
+    }
+    document.getElementById('addB').onclick = function(){ add(0); };
+    document.getElementById('addR').onclick = function(){ add(1); };
+    document.getElementById('sb2020').onclick = function(){ s = [20, 20]; server = 0; over = false; draw('<b>20 : 20 듀스.</b> 이제 2점 차로 앞서야 이겨요.'); };
+    document.getElementById('sb2929').onclick = function(){ s = [29, 29]; server = 0; over = false; draw('<b>29 : 29.</b> 다음 1점을 얻는 쪽이 30점으로 이겨요.'); };
+    document.getElementById('sb00').onclick = function(){ s = [0, 0]; server = 0; over = false; draw('랠리를 이긴 쪽이 1점을 얻어요. 버튼을 눌러 게임을 진행해 보세요.'); };
+    draw(msg.innerHTML);
+  })();
+}catch(e){ PE_ERR(e, '전광판'); }
+
+/* 6. 바른 서브와 높은 서브 */
+try{
+  (function(){
+    var view = {x:2.6, y:-2.75, w:6.6, h:3.1};
+    var base = {actors:[{id:'a', team:'blue', num:7, keys:[[0,3.9]], pose:null}, {id:'b', team:'red', num:3, keys:[[0,9.0]], pose:[[0,'ready']]}]};
+    var c = new CT.Side(document.getElementById('sServe'), {view:view, height:true}), cur = null;
+    function make(kind){
+      if(cur){ cur.pause(); c.gActors.replaceChildren(); c.gMarks.replaceChildren(); c.gFx.replaceChildren(); c.actors = {}; }
+      var high = kind === 'high';
+      var scn = {dur:3.2, hold:{who:'a'}, actors:[
+        {id:'a', team:'blue', num:7, keys:[[0,3.9]], pose:high ? [[0,'stand'],[.5,'serveHigh'],[.75,'serveHigh'],[1.1,'serveEnd']] : [[0,'serveSet'],[.45,'serveSet'],[.75,'serveHit'],[1.1,'serveEnd']]},
+        {id:'b', team:'red', num:3, keys:[[0,9.0]], pose:[[0,'ready']]}],
+        shots:[{t:.75, from:'a', to:high ? 9.2 : 7.3, ang:high ? 12 : 30}],
+        events:high ? [{t:.8, type:'ring', who:'a', until:3.2, color:'#ff6b52'}] : [],
+        marks:high ? [{at:.75, type:'text', x:5.6, z:2.0, text:'1.15 m보다 높아요', color:'#ffb4a6'}] : [{at:.75, type:'text', x:5.6, z:.55, text:'1.15 m 아래에서 쳤어요', color:'#ffd23f'}]};
+      cur = new CT.Scene(c, scn, {loop:true, marks:true, hold:1.4});
+      if(vis && !PE.reduce) cur.play();
+      var v = document.getElementById('serveVerdict');
+      v.className = 'verdict ' + (high ? 'foul' : 'ok'); v.textContent = high ? '폴트: 치는 순간 너무 높아요' : '바른 서브';
+      Array.prototype.forEach.call(document.querySelectorAll('[data-sv]'), function(b){ b.classList.toggle('on', b.dataset.sv === kind); });
+      SC.sServe = cur;
+    }
+    Array.prototype.forEach.call(document.querySelectorAll('[data-sv]'), function(b){ b.onclick = function(){ make(b.dataset.sv); }; });
+    var vis = false, el = document.getElementById('sServe');
+    make('ok');
+    setInterval(function(){
+      var r = el.getBoundingClientRect(), v = r.width > 0 && r.right > 4 && r.left < innerWidth - 4;
+      if(v && !vis){ vis = true; if(!PE.reduce) cur.play(); else cur.seek(cur.s.dur); }
+      if(!v && vis){ vis = false; cur.pause(); }
+    }, 400);
+  })();
+}catch(e){ PE_ERR(e, '서브 그림'); }
+
+/* 7. 서브 위치 */
+try{
+  (function(){
+    var c = new CT.Top(document.getElementById('tPos'), {singles:true}), E = CT.E;
+    var a = c.player('a', 'blue', 7), b = c.player('b', 'red', 3);
+    var n = 0, arrowG = E('g', null, c.gMarks);
+    function draw(){
+      var even = n % 2 === 0, half = even ? 'right' : 'left';
+      c.clearZones();
+      var ra = CT.area('L', 'singles', true, half), rb = CT.area('R', 'singles', true, half);
+      c.zone(ra, 'rgba(110,162,255,.28)', '#a9c8ff'); c.zone(rb, 'rgba(255,210,63,.26)', '#ffd23f');
+      var ay = (ra.y0 + ra.y1) / 2, by = (rb.y0 + rb.y1) / 2;
+      a.pos(4.1, ay); b.pos(9.4, by);
+      arrowG.replaceChildren();
+      E('path', {d:'M4.5 ' + ay + ' Q6.7 ' + (K.WID / 2) + ' 9.0 ' + by, fill:'none', stroke:'#ffd23f', 'stroke-width':.07, 'stroke-dasharray':'.2 .14'}, arrowG);
+      c.label(2.0, ay, '서버', '#cfe0ff', 'middle', .4, arrowG); c.label(11.6, by, '리시버', '#ffd23f', 'middle', .4, arrowG);
+      document.getElementById('posV').textContent = n;
+      document.getElementById('posCall').innerHTML = n + '점 → ' + (even ? (n === 0 ? '0도 짝수' : '짝수') : '홀수') + ' → <em>' + (even ? '오른쪽' : '왼쪽') + '</em>에서 서브';
+    }
+    document.getElementById('posMinus').onclick = function(){ n = Math.max(0, n - 1); draw(); };
+    document.getElementById('posPlus').onclick = function(){ n = Math.min(29, n + 1); draw(); };
+    draw();
+  })();
+}catch(e){ PE_ERR(e, '서브 위치'); }
+
+/* 8. 단식·복식 서비스 코트 */
+try{
+  [['tSvcS', 'singles'], ['tSvcD', 'doubles']].forEach(function(p){
+    var c = new CT.Top(document.getElementById(p[0]), {singles:p[1] === 'singles', view:{x:-.6, y:-.7, w:14.6, h:7.5}});
+    c.zone(CT.area('L', p[1], true, 'right'), 'rgba(110,162,255,.3)', '#a9c8ff');
+    c.zone(CT.area('R', p[1], true, 'right'), 'rgba(255,210,63,.32)', '#ffd23f');
+    var s = new CT.Scene(c, {dur:2.6, hold:{who:'a'}, actors:[{id:'a', team:'blue', num:7, keys:[[0,4.2,4.4]]}, {id:'b', team:'red', num:3, keys:[[0,p[1] === 'singles' ? 10.6 : 9.6, 1.6]]}],
+      shots:[{t:.4, from:'a', to:p[1] === 'singles' ? [12.9, 1.1] : [12.2, .5], ang:40, z:.9}], marks:[{at:0, type:'path', shot:0}, {at:0, type:'land', shot:0}]}, {loop:true, marks:true});
+    CT.loopWhenVisible(s, document.getElementById(p[0]));
+  });
+}catch(e){ PE_ERR(e, '서비스 코트'); }
+
+/* 9. 복식 서비스 순서 */
+try{
+  (function(){
+    var c = new CT.Top(document.getElementById('tDbl')), E = CT.E;
+    var P = {A:c.player('A', 'blue', 'A'), B:c.player('B', 'blue', 'B'), C:c.player('C', 'red', 'C'), D:c.player('D', 'red', 'D')};
+    var st, arrowG = E('g', null, c.gMarks), log = document.getElementById('dblLog'), anim = null;
+    function spot(sideK, half){ var r = CT.area(sideK === 0 ? 'L' : 'R', 'doubles', true, half); return {x:sideK === 0 ? 4.0 : 9.4, y:(r.y0 + r.y1) / 2}; }
+    function reset(){ st = {sc:[0, 0], sv:0, pos:[{right:'A', left:'B'}, {right:'C', left:'D'}]}; place(false); say('0 : 0. 처음에는 서브하는 편의 <b>오른쪽</b>에 선 A가 대각선의 C에게 서브해요.'); }
+    function who(){ var half = st.sc[st.sv] % 2 === 0 ? 'right' : 'left'; return {half:half, server:st.pos[st.sv][half], recv:st.pos[1 - st.sv][half]}; }
+    function place(animate){
+      var targets = {};
+      [0, 1].forEach(function(k){ ['right', 'left'].forEach(function(h){ targets[st.pos[k][h]] = spot(k, h); }); });
+      var from = {}; for(var id in P) from[id] = {x:P[id].x, y:P[id].y};
+      cancelAnimationFrame(anim);
+      var t0 = performance.now(), D = animate && !PE.reduce ? 700 : 0;
+      (function step(now){
+        var u = D ? Math.min(1, (now - t0) / D) : 1; u = u * u * (3 - 2 * u);
+        for(var id in P){ P[id].pos(CT.lerp(from[id].x || targets[id].x, targets[id].x, u), CT.lerp(from[id].y || targets[id].y, targets[id].y, u)); }
+        if(u < 1) anim = requestAnimationFrame(step); else arrows();
+      })(t0);
+      arrowG.replaceChildren(); c.clearZones();
+    }
+    function arrows(){
+      var w = who(), s = P[w.server], r = P[w.recv];
+      c.clearZones(); c.zone(CT.area(st.sv === 0 ? 'R' : 'L', 'doubles', true, w.half), 'rgba(255,210,63,.24)', '#ffd23f');
+      arrowG.replaceChildren();
+      E('path', {d:'M' + s.x + ' ' + s.y + ' Q6.7 3.05 ' + r.x + ' ' + r.y, fill:'none', stroke:'#ffd23f', 'stroke-width':.08, 'stroke-dasharray':'.22 .14'}, arrowG);
+      for(var id in P) P[id].ring(id === w.server, '#ffd23f');
+      document.getElementById('dblScore').textContent = '점수 파랑 ' + st.sc[0] + ' : ' + st.sc[1] + ' 빨강 · 서버 ' + w.server + ' → 리시버 ' + w.recv;
+    }
+    function say(h){ log.innerHTML = h; }
+    function point(k){
+      var before = who(), team = k === 0 ? '파랑' : '빨강';
+      st.sc[k]++;
+      if(k === st.sv){
+        var p = st.pos[k]; var t = p.right; p.right = p.left; p.left = t;
+        var w = who();
+        say(team + ' 득점(' + st.sc[0] + ' : ' + st.sc[1] + '). 서브한 편이 이겼으니 <b>' + before.server + '가 파트너와 자리를 바꿔</b> ' + (w.half === 'right' ? '오른쪽' : '왼쪽') + '에서 또 서브해요.');
+      } else {
+        st.sv = k; var w2 = who();
+        say(team + ' 득점(' + st.sc[0] + ' : ' + st.sc[1] + '). 서브권이 넘어가요. ' + team + ' 점수 ' + st.sc[k] + '는 ' + (st.sc[k] % 2 ? '홀수' : '짝수') + '라서 <b>' + (w2.half === 'right' ? '오른쪽' : '왼쪽') + '에 서 있던 ' + w2.server + '</b>가 서브해요. 아무도 자리를 바꾸지 않아요.');
+      }
+      place(true);
+    }
+    document.getElementById('dblB').onclick = function(){ point(0); };
+    document.getElementById('dblR').onclick = function(){ point(1); };
+    document.getElementById('dbl0').onclick = reset;
+    reset();
+  })();
+}catch(e){ PE_ERR(e, '복식 순서'); }
+
+/* 10. 폴트 6장면 */
+try{
+  var FV = {x:3.3, y:-3.0, w:6.8, h:3.35};
+  var F = {};
+  (function(){
+    var hs = H('smashHit', 5.6), T0 = T([8.7, 1.0], hs, 42);
+    F.f1 = {dur:T0 + 2.6, actors:[{id:'a', team:'blue', num:7, keys:[[0,5.3],[T0 - .3,5.6],[T0 + .3,5.75]], pose:[[0,'ready'],[T0 - .3,'netHigh'],[T0,'smashHit'],[T0 + .3,'netTouch'],[T0 + 1.3,'netTouch'],[T0 + 1.9,'ready']]}, {id:'b', team:'red', num:3, keys:[[0,8.9]], pose:[[0,'ready']]}],
+      shots:[{t:0, from:[8.7,1.0], to:hs[0], toZ:hs[1], ang:42}, {t:T0, from:'prev', to:8.3, ang:-42}],
+      events:[{t:T0 + .28, type:'shake'}, {t:T0 + .3, type:'say', who:'a', text:'네트 터치!', dur:1.8, tone:'foul'}]};
+    var ho = H('netOver', 6.0), T2 = T([8.4, .9], ho, 66);
+    F.f2 = {dur:T2 + 2.4, actors:[{id:'a', team:'blue', num:7, keys:[[0,5.4],[T2 - .35,6.0]], pose:[[0,'ready'],[T2 - .15,'netOver'],[T2 + .4,'netOver'],[T2 + 1.0,'ready']]}, {id:'b', team:'red', num:3, keys:[[0,8.2]], pose:[[0,'under'],[.4,'ready']]}],
+      shots:[{t:0, from:[8.4,.9], to:ho[0], toZ:ho[1], ang:66}, {t:T2, from:'prev', to:9.0, ang:-15}],
+      events:[{t:T2 + .1, type:'say', who:'a', text:'상대 쪽에서 쳤어요', dur:1.9, tone:'foul'}]};
+    var hu = H('under', 5.0), hc = H('overHit', 3.9), T4 = T([8.7, 1.6], hu, 32), T5 = T(hu, hc, 80);
+    F.f4 = {dur:T4 + T5 + 2.6, actors:[{id:'a', team:'blue', num:7, keys:[[0,5.0]], pose:[[0,'ready'],[T4 - .25,'under'],[T4 + .4,'ready']]}, {id:'c', team:'blue', num:5, keys:[[0,3.5],[T4 + T5 - .4,3.9]], pose:[[0,'ready'],[T4 + T5 - .3,'overSet'],[T4 + T5,'overHit'],[T4 + T5 + .3,'follow'],[T4 + T5 + 1.2,'ready']]}, {id:'b', team:'red', num:3, keys:[[0,8.9]], pose:[[0,'ready']]}],
+      shots:[{t:0, from:[8.7,1.6], to:hu[0], toZ:hu[1], ang:32}, {t:T4, from:'prev', to:hc[0], toZ:hc[1], ang:80}, {t:T4 + T5, from:'prev', to:9.6, ang:10}],
+      events:[{t:T4, type:'say', who:'a', text:'한 번', dur:1.0}, {t:T4 + T5, type:'say', who:'c', text:'두 번 → 폴트', dur:1.8, tone:'foul'}]};
+    var h6 = H('overHit', 7.0);
+    F.f6 = {dur:3.6, view:{x:6.2, y:-3.2, w:8.4, h:3.55}, actors:[{id:'a', team:'blue', num:7, keys:[[0,7.0]], pose:[[0,'overSet'],[.3,'overHit'],[.6,'follow'],[1.4,'ready']]}, {id:'b', team:'red', num:3, keys:[[0,11.4],[1.0,12.4]], pose:[[0,'ready'],[1.1,'stand']]}],
+      hold:{xy:[h6[0], h6[1] + .15]}, shots:[{t:.3, from:'a', to:14.0, ang:5}],
+      marks:[{at:0, type:'text', x:14.05, z:.75, text:'밖', color:'#ffb4a6', size:.36}],
+      events:[{t:1.7, type:'say', who:'b', text:'아웃!', dur:1.6, tone:'foul'}]};
+  })();
+  F.f3 = {dur:3.2, actors:[{id:'a', team:'blue', num:7, keys:[[0,4.4]], pose:[[0,'ready'],[.5,'ready'],[.7,'stand']]}, {id:'b', team:'red', num:3, keys:[[0,8.8]], pose:[[0,'overSet'],[.3,'smashHit'],[.6,'follow'],[1.4,'ready']]}],
+    hold:{xy:[8.6, 2.6]}, shots:[{t:.3, from:'b', to:3.0, ang:-12, stop:{x:4.55}}],
+    events:[{t:.75, type:'say', who:'a', text:'몸에 맞음', dur:1.8, tone:'foul'}, {t:.7, type:'ring', who:'a', until:2.6, color:'#ff6b52'}]};
+  F.f5 = {dur:3.0, actors:[{id:'a', team:'blue', num:7, keys:[[0,4.4]], pose:[[0,'ready'],[.35,'under'],[.7,'ready']]}, {id:'b', team:'red', num:3, keys:[[0,8.8]], pose:[[0,'ready']]}],
+    hold:{xy:[4.9,.5]}, shots:[{t:.4, from:[4.9,.45], to:9.0, ang:8}],
+    events:[{t:.95, type:'say', who:'a', text:'네트에 걸림', dur:1.6, tone:'foul'}]};
+  var ORDER = ['f1', 'f2', 'f3', 'f4', 'f5', 'f6'];
+  ORDER.forEach(function(k){
+    var s = mkSide(k, F[k].view || FV, F[k], {loop:true, marks:true, netLabel:false});
+    CT.loopWhenVisible(s, document.getElementById(k));
+  });
+}catch(e){ PE_ERR(e, '폴트 그림'); }
+
+/* 11. 렛: 셔틀이 네트 위에 걸림 */
+try{
+  var hl = H('lunge', 5.0), TL = T([8.0, .9], hl, 30);
+  var sl = mkSide('sLet', {x:2.8, y:-3.1, w:7.8, h:3.45}, {dur:TL + 3.0,
+    actors:[{id:'a', team:'blue', num:7, keys:[[0,4.6],[TL - .3,5.0]], pose:[[0,'ready'],[TL - .3,'lunge'],[TL + .4,'lunge'],[TL + .9,'ready']]}, {id:'b', team:'red', num:3, keys:[[0,8.4]], pose:[[0,'under'],[.4,'ready']]}],
+    shots:[{t:0, from:[8.0,.9], to:hl[0], toZ:hl[1], ang:30}, {t:TL, from:'prev', to:7.4, ang:35, net:'stick'}],
+    events:[{t:TL + .6, type:'say', who:'a', text:'렛!', dur:2.2, tone:'volt'}, {t:TL + .6, type:'say', who:'b', text:'렛!', dur:2.2, tone:'volt'}]
+  }, {loop:true, netLabel:false});
+  CT.loopWhenVisible(sl, document.getElementById('sLet'));
+}catch(e){ PE_ERR(e, '렛 그림'); }
+</script>
+</body>
+</html>
