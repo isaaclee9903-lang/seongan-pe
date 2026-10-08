@@ -177,7 +177,8 @@ header{flex:none;display:flex;align-items:center;gap:12px;padding:6px 12px 6px 1
 nav.board{flex:none;display:flex;align-items:stretch;gap:2px;background:#060b09;padding:6px;overflow-x:auto;scrollbar-width:none;z-index:3}
 nav.board::-webkit-scrollbar{display:none}
 .half{display:flex;align-items:stretch;gap:4px;flex:1;min-width:0}
-.half .hl{writing-mode:vertical-rl;transform:rotate(180deg);font-size:11px;font-weight:800;letter-spacing:.12em;color:rgba(255,255,255,.4);display:flex;align-items:center;justify-content:center;padding:0 4px}
+.half .hl{display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:11px;line-height:1.35;font-weight:800;color:rgba(255,255,255,.5);padding:0 6px;text-align:center;white-space:nowrap}
+.half .hl b{font-family:var(--display);font-weight:400;font-size:15px;color:#fff}
 .tab{flex:1;min-width:120px;min-height:54px;border:0;border-radius:12px;background:#101a15;color:rgba(255,255,255,.75);display:flex;align-items:center;gap:10px;padding:6px 12px;text-align:left;transition:background .2s,color .2s}
 .tab .n{font-family:var(--display);font-size:24px;color:var(--volt);line-height:1;font-variant-numeric:tabular-nums}
 .tab .l{font-weight:800;font-size:15px;line-height:1.25}
@@ -198,15 +199,14 @@ nav.board::-webkit-scrollbar{display:none}
 .hub .sub{color:rgba(255,255,255,.7);font-size:16px;margin:8px 0 0;line-height:1.6;max-width:640px}
 .chips{display:flex;gap:8px;flex-wrap:wrap}
 .chips span{font-size:13px;font-weight:800;padding:6px 12px;border-radius:999px;background:rgba(255,255,255,.08);color:rgba(255,255,255,.85)}
-.pitchwrap{position:relative;width:min(100%,1240px,(100vh - 360px) * 2);margin:0 auto;aspect-ratio:1000/500}
+.pitchwrap{position:relative;width:min(100%,1240px,(100vh - 420px) * 2);margin:0 auto;aspect-ratio:1000/500}
 .pitchwrap svg{position:absolute;inset:0;width:100%;height:100%;border-radius:22px;box-shadow:0 30px 60px -30px #000}
-.st{position:absolute;transform:translate(-50%,-50%);display:flex;align-items:center;gap:10px;border:0;background:none;padding:0;color:#fff;text-align:left}
+.st{position:absolute;transform:translate(-50%,-29px);display:flex;flex-direction:column;align-items:center;gap:8px;border:0;background:none;padding:0;color:#fff;text-align:center}
 .st .dot{flex:none;width:58px;height:58px;border-radius:50%;background:var(--volt);color:var(--turf-950);font-family:var(--display);font-size:24px;display:grid;place-items:center;box-shadow:0 0 0 6px rgba(255,210,63,.25),0 10px 20px -6px rgba(0,0,0,.5);transition:transform .2s}
 .st:hover .dot,.st:focus-visible .dot{transform:scale(1.08)}
-.st .card{background:rgba(7,28,21,.88);border:1px solid rgba(255,255,255,.12);border-radius:14px;padding:8px 12px;backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);width:196px}
+.st .card{background:rgba(7,28,21,.88);border:1px solid rgba(255,255,255,.12);border-radius:14px;padding:8px 12px;backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);width:176px}
 .st .card b{display:block;font-size:16px;font-weight:800}
 .st .card span{display:block;font-size:12.5px;color:rgba(255,255,255,.65);line-height:1.4;margin-top:2px}
-.st.left{flex-direction:row-reverse;text-align:right}
 .st.seen .dot{background:#3fcf7f}
 .hub-list{display:none;max-width:700px;margin:16px auto 0;gap:10px}
 .hub-list button{display:flex;align-items:center;gap:14px;text-align:left;min-height:72px;border-radius:16px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.05);color:#fff;padding:10px 14px}
@@ -217,6 +217,7 @@ nav.board::-webkit-scrollbar{display:none}
 .start{margin-top:14px;display:flex;justify-content:center}
 @media (orientation:portrait),(max-width:900px){
   .st .card{display:none}
+  .st{transform:translate(-50%,-50%)}
   .st .dot{width:48px;height:48px;font-size:20px}
   .hub-list{display:grid}
   .hub{padding:18px 16px 24px}
@@ -477,11 +478,11 @@ PE.glossary = function(G){
 </script>
 <script>
 var PAGES = [
-  {id:'video', n:'01', label:'영상으로 보기', desc:'공식 영상을 보다가 멈추면 퀴즈', half:1, src:'video.html', at:[150, 345]},
-  {id:'rules', n:'02', label:'규칙 읽기', desc:'그림으로 익히는 태그럭비 규칙', half:1, src:'rules.html', at:[330, 140]},
-  {id:'playground', n:'03', label:'규칙 놀이터', desc:'직접 뛰며 패스·태그 규칙 지키기', half:1, src:'playground.html', at:[500, 360]},
-  {id:'referee', n:'04', label:'내가 심판', desc:'경기 장면을 보고 반칙 판정하기', half:2, src:'referee.html', at:[690, 140], left:true},
-  {id:'science', n:'05', label:'경기장 밖 과학', desc:'럭비공에 숨은 힘과 운동', half:2, src:'science.html', at:[905, 330], left:true}
+  {id:'video', n:'01', label:'영상으로 보기', desc:'공식 영상을 보다가 멈추면 퀴즈', half:1, src:'video.html', at:[120, 290]},
+  {id:'rules', n:'02', label:'규칙 읽기', desc:'그림으로 익히는 태그럭비 규칙', half:1, src:'rules.html', at:[300, 100]},
+  {id:'playground', n:'03', label:'규칙 놀이터', desc:'직접 뛰며 패스·태그 규칙 지키기', half:1, src:'playground.html', at:[500, 290]},
+  {id:'referee', n:'04', label:'내가 심판', desc:'경기 장면을 보고 반칙 판정하기', half:2, src:'referee.html', at:[700, 100]},
+  {id:'science', n:'05', label:'경기장 밖 과학', desc:'럭비공에 숨은 힘과 운동', half:2, src:'science.html', at:[880, 290]}
 ];
 </script>
 <script>
@@ -495,7 +496,7 @@ try{
   PAGES.forEach(function(p){
     if(p.half !== lastHalf){
       if(lastHalf) html += '</div><div class="gap"></div>';
-      html += '<div class="half"><span class="hl">' + (p.half === 1 ? '전반 1차시' : '후반 2차시') + '</span>';
+      html += '<div class="half"><span class="hl"><b>' + (p.half === 1 ? '전반' : '후반') + '</b>' + p.half + '차시</span>';
       lastHalf = p.half;
     }
     html += '<button class="tab" role="tab" data-id="' + p.id + '" aria-selected="false"><span class="n">' + p.n + '</span><span class="l">' + p.label + '<small>' + p.desc + '</small></span><span class="seen"></span></button>';
@@ -525,7 +526,7 @@ try{
     path += ' C ' + mx + ' ' + a[1] + ', ' + mx + ' ' + b[1] + ', ' + b[0] + ' ' + b[1];
   }
   E('path', {d:path, fill:'none', stroke:'rgba(255,255,255,.75)', 'stroke-width':4, 'stroke-dasharray':'2 12', 'stroke-linecap':'round'});
-  [[200,110],[230,420],[600,80],[610,440],[790,250]].forEach(function(p){
+  [[200,60],[560,60],[800,245],[360,470],[640,470]].forEach(function(p){
     var g = E('g', {transform:'translate(' + p[0] + ' ' + p[1] + ')', opacity:.6});
     E('path', {d:'M-12 -12 L12 12 M12 -12 L-12 12', stroke:'#ffb4a6', 'stroke-width':5, 'stroke-linecap':'round'}, g);
   });
