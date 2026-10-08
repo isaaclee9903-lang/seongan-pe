@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<!--@@KIT:head.html@@-->
+<title>영상으로 보기 - 태그럭비</title>
+<style>
+/*@@KIT:base.css@@*/
+body{background:var(--turf-950);color:#fff;overflow:hidden}
+.page{position:fixed;inset:0;display:flex;flex-direction:column}
+.top{flex:none;display:flex;align-items:center;gap:14px;padding:6px 16px 6px 18px;min-height:52px;background:var(--turf-900);border-bottom:1px solid rgba(255,255,255,.06)}
+.top .ttl{font-weight:700;font-size:14px;color:rgba(255,255,255,.72);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.top .sc{display:flex;align-items:baseline;gap:8px;font-weight:700;font-size:13px;color:rgba(255,255,255,.6)}
+.top .sc b{font-family:var(--display);font-weight:400;font-size:24px;color:var(--volt);font-variant-numeric:tabular-nums}
+.main{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:18px;padding:16px 18px}
+.left{min-width:0;min-height:0;display:flex;flex-direction:column;gap:12px}
+.vhead{display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap}
+.vhead h1{font-family:var(--display);font-weight:400;font-size:clamp(24px,2.6vw,32px);margin:0;line-height:1.2}
+.vhead .ch{font-size:14px;color:rgba(255,255,255,.6);font-weight:600}
+.stage{position:relative;flex:1;min-height:0;display:flex;align-items:center;justify-content:center}
+.vwrap{position:relative;width:100%;max-height:100%;aspect-ratio:16/9;background:#000;border-radius:18px;overflow:hidden;box-shadow:0 20px 40px -20px #000}
+@supports (aspect-ratio:16/9){.vwrap{height:auto;max-width:calc((100vh - 250px) * 16 / 9)}}
+.vwrap iframe,.vwrap #yt{position:absolute;inset:0;width:100%;height:100%;border:0}
+.cue{position:absolute;inset:0;background:rgba(7,28,21,.93);display:none;align-items:center;justify-content:center;padding:18px;overflow-y:auto;z-index:3}
+.cue.on{display:flex}
+.cue .card{width:100%;max-width:680px;color:#fff}
+.cue .stamp{display:inline-flex;align-items:center;gap:8px;font-weight:800;font-size:13px;color:var(--turf-950);background:var(--volt);border-radius:999px;padding:4px 12px}
+.cue .q{font-size:clamp(18px,2vw,23px);font-weight:800;line-height:1.55;margin:12px 0 14px}
+.cue .opts .opt{background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.16);color:#fff}
+.cue .opts .opt .k{background:rgba(255,255,255,.14);color:#fff}
+.cue .opts .opt.right{background:rgba(21,131,74,.35);border-color:#3fcf7f}
+.cue .opts .opt.wrong{background:rgba(210,55,44,.3);border-color:#ff7d70}
+.cue .fb{color:var(--ink)}
+.cue .acts{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
+.cue .acts .btn{min-height:48px;font-size:16px}
+.tl{flex:none;position:relative;height:44px;margin:0 6px}
+.tl .bar{position:absolute;left:0;right:0;top:19px;height:6px;border-radius:3px;background:rgba(255,255,255,.14)}
+.tl .fill{position:absolute;left:0;top:19px;height:6px;border-radius:3px;background:var(--volt);width:0}
+.tl .pin{position:absolute;top:8px;width:28px;height:28px;margin-left:-14px;border-radius:50%;border:3px solid var(--turf-950);background:#fff;color:var(--turf-950);font-family:var(--display);font-size:13px;display:grid;place-items:center;padding:0}
+.tl .pin.done{background:#3fcf7f}
+.tl .pin.miss{background:#ffb4a6}
+.tl .lab{position:absolute;right:0;top:-2px;font-size:12px;color:rgba(255,255,255,.5);font-weight:700}
+.side{min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:10px;padding-right:2px}
+.side h2{font-size:13px;letter-spacing:.06em;color:rgba(255,255,255,.55);margin:2px 0 2px;font-family:"Pretendard";font-weight:800}
+.vcard{display:grid;grid-template-columns:120px 1fr;gap:12px;align-items:center;text-align:left;padding:8px;border-radius:16px;border:2px solid transparent;background:rgba(255,255,255,.05);color:#fff;min-height:80px}
+.vcard.on{border-color:var(--volt);background:rgba(255,210,63,.08)}
+.vcard .th{position:relative;border-radius:10px;overflow:hidden;aspect-ratio:16/9;background:#123}
+.vcard .th img{width:100%;height:100%;object-fit:cover;display:block}
+.vcard .th .no{position:absolute;left:6px;top:6px;font-family:var(--display);font-size:14px;background:var(--volt);color:var(--turf-950);border-radius:6px;padding:1px 7px}
+.vcard .th .len{position:absolute;right:6px;bottom:6px;font-size:11px;font-weight:700;background:rgba(0,0,0,.75);border-radius:4px;padding:1px 5px}
+.vcard .t{font-weight:800;font-size:15px;line-height:1.35}
+.vcard .m{font-size:12px;color:rgba(255,255,255,.55);margin-top:3px}
+.vcard .dots{display:flex;gap:4px;margin-top:6px}
+.vcard .dots i{width:9px;height:9px;border-radius:50%;background:rgba(255,255,255,.2)}
+.vcard .dots i.done{background:#3fcf7f}
+.vcard .dots i.miss{background:#ffb4a6}
+.howto{font-size:13.5px;line-height:1.6;color:rgba(255,255,255,.65);background:rgba(255,255,255,.04);border-radius:14px;padding:12px 14px}
+.howto b{color:var(--volt)}
+.side .btn{min-height:46px;font-size:15px;box-shadow:none}
+.side .btn.ghost{background:transparent;color:#fff;border-color:rgba(255,255,255,.2)}
+.list{position:fixed;inset:52px 0 0 0;background:var(--paper);color:var(--ink);overflow-y:auto;padding:24px 20px 60px;display:none;z-index:10}
+.list.on{display:block}
+.list .solo h2{color:var(--ink)}
+.notice{position:absolute;inset:0;display:none;align-items:center;justify-content:center;text-align:center;padding:20px;color:#fff;background:#0b120f;z-index:2}
+.notice.on{display:flex}
+@media (max-width:900px),(orientation:portrait){
+  body{overflow:auto}
+  .page{position:static;min-height:100%}
+  .main{grid-template-columns:1fr;padding:14px}
+  .vwrap{max-width:none}
+  .stage{flex:none}
+  .side{overflow:visible}
+  .vcard{grid-template-columns:150px 1fr}
+}
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="top">
+    <div class="ttl">01 영상으로 보기 · 대한럭비협회 공식 영상</div>
+    <div class="sc">맞힌 문제 <b id="score">0 / 0</b></div>
+  </div>
+  <div class="main">
+    <div class="left">
+      <div class="vhead"><h1 id="vTitle">영상</h1><span class="ch" id="vCh"></span></div>
+      <div class="stage">
+        <div class="vwrap">
+          <div id="yt"></div>
+          <div class="notice" id="notice"><div><p style="font-size:18px;font-weight:700">영상을 불러오지 못했어요.</p><p style="color:rgba(255,255,255,.7);font-size:15px">학교 인터넷에서 유튜브가 막혀 있을 수 있어요.<br>오른쪽 아래 <b>「문제만 풀기」</b>로 같은 문제를 풀 수 있어요.</p></div></div>
+          <div class="cue" id="cue"><div class="card" id="cueCard"></div></div>
+        </div>
+      </div>
+      <div class="tl" id="tl"><div class="bar"></div><div class="fill" id="tlFill"></div><div class="lab" id="tlLab"></div></div>
+    </div>
+    <aside class="side">
+      <h2>영상 목록</h2>
+      <div id="vlist" style="display:grid;gap:10px"></div>
+      <div class="howto">영상이 <b>노란 점</b>에 오면 잠깐 멈추고 문제가 나와요. 맞히면 이어서 재생되고, 틀리면 그 장면을 다시 볼 수 있어요.</div>
+      <button class="btn ghost" id="listBtn">영상이 안 나오면: 문제만 풀기</button>
+      <button class="btn volt" data-nav="rules">02 규칙 읽기로 →</button>
+    </aside>
+  </div>
+</div>
+<div class="list" id="list"><div class="solo"><div class="kicker">문제만 풀기</div><h2>영상 문제 모아 보기</h2><p class="note">영상 내용을 바탕으로 만든 문제예요. 영상이 열리면 영상과 함께 푸는 것이 더 좋아요.</p><div id="listQ"></div><button class="btn" id="listClose">영상으로 돌아가기</button></div></div>
+
+<script>
+/*@@KIT:kit.js@@*/
+</script>
+
+<script>
+/* ===== 선생님이 고치기 쉬운 데이터 =====
+   t: 멈출 시각(초), back: '장면 다시 보기'로 돌아갈 시각(초). 시각은 영상 자동 자막 기준이라 실제 재생으로 확인하세요. */
+var VIDEOS = [
+  {id:'_yUm6wbp6DI', title:'몸싸움 없는 태그럭비', ch:'대한럭비협회 · 알쏭달쏭 럭비이야기 제10장', len:'3:00', cues:[
+    {t:52, back:33, q:'태그럭비는 누가, 왜 처음 만들었다고 했나요?', opts:['영국의 체육 선생님이 학교 체육 수업에서 럭비를 하려고', '프로 럭비 선수들이 겨울에 훈련하려고', '축구 선수들이 부상을 줄이려고'], a:0, ex:'1990년 영국의 체육 교사가 학교 수업에서 안전하게 럭비를 하려고 만들었어요.'},
+    {t:76, back:55, q:'태그가 떼이면 공을 든 선수는 어떻게 해야 하나요?', opts:['경기장 밖으로 나간다', '그 자리에 멈추고 패스한다', '계속 달려서 트라이한다'], a:1, ex:'태그가 떼여도 아웃이 아니에요. 그 자리에 멈추고 패스해요.'},
+    {t:112, back:98, q:'태그럭비에서 점수를 얻는 방법은?', opts:['공을 차서 골대 사이로 넣기', '상대 인골에 공을 손으로 내려놓기', '상대 선수의 태그를 많이 떼기'], a:1, ex:'득점 방법은 공을 내려놓는 트라이 하나뿐이에요. 공을 차서 얻는 점수는 없어요.'}
+  ]},
+  {id:'fh8ZwtY01ZU', title:'태그럭비 용품과 경기장', ch:'대한럭비협회 · 제1강', len:'3:20', cues:[
+    {t:62, back:28, q:'영상에서 경기장을 표시할 때 쓴 도구는?', opts:['꼬깔콘(마커콘)', '분필', '줄넘기'], a:0, ex:'꼬깔콘으로 경기장을 표시하고, 학년에 맞게 크기를 줄이거나 넓혀요.'},
+    {t:112, back:78, q:'태그는 어디에 다나요?', opts:['양쪽 골반에 하나씩', '배 앞쪽과 엉덩이 뒤쪽', '한쪽 골반에 두 개'], a:0, ex:'양쪽 골반에 하나씩, 모두 2개를 달아요.'},
+    {t:160, back:133, q:'조끼와 벨트는 어떤 순서로 입나요?', opts:['벨트를 먼저 차고 조끼를 입는다', '조끼를 먼저 입고 그 위에 벨트를 찬다', '순서는 상관없다'], a:1, ex:'벨트를 먼저 차고 조끼를 입으면 태그가 가려져 뗄 수 없어요.'},
+    {t:196, back:160, q:'다음 중 <b>바른</b> 착용은?', opts:['태그를 하나만 달기', '태그를 앞과 뒤에 달기', '양쪽 골반에 태그를 하나씩 달기'], a:2, ex:'하나만 달거나 앞뒤·한쪽에 몰아 다는 것은 모두 잘못된 착용이에요.'}
+  ]},
+  {id:'tGVKW_utmGM', title:'경기 방법과 규칙', ch:'대한럭비협회 · 제2강', len:'3:17', cues:[
+    {t:79, back:50, q:'공을 앞으로 떨어뜨리면? 뒤로 떨어뜨리면?', opts:['둘 다 상대 팀 공', '앞으로: 녹온(상대 공) / 뒤로: 경기 계속', '앞으로: 경기 계속 / 뒤로: 녹온'], a:1, ex:'앞(상대 인골 쪽)으로 놓치면 녹온이에요. 옆이나 뒤로 떨어뜨리면 경기를 계속해요.'},
+    {t:101, back:80, q:'공보다 앞에 있는 같은 팀 친구에게 패스하면?', opts:['포워드 패스 반칙, 상대 팀 공', '좋은 패스로 인정', '한 번은 봐준다'], a:0, ex:'패스는 옆이나 뒤로만 해요. 앞으로 패스하면 상대 팀 공이에요.'},
+    {t:131, back:101, q:'태그를 뗀 뒤 수비는 어떻게 해야 하나요?', opts:['그 자리에 서 있는다', '뒤로 3m 물러난다', '바로 공을 빼앗으러 간다'], a:1, ex:'물러나지 않고 경기를 이어 가면 오프사이드 반칙이에요.'},
+    {t:177, back:150, q:'공격 선수의 반칙이 <b>아닌</b> 것은?', opts:['손으로 수비를 밀어내기', '자기 태그를 손으로 잡고 달리기', '태그를 당한 뒤 멈춰서 옆 친구에게 패스하기'], a:2, ex:'태그 뒤 멈춰서 패스하는 것은 규칙을 지킨 플레이예요.'},
+    {t:189, back:178, q:'수비가 하면 <b>안 되는</b> 행동은?', opts:['"태그!"라고 외치기', '옷을 잡고 태그 떼기', '태그를 뗀 뒤 물러나기'], a:1, ex:'수비는 태그만 떼요. 옷을 잡으면 반칙이에요.'}
+  ]},
+  {id:'XVfzDKMikTU', title:'심판법과 안전 수칙', ch:'대한럭비협회 · 제3강', len:'2:32', cues:[
+    {t:68, back:27, q:'학교 상황에 맞게 정할 수 있다고 한 것이 <b>아닌</b> 것은?', opts:['경기장 크기', '팀 인원과 경기 시간', '몸으로 부딪혀도 되는지'], a:2, ex:'경기장 크기, 인원, 시간, 태그 횟수는 정할 수 있지만 몸 접촉은 언제나 반칙이에요.'},
+    {t:125, back:104, q:'비접촉 태그럭비에서 몸이 부딪히면?', opts:['괜찮다', '모두 반칙(페널티)이다', '공격 팀만 반칙이다'], a:1, ex:'안전이 가장 중요해요. 접촉하는 순간 모두 페널티예요.'},
+    {t:141, back:124, q:'트라이할 때 하지 말아야 할 행동은?', opts:['미끄러지며 넘어지는 슬라이딩', '손으로 공을 눌러 내려놓기', '서서 공 내려놓기'], a:0, ex:'슬라이딩은 다칠 수 있어서 조심해야 해요. 서서 공을 내려놓아요.'}
+  ]}
+];
+</script>
+
+<script>
+try{
+  var cur = 0, player = null, ready = false, tick = null, open = null;
+  var R = {}; // 'v-c' -> true(첫 시도 정답) / false
+  var vlist = document.getElementById('vlist');
+  var total = VIDEOS.reduce(function(s, v){ return s + v.cues.length; }, 0);
+  function key(v, c){ return v + '-' + c; }
+  function score(){
+    var s = 0; for(var k in R) if(R[k] === true) s++;
+    document.getElementById('score').textContent = s + ' / ' + total;
+  }
+  function fmt(t){ t = Math.max(0, Math.floor(t)); return Math.floor(t/60) + ':' + ('0' + t % 60).slice(-2); }
+  function drawList(){
+    vlist.innerHTML = VIDEOS.map(function(v, i){
+      var dots = v.cues.map(function(c, j){ var r = R[key(i, j)]; return '<i class="' + (r === true ? 'done' : r === false ? 'miss' : '') + '"></i>'; }).join('');
+      return '<button class="vcard' + (i === cur ? ' on' : '') + '" data-v="' + i + '"><div class="th"><img alt="" loading="lazy" src="https://i.ytimg.com/vi/' + v.id + '/mqdefault.jpg"><span class="no">' + (i+1) + '</span><span class="len">' + v.len + '</span></div><div><div class="t">' + v.title + '</div><div class="m">' + v.ch + '</div><div class="dots">' + dots + '</div></div></button>';
+    }).join('');
+    Array.prototype.forEach.call(vlist.querySelectorAll('[data-v]'), function(b){ b.onclick = function(){ load(+b.dataset.v); }; });
+  }
+  function drawPins(){
+    var v = VIDEOS[cur], tl = document.getElementById('tl'), dur = durOf(v);
+    Array.prototype.forEach.call(tl.querySelectorAll('.pin'), function(p){ p.remove(); });
+    v.cues.forEach(function(c, j){
+      var p = document.createElement('button'); var r = R[key(cur, j)];
+      p.className = 'pin' + (r === true ? ' done' : r === false ? ' miss' : '');
+      p.style.left = (c.t / dur * 100) + '%'; p.textContent = j + 1;
+      p.setAttribute('aria-label', (j+1) + '번 문제 장면으로');
+      p.onclick = function(){ if(ready){ player.seekTo(c.back, true); player.playVideo(); } };
+      tl.appendChild(p);
+    });
+  }
+  function durOf(v){ var d = ready && player.getDuration ? player.getDuration() : 0; if(d > 0) return d; var m = v.len.split(':'); return +m[0] * 60 + +m[1]; }
+  function load(i){
+    cur = i; var v = VIDEOS[i];
+    document.getElementById('vTitle').textContent = (i+1) + '. ' + v.title;
+    document.getElementById('vCh').textContent = v.ch + ' · ' + v.len;
+    hideCue();
+    if(ready) player.cueVideoById({videoId:v.id, startSeconds:0});
+    drawList(); drawPins();
+  }
+  function hideCue(){ document.getElementById('cue').classList.remove('on'); open = null; }
+  function showCue(j){
+    var v = VIDEOS[cur], c = v.cues[j], k = key(cur, j);
+    open = j;
+    if(ready) player.pauseVideo();
+    var card = document.getElementById('cueCard');
+    card.innerHTML = '<span class="stamp">' + fmt(c.t) + ' · 문제 ' + (j+1) + ' / ' + v.cues.length + '</span><div class="q">' + c.q + '</div><div class="opts"></div><div class="fb"></div><div class="acts"></div>';
+    var box = card.querySelector('.opts'), fb = card.querySelector('.fb'), acts = card.querySelector('.acts');
+    c.opts.forEach(function(o, n){
+      var b = document.createElement('button'); b.className = 'opt';
+      b.innerHTML = '<span class="k">' + (n+1) + '</span><span>' + o + '</span>';
+      b.onclick = function(){
+        var ok = n === c.a;
+        if(!(k in R)) R[k] = ok;
+        b.classList.add(ok ? 'right' : 'wrong');
+        fb.className = 'fb show ' + (ok ? 'ok' : 'no');
+        fb.innerHTML = (ok ? '<b>정답이에요.</b> ' : '<b>아쉬워요.</b> ') + (c.ex || '');
+        acts.innerHTML = '';
+        if(ok){
+          Array.prototype.forEach.call(box.children, function(x){ x.disabled = true; });
+          c._pass = true;
+          var go = document.createElement('button'); go.className = 'btn volt'; go.textContent = '이어서 보기 ▶';
+          go.onclick = function(){ hideCue(); if(ready) player.playVideo(); };
+          acts.appendChild(go);
+        } else {
+          var back = document.createElement('button'); back.className = 'btn volt'; back.textContent = '그 장면 다시 보기 (' + fmt(c.back) + '부터)';
+          back.onclick = function(){ hideCue(); if(ready){ player.seekTo(c.back, true); player.playVideo(); } };
+          acts.appendChild(back);
+        }
+        score(); drawList(); drawPins();
+      };
+      box.appendChild(b);
+    });
+    document.getElementById('cue').classList.add('on');
+  }
+  function poll(){
+    if(!ready || !player.getCurrentTime) return;
+    var v = VIDEOS[cur], t = player.getCurrentTime(), dur = durOf(v);
+    document.getElementById('tlFill').style.width = Math.min(100, t / dur * 100) + '%';
+    document.getElementById('tlLab').textContent = fmt(t) + ' / ' + fmt(dur);
+    if(open != null) return;
+    var st = player.getPlayerState();
+    if(st !== 1) return;
+    for(var j = 0; j < v.cues.length; j++){
+      var c = v.cues[j];
+      if(!c._pass && t >= c.t){ showCue(j); break; }
+    }
+  }
+  window.onYouTubeIframeAPIReady = function(){
+    try{
+      player = new YT.Player('yt', {
+        videoId: VIDEOS[cur].id,
+        playerVars: {rel:0, playsinline:1, modestbranding:1, hl:'ko', cc_lang_pref:'ko'},
+        events: {
+          onReady: function(){ ready = true; drawPins(); tick = setInterval(poll, 250); },
+          onError: function(){ document.getElementById('notice').classList.add('on'); },
+          onStateChange: function(e){
+            if(e.data === 0 && cur < VIDEOS.length - 1){
+              var card = document.getElementById('cueCard');
+              card.innerHTML = '<span class="stamp">영상 끝</span><div class="q">' + VIDEOS[cur].title + ' 영상을 다 봤어요.</div><div class="acts"><button class="btn volt" id="nextV">다음 영상: ' + VIDEOS[cur+1].title + ' ▶</button></div>';
+              document.getElementById('cue').classList.add('on'); open = -1;
+              document.getElementById('nextV').onclick = function(){ load(cur + 1); hideCue(); setTimeout(function(){ player.playVideo(); }, 400); };
+            }
+          }
+        }
+      });
+    }catch(e){ PE_ERR(e, '유튜브'); }
+  };
+  var s = document.createElement('script'); s.src = 'https://www.youtube.com/iframe_api';
+  s.onerror = function(){ document.getElementById('notice').classList.add('on'); };
+  document.head.appendChild(s);
+  setTimeout(function(){ if(!ready) document.getElementById('notice').classList.add('on'); }, 9000);
+  load(0); score();
+
+  /* 문제만 풀기 */
+  document.getElementById('listBtn').onclick = function(){
+    var Q = {}, html = '';
+    VIDEOS.forEach(function(v, i){
+      html += '<h3>' + (i+1) + '. ' + v.title + ' <span class="note">' + v.ch + '</span></h3>';
+      v.cues.forEach(function(c, j){
+        Q['v' + i + 'c' + j] = {type:'mc', src:fmt(c.t), q:c.q, opts:c.opts, a:c.a, ex:c.ex};
+        html += '<div class="quiz" data-q="v' + i + 'c' + j + '"></div>';
+      });
+    });
+    var host = document.getElementById('listQ'); host.innerHTML = html;
+    PE.quiz(Q, {onAnswer:function(id, ok){ var m = id.match(/v(\d+)c(\d+)/), k = key(+m[1], +m[2]); if(!(k in R)) R[k] = ok; if(ok) VIDEOS[+m[1]].cues[+m[2]]._pass = true; score(); drawList(); drawPins(); }});
+    document.getElementById('list').classList.add('on');
+    if(ready) player.pauseVideo();
+  };
+  document.getElementById('listClose').onclick = function(){ document.getElementById('list').classList.remove('on'); };
+}catch(e){ PE_ERR(e, '영상'); }
+</script>
+</body>
+</html>

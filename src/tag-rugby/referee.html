@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<!--@@KIT:head.html@@-->
+<title>내가 심판 - 태그럭비</title>
+<style>
+/*@@KIT:base.css@@*/
+body{background:var(--turf-950);color:#fff;overflow:hidden}
+.page{position:fixed;inset:0;display:flex;flex-direction:column}
+.sb{flex:none;display:flex;align-items:stretch;gap:2px;background:#0a0f0d;min-height:58px}
+.sb .ttl{display:flex;align-items:center;padding:0 18px;font-weight:700;font-size:14px;color:rgba(255,255,255,.72);flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sb .cell{display:flex;flex-direction:column;justify-content:center;align-items:center;padding:4px 18px;background:#111a16;min-width:96px}
+.sb .cell small{font-size:11px;font-weight:800;letter-spacing:.08em;color:rgba(255,255,255,.5)}
+.sb .cell b{font-family:var(--display);font-weight:400;font-size:26px;line-height:1.05;color:var(--volt);font-variant-numeric:tabular-nums}
+.prog{display:flex;gap:4px;align-items:center;padding:0 14px;background:#111a16}
+.prog i{width:12px;height:12px;border-radius:3px;background:rgba(255,255,255,.15)}
+.prog i.on{outline:2px solid var(--volt);outline-offset:1px}
+.prog i.ok{background:#3fcf7f}
+.prog i.no{background:#ff7d70}
+.main{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:16px;padding:14px 16px}
+.left{min-height:0;display:flex;flex-direction:column;justify-content:center}
+.left .vis{padding:10px}
+.left svg.board{max-height:calc(100vh - 200px)}
+.scnHead{display:flex;align-items:center;gap:10px;margin:0 0 10px}
+.scnHead .no{font-family:var(--display);background:var(--volt);color:var(--turf-950);border-radius:8px;padding:3px 10px 2px;font-size:18px}
+.scnHead h1{font-family:var(--display);font-weight:400;font-size:clamp(22px,2.4vw,30px);margin:0;line-height:1.2}
+.speed{font-size:13px;color:rgba(255,255,255,.6);font-weight:700}
+.panel{min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:12px}
+.box{background:rgba(255,255,255,.05);border-radius:18px;padding:16px 18px}
+.box h3{margin:0 0 10px;font-size:13px;letter-spacing:.06em;color:rgba(255,255,255,.55);font-weight:800}
+.ask{font-size:19px;font-weight:800;line-height:1.5;margin:0 0 12px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.dec{min-height:76px;border-radius:16px;border:2px solid rgba(255,255,255,.18);background:rgba(255,255,255,.06);color:#fff;font-size:18px;font-weight:800;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px}
+.dec small{font-size:12.5px;font-weight:600;color:rgba(255,255,255,.6)}
+.dec.play{border-color:#3fcf7f}
+.dec.whistle{border-color:#ff7d70}
+.dec.sel{background:#fff;color:var(--ink)}
+.dec.sel small{color:var(--muted)}
+.dec:disabled{opacity:.35}
+.reasons{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.reasons button{min-height:50px;border-radius:12px;border:2px solid rgba(255,255,255,.16);background:rgba(255,255,255,.05);color:#fff;font-weight:700;font-size:15px;padding:6px 10px;line-height:1.3}
+.reasons button.sel{background:#fff;color:var(--ink)}
+.result{background:#fff;color:var(--ink);border-radius:18px;padding:16px 18px}
+.result .verdict{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.result .verdict .mark{font-family:var(--display);font-size:20px;background:none}
+.result .verdict .mark.ok{color:var(--ok)} .result .verdict .mark.no{color:var(--foul)}
+.result .ans{font-weight:800;font-size:17px;padding:10px 14px;border-radius:12px;margin:8px 0}
+.result .ans.ok{background:var(--ok-soft);color:var(--ok)} .result .ans.foul{background:var(--foul-soft);color:var(--foul)}
+.result p{font-size:16px;line-height:1.7;margin:0 0 10px}
+.result .acts{display:flex;gap:8px;flex-wrap:wrap}
+.result .btn{min-height:48px;font-size:16px;box-shadow:none}
+.final{position:fixed;inset:58px 0 0 0;background:var(--paper);color:var(--ink);overflow-y:auto;padding:28px 20px 60px;display:none;z-index:10}
+.final.on{display:block}
+.rank{font-family:var(--display);font-size:clamp(36px,5vw,56px);margin:.2em 0}
+@media (max-width:900px),(orientation:portrait){
+  body{overflow:auto}
+  .page{position:static;min-height:100%}
+  .main{grid-template-columns:1fr;padding:12px}
+  .left svg.board{max-height:none}
+  .sb .ttl{display:none}
+  .prog{flex:1;flex-wrap:wrap;justify-content:center;padding:6px}
+}
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="sb">
+    <div class="ttl">04 내가 심판 · 장면을 보고 판정하기</div>
+    <div class="prog" id="prog"></div>
+    <div class="cell"><small>장면</small><b id="sNo">1 / 12</b></div>
+    <div class="cell"><small>정확한 판정</small><b id="sOk">0</b></div>
+  </div>
+  <div class="main">
+    <div class="left">
+      <div class="scnHead"><span class="no" id="hNo">1</span><h1 id="hTitle">장면</h1></div>
+      <div class="vis">
+        <svg id="pitch"></svg>
+        <div class="bar">
+          <button class="vbtn" id="bReplay">▶ 다시 보기</button>
+          <button class="vbtn" id="bSlow">느리게 보기</button>
+          <button class="vbtn" id="bMarks" disabled>판정선</button>
+          <span class="grow"></span><span class="speed" id="spd"></span>
+        </div>
+        <div class="model-note">파랑 팀이 오른쪽(상대 인골)으로 공격해요. 노란 네모는 허리의 태그예요.</div>
+      </div>
+    </div>
+    <aside class="panel">
+      <div class="box" id="step1">
+        <h3>1단계</h3>
+        <p class="ask">이 장면, 심판이라면?</p>
+        <div class="two">
+          <button class="dec play" data-d="play">경기 계속<small>정상 플레이</small></button>
+          <button class="dec whistle" data-d="foul">휘슬!<small>반칙이 있어요</small></button>
+        </div>
+      </div>
+      <div class="box" id="step2" style="display:none">
+        <h3>2단계</h3>
+        <p class="ask">어떤 반칙인가요?</p>
+        <div class="reasons" id="reasons"></div>
+      </div>
+      <div class="result" id="result" style="display:none"></div>
+    </aside>
+  </div>
+</div>
+<div class="final" id="final"><div class="solo" id="finalIn"></div></div>
+
+<script>
+/*@@KIT:kit.js@@*/
+</script>
+<script>
+/*@@KIT:board.js@@*/
+</script>
+
+<script>
+/* ===== 판정 종류와 장면 데이터 =====
+   answer: null이면 정상 플레이, 아니면 REASONS의 키 */
+var REASONS = {
+  fwd:'앞으로 패스', knock:'녹온', run:'태그 뒤 계속 달리기', guard:'태그 가리기',
+  handoff:'손으로 밀기', grab:'옷 잡기·몸 접촉', offside:'오프사이드', dive:'다이빙·슬라이딩'
+};
+var V1 = {x:4, y:3, w:32, h:19};
+var SCENES = [
+  {title:'뒤에서 따라오는 친구에게 패스', view:V1, answer:null,
+   ex:'7번이 공을 놓는 순간 10번은 흰 점선(공의 위치)보다 뒤에 있었어요. 뒤로 한 패스라 정상이에요.',
+   dur:3.4, actors:[
+    {id:'b1', team:'blue', num:7, keys:[[0,10,11],[1.9,19.5,11],[2.4,21.5,11.2],[3.4,24,11.5]]},
+    {id:'b2', team:'blue', num:10, keys:[[0,6,16],[1.9,15.5,16],[2.4,18,16],[3.4,22.5,16]]},
+    {id:'r1', team:'red', num:2, keys:[[0,30,10],[1.9,26,10.5],[3.4,24.5,13]]},
+    {id:'r2', team:'red', num:5, keys:[[0,31,17],[3.4,27,16.5]]}],
+   ball:[{on:'b1', t0:0, t1:1.9}, {from:'b1', to:'b2', t0:1.9, t1:2.35}, {on:'b2', t0:2.35, t1:3.4}],
+   marks:[{type:'passline', at:1.9}]},
+  {title:'앞서 달리던 친구에게 패스', view:V1, answer:'fwd',
+   ex:'공을 놓는 순간 10번이 공보다 앞(상대 인골 쪽)에 있었어요. 앞으로 패스 반칙이에요.',
+   dur:3.4, actors:[
+    {id:'b1', team:'blue', num:7, keys:[[0,10,11],[1.9,19.5,11],[2.4,21,11],[3.4,22,11]]},
+    {id:'b2', team:'blue', num:10, keys:[[0,15,16.5],[1.9,23,16.5],[2.4,25,16.5],[3.4,27,16.5]]},
+    {id:'r1', team:'red', num:2, keys:[[0,31,10],[1.9,27,10.5],[3.4,25,12]]},
+    {id:'r2', team:'red', num:5, keys:[[0,33,19],[3.4,30,18]]}],
+   ball:[{on:'b1', t0:0, t1:1.9}, {from:'b1', to:'b2', t0:1.9, t1:2.35}, {on:'b2', t0:2.35, t1:3.4}],
+   marks:[{type:'passline', at:1.9}]},
+  {title:'빠르게 달리며 뒤로 패스', view:V1, answer:null,
+   ex:'7번은 손을 뒤로 뻗어 패스했고, 공을 놓는 순간 10번은 뒤에 있었어요. 그런데 노란 점선을 보면 공이 땅 위에서 조금 앞으로 갔지요? 7번이 빠르게 달리던 빠르기를 공도 함께 가지고 있었기 때문이에요. 그래서 정상 패스예요. 자세한 이유는 05 경기장 밖 과학에서 알아봐요.',
+   dur:3.4, actors:[
+    {id:'b1', team:'blue', num:7, keys:[[0,6,11],[2.0,19,11],[2.6,22.9,11],[3.4,26,11]]},
+    {id:'b2', team:'blue', num:10, keys:[[0,3,15.5],[2.0,16,15.5],[2.7,20.5,15.5],[3.4,24,15.5]]},
+    {id:'r1', team:'red', num:2, keys:[[0,33,11],[3.4,29.5,12]]}],
+   ball:[{on:'b1', t0:0, t1:2.0}, {from:'b1', to:'b2', t0:2.0, t1:2.7}, {on:'b2', t0:2.7, t1:3.4}],
+   marks:[{type:'passline', at:2.0}, {type:'ballpath', t0:2.0, t1:2.7, at:2.7}, {type:'text', at:2.7, x:20.5, y:19.6, text:'공은 땅 위에서 조금 앞으로', color:'#ffd23f'}]},
+  {title:'태그를 당한 뒤', view:V1, answer:'run',
+   ex:'태그를 당하면 3걸음 안에 멈춰야 하는데, 7번은 10걸음 넘게 계속 달렸어요. 태그 지점에서 상대 프리패스예요.',
+   dur:3.2, actors:[
+    {id:'b1', team:'blue', num:7, keys:[[0,8,12],[1.5,16,12],[3.2,24,12.3]]},
+    {id:'b2', team:'blue', num:10, keys:[[0,5,16],[3.2,18,16]]},
+    {id:'r1', team:'red', num:2, keys:[[0,24,11],[1.5,16.9,11.2],[2.4,19.4,9.6],[3.2,20,9]]},
+    {id:'r2', team:'red', num:5, keys:[[0,30,15],[3.2,27,14.5]]}],
+   ball:[{on:'b1', t0:0, t1:3.2}],
+   events:[{t:1.5, type:'tag', who:'b1', side:0}, {t:1.5, type:'say', who:'r1', text:'태그!'}, {t:1.5, type:'raise', who:'r1'}],
+   marks:[{type:'steps', who:'b1', t0:1.5, t1:3.2}]},
+  {title:'태그를 당한 뒤 (2)', view:V1, answer:null,
+   ex:'7번은 한 걸음 만에 멈췄고, 1초 안에 뒤쪽 10번에게 패스했어요. 태그한 2번도 3m 선 뒤로 물러났어요. 모두 규칙을 지켰어요.',
+   dur:3.6, actors:[
+    {id:'b1', team:'blue', num:7, keys:[[0,8,12],[1.5,16,12],[1.85,17.2,12],[3.6,17.2,12]]},
+    {id:'b2', team:'blue', num:10, keys:[[0,4,16],[2.3,13.5,16],[2.8,15.5,16],[3.6,18,16]]},
+    {id:'r1', team:'red', num:2, keys:[[0,24,11],[1.5,16.95,11.2],[2.4,21.4,11],[3.6,21.4,11]]},
+    {id:'r2', team:'red', num:5, keys:[[0,29,15],[1.6,24,15],[3.6,24,15]]}],
+   ball:[{on:'b1', t0:0, t1:2.3}, {from:'b1', to:'b2', t0:2.3, t1:2.75}, {on:'b2', t0:2.75, t1:3.6}],
+   events:[{t:1.5, type:'tag', who:'b1', side:0}, {t:1.5, type:'say', who:'r1', text:'태그!'}, {t:1.5, type:'raise', who:'r1'}],
+   marks:[{type:'steps', who:'b1', t0:1.5, t1:1.85}, {type:'offside', at:1.6, dist:3, ly:20.5, ly2:4.6}]},
+  {title:'수비가 다가올 때', view:V1, answer:'guard',
+   ex:'7번이 손으로 자기 태그를 가리고 달려서 2번이 태그를 뗄 수 없었어요. 태그 가리기 반칙이에요.',
+   dur:3.2, actors:[
+    {id:'b1', team:'blue', num:7, keys:[[0,8,12],[3.2,24,12]]},
+    {id:'b2', team:'blue', num:10, keys:[[0,5,16],[3.2,19,16]]},
+    {id:'r1', team:'red', num:2, keys:[[0,22,7.5],[1.6,16.6,10.4],[2.2,17.6,10.4],[3.2,17.2,9.5]]}],
+   ball:[{on:'b1', t0:0, t1:3.2}],
+   events:[{t:.6, type:'arm', who:'b1', side:0, to:'tag0'}, {t:1.5, type:'arm', who:'r1', side:1, to:'b1', until:2.1}, {t:1.8, type:'say', who:'r1', text:'못 떼겠어!'}],
+   marks:[{type:'ring', who:'b1', at:1.7, r:1.3}, {type:'text', at:1.7, x:16, y:20, text:'손으로 자기 태그를 가림', color:'#ffb4a6'}]},
+  {title:'수비와 마주쳤을 때', view:V1, answer:'handoff',
+   ex:'7번이 팔을 뻗어 2번 수비를 밀어냈어요. 손이나 팔로 수비를 미는 것(핸드오프)은 반칙이에요.',
+   dur:3.2, actors:[
+    {id:'b1', team:'blue', num:7, keys:[[0,8,12],[1.4,15.5,12],[2.1,19,12.2],[3.2,24,12.5]]},
+    {id:'b2', team:'blue', num:10, keys:[[0,5,16],[3.2,19,16]]},
+    {id:'r1', team:'red', num:2, keys:[[0,22,11.5],[1.4,17.1,11.6],[1.75,17.9,10],[2.2,18.5,8.6],[3.2,18.5,8.6]]}],
+   ball:[{on:'b1', t0:0, t1:3.2}],
+   events:[{t:1.35, type:'arm', who:'b1', side:0, to:'r1', until:1.85}, {t:1.7, type:'say', who:'r1', text:'밀었어!', tone:'foul'}],
+   marks:[{type:'ring', who:'r1', at:1.45, r:1.6}, {type:'arrow', at:1.8, from:[17.4,11.2], to:[18.4,8.4], color:'#ff8b75', label:'밀려남'}]},
+  {title:'수비가 태그를 떼는 장면', view:V1, answer:'grab',
+   ex:'2번 수비가 7번의 옷을 붙잡아 멈춘 뒤 태그를 뗐어요. 수비는 태그만 떼야 해요. 옷 잡기는 반칙이에요.',
+   dur:3.0, actors:[
+    {id:'b1', team:'blue', num:7, keys:[[0,8,12],[1.4,15.5,12],[2.2,16.6,12],[3,17,12]]},
+    {id:'b2', team:'blue', num:10, keys:[[0,5,16],[3,16,16]]},
+    {id:'r1', team:'red', num:2, keys:[[0,22,10.4],[1.4,16.6,10.6],[2.2,17.3,10.7],[3,19,10.4]]}],
+   ball:[{on:'b1', t0:0, t1:3}],
+   events:[{t:1.4, type:'arm', who:'r1', side:0, to:'b1', until:2.3}, {t:1.5, type:'arm', who:'r1', side:1, to:'b1', until:2.3}, {t:1.6, type:'say', who:'b1', text:'옷 잡지 마!', tone:'foul', dur:1.1}, {t:2.2, type:'tag', who:'b1', side:0}, {t:2.2, type:'say', who:'r1', text:'태그!'}],
+   marks:[{type:'ring', who:'b1', at:1.7, r:2.1}]},
+  {title:'패스를 받다가', view:V1, answer:'knock',
+   ex:'10번이 패스를 받다가 공을 앞(상대 인골 쪽)으로 떨어뜨렸어요. 녹온이에요. 상대 팀 공이 돼요.',
+   dur:3.0, actors:[
+    {id:'b1', team:'blue', num:7, keys:[[0,12,9],[1.2,17,9],[3,19,9]]},
+    {id:'b2', team:'blue', num:10, keys:[[0,9,13.5],[1.65,15.6,13.5],[2.2,16.6,13.5],[3,16.6,13.5]]},
+    {id:'r1', team:'red', num:2, keys:[[0,28,12],[3,23.5,12.5]]}],
+   ball:[{on:'b1', t0:0, t1:1.2}, {from:'b1', to:'b2', t0:1.2, t1:1.65}, {from:'b2', xy:[20,14.2], t0:1.7, t1:2.4, drop:true}, {xy:[20,14.2], t0:2.4, t1:3}],
+   events:[{t:1.75, type:'say', who:'b2', text:'앗!'}],
+   marks:[{type:'arrow', at:2.4, from:[16.2,16], to:[19.8,16], color:'#ff8b75', label:'앞으로 떨어짐'}]},
+  {title:'패스를 받다가 (2)', view:V1, answer:null,
+   ex:'10번이 공을 놓쳤지만 뒤쪽으로 떨어졌어요. 녹온이 아니에요. 얼른 주워서 경기를 계속하면 돼요.',
+   dur:3.6, actors:[
+    {id:'b1', team:'blue', num:7, keys:[[0,12,9],[1.2,17,9],[3.6,19,9]]},
+    {id:'b2', team:'blue', num:10, keys:[[0,9,13.5],[1.65,15.6,13.5],[2.0,15.9,13.5],[2.6,13.4,14.2],[3.6,18,14]]},
+    {id:'r1', team:'red', num:2, keys:[[0,28,12],[3.6,23,12.5]]}],
+   ball:[{on:'b1', t0:0, t1:1.2}, {from:'b1', to:'b2', t0:1.2, t1:1.65}, {from:'b2', xy:[12.8,14.6], t0:1.7, t1:2.3, drop:true}, {xy:[12.8,14.6], t0:2.3, t1:2.6}, {on:'b2', t0:2.6, t1:3.6}],
+   events:[{t:1.75, type:'say', who:'b2', text:'앗!'}],
+   marks:[{type:'arrow', at:2.3, from:[15.6,16.4], to:[13,16.4], color:'#ffffff', label:'뒤로 떨어짐'}]},
+  {title:'태그 뒤 패스를 가로챔', view:V1, answer:'offside',
+   ex:'7번이 태그를 당했을 때 5번 수비는 공 바로 앞에 있었어요. 3m 선 뒤로 물러나지 않고 패스를 가로챘으니 오프사이드예요.',
+   dur:3.4, actors:[
+    {id:'b1', team:'blue', num:7, keys:[[0,8,11],[1.5,16,11],[1.8,16.8,11],[3.4,16.8,11]]},
+    {id:'b2', team:'blue', num:10, keys:[[0,4,16],[2.4,13,15.8],[3.4,15,15.8]]},
+    {id:'r1', team:'red', num:2, keys:[[0,24,10],[1.5,16.95,10.2],[2.4,20.8,10.2],[3.4,21,10]]},
+    {id:'r2', team:'red', num:5, keys:[[0,24,15.5],[1.5,18.2,14.4],[2.4,17.8,14.2],[2.8,16.8,14.6],[3.4,17.2,14.6]]}],
+   ball:[{on:'b1', t0:0, t1:2.4}, {from:'b1', to:'r2', t0:2.4, t1:2.75}, {on:'r2', t0:2.75, t1:3.4}],
+   events:[{t:1.5, type:'tag', who:'b1', side:0}, {t:1.5, type:'say', who:'r1', text:'태그!'}, {t:1.5, type:'raise', who:'r1'}, {t:2.8, type:'say', who:'r2', text:'가로챘다!'}],
+   marks:[{type:'offside', at:1.6, dist:3, ly:20.5, ly2:4.6}, {type:'ring', who:'r2', at:1.6, r:1.6}]},
+  {title:'인골 앞에서', view:{x:22, y:4, w:26, h:17}, answer:'dive',
+   ex:'9번이 인골에서 미끄러지며 공을 내려놓았어요. 다이빙·슬라이딩은 다칠 수 있어서 반칙이에요. 서서 공을 내려놓아야 해요.',
+   dur:3.2, actors:[
+    {id:'b1', team:'blue', num:9, keys:[[0,26,12.5],[1.6,37,12.5],[2.0,39.6,12.6],[2.4,42.8,12.8],[3.2,43.2,12.8]]},
+    {id:'r1', team:'red', num:2, keys:[[0,32,7],[2.4,38,10],[3.2,38.5,10.5]]}],
+   ball:[{on:'b1', t0:0, t1:2.3}, {from:'b1', xy:[44,13.4], t0:2.3, t1:2.5, place:true}, {xy:[44,13.4], t0:2.5, t1:3.2}],
+   events:[{t:2.0, type:'dive', who:'b1'}, {t:2.1, type:'say', who:'b1', text:'슬라이딩!', tone:'foul', dur:1.1}],
+   marks:[{type:'arrow', at:2.4, from:[38.5,15.2], to:[42.8,15.2], color:'#ff8b75', label:'미끄러짐'}]}
+];
+</script>
+
+<script>
+try{
+(function(){
+  var cur = 0, scene = null, board = null, phase = 'watch', pick = null, res = {};
+  var svgHost = document.getElementById('pitch');
+  var prog = document.getElementById('prog');
+  prog.innerHTML = SCENES.map(function(){ return '<i></i>'; }).join('');
+  var rs = document.getElementById('reasons');
+  rs.innerHTML = Object.keys(REASONS).map(function(k){ return '<button data-r="' + k + '">' + REASONS[k] + '</button>'; }).join('');
+  function $(id){ return document.getElementById(id); }
+  function ui(){
+    $('sNo').textContent = (cur + 1) + ' / ' + SCENES.length;
+    var ok = 0; for(var k in res) if(res[k]) ok++;
+    $('sOk').textContent = ok;
+    Array.prototype.forEach.call(prog.children, function(d, i){ d.className = (i === cur ? 'on ' : '') + (i in res ? (res[i] ? 'ok' : 'no') : ''); });
+  }
+  function load(i){
+    cur = i; phase = 'watch'; pick = null;
+    var s = SCENES[i];
+    var fresh = svgHost.cloneNode(false); svgHost.parentNode.replaceChild(fresh, svgHost); svgHost = fresh;
+    board = new PB.Board(svgHost, {view:s.view});
+    scene = new PB.Scene(board, s, {onEnd:function(){ enable(true); }});
+    $('hNo').textContent = i + 1; $('hTitle').textContent = s.title;
+    $('step1').style.display = ''; $('step2').style.display = 'none'; $('result').style.display = 'none';
+    Array.prototype.forEach.call(document.querySelectorAll('.dec'), function(b){ b.classList.remove('sel'); });
+    Array.prototype.forEach.call(rs.children, function(b){ b.classList.remove('sel'); b.disabled = false; });
+    $('bMarks').disabled = true; $('bMarks').classList.remove('on');
+    enable(false);
+    ui();
+    setTimeout(function(){ play(1); }, 500);
+  }
+  function enable(on){ Array.prototype.forEach.call(document.querySelectorAll('.dec'), function(b){ b.disabled = !on || phase !== 'watch'; }); }
+  function play(sp){ scene.t = 0; scene.play(sp); $('spd').textContent = sp < 1 ? '느리게 ×' + sp : ''; }
+  $('bReplay').onclick = function(){ play(1); };
+  $('bSlow').onclick = function(){ play(.4); };
+  $('bMarks').onclick = function(){ var on = !this.classList.contains('on'); this.classList.toggle('on', on); scene.setMarks(on); };
+  Array.prototype.forEach.call(document.querySelectorAll('.dec'), function(b){
+    b.onclick = function(){
+      if(phase !== 'watch') return;
+      Array.prototype.forEach.call(document.querySelectorAll('.dec'), function(x){ x.classList.toggle('sel', x === b); });
+      if(b.dataset.d === 'play'){ judge(null); }
+      else { phase = 'reason'; $('step2').style.display = ''; enable(false); }
+    };
+  });
+  Array.prototype.forEach.call(rs.children, function(b){
+    b.onclick = function(){
+      if(phase !== 'reason') return;
+      b.classList.add('sel');
+      judge(b.dataset.r);
+    };
+  });
+  function judge(call){
+    phase = 'done'; enable(false);
+    Array.prototype.forEach.call(rs.children, function(b){ b.disabled = true; });
+    var s = SCENES[cur], ok = call === s.answer;
+    if(!(cur in res)) res[cur] = ok;
+    var ans = s.answer ? '반칙: ' + REASONS[s.answer] + ' → 상대 팀 프리패스' : '정상 플레이 → 경기 계속';
+    var r = $('result');
+    r.innerHTML = '<div class="verdict"><span class="mark ' + (ok ? 'ok' : 'no') + '">' + (ok ? '정확한 판정!' : '아쉬운 판정') + '</span></div>' +
+      '<div class="ans ' + (s.answer ? 'foul' : 'ok') + '">' + ans + '</div><p>' + s.ex + '</p>' +
+      '<div class="acts"><button class="btn" id="why">느린 화면으로 이유 보기</button><button class="btn volt" id="next">' + (cur < SCENES.length - 1 ? '다음 장면 →' : '결과 보기 →') + '</button></div>';
+    r.style.display = '';
+    $('bMarks').disabled = false; $('bMarks').classList.add('on');
+    scene.setMarks(true);
+    play(.45);
+    $('why').onclick = function(){ scene.setMarks(true); $('bMarks').classList.add('on'); play(.45); };
+    $('next').onclick = function(){ if(cur < SCENES.length - 1) load(cur + 1); else final(); };
+    ui();
+    r.scrollIntoView({block:'nearest', behavior:'smooth'});
+  }
+  function final(){
+    var ok = 0; for(var k in res) if(res[k]) ok++;
+    var n = SCENES.length;
+    var rank = ok >= n - 1 ? '주심 자격 충분!' : ok >= Math.ceil(n * .7) ? '믿음직한 부심' : '심판 연습생';
+    var miss = SCENES.map(function(s, i){ return i; }).filter(function(i){ return !res[i]; });
+    $('finalIn').innerHTML = '<div class="kicker">판정 결과</div><div class="rank">' + rank + '</div>' +
+      '<div class="scorebox"><div><div class="lbl">정확한 판정</div><div class="digits">' + ok + '<small> / ' + n + '</small></div></div><div style="flex:1;min-width:220px"><div class="msg">심판은 공이 손을 떠나는 순간, 태그가 떼어지는 순간을 봐요. 경기에서도 이 순간을 기억해요.</div></div></div>' +
+      (miss.length ? '<h3>다시 볼 장면</h3><div class="review">' + miss.map(function(i){ return '<button data-i="' + i + '">장면 ' + (i+1) + ' · ' + SCENES[i].title + ' →</button>'; }).join('') + '</div>' : '') +
+      '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:18px"><button class="btn ghost" id="again">처음부터 다시</button><button class="btn volt" data-nav="science">05 경기장 밖 과학으로 →</button></div>';
+    $('final').classList.add('on');
+    Array.prototype.forEach.call(document.querySelectorAll('#finalIn [data-i]'), function(b){ b.onclick = function(){ $('final').classList.remove('on'); load(+b.dataset.i); }; });
+    $('again').onclick = function(){ res = {}; $('final').classList.remove('on'); load(0); };
+  }
+  load(0);
+})();
+}catch(e){ PE_ERR(e, '내가 심판'); }
+</script>
+</body>
+</html>

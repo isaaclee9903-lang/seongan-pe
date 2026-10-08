@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<!--@@KIT:head.html@@-->
+<title>규칙 놀이터 - 태그럭비</title>
+<style>
+/*@@KIT:base.css@@*/
+body{background:var(--turf-950);color:#fff;overflow:hidden}
+.page{position:fixed;inset:0;display:flex;flex-direction:column}
+.sb{flex:none;display:flex;align-items:stretch;gap:2px;background:#0a0f0d;min-height:58px;border-bottom:1px solid rgba(255,255,255,.06)}
+.sb .ttl{display:flex;align-items:center;padding:0 18px;font-weight:700;font-size:14px;color:rgba(255,255,255,.72);flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sb .cell{display:flex;flex-direction:column;justify-content:center;align-items:center;padding:4px 16px;background:#111a16;min-width:86px}
+.sb .cell small{font-size:11px;font-weight:800;letter-spacing:.08em;color:rgba(255,255,255,.5)}
+.sb .cell b{font-family:var(--display);font-weight:400;font-size:26px;line-height:1.05;color:var(--volt);font-variant-numeric:tabular-nums}
+.sb .tags{display:flex;gap:5px;margin-top:4px}
+.sb .tags i{width:13px;height:13px;border-radius:50%;background:rgba(255,255,255,.18)}
+.sb .tags i.on{background:var(--volt)}
+.sb .tags i.on.last{background:var(--foul)}
+.main{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) 330px;gap:16px;padding:14px 16px}
+.field{position:relative;min-height:0;display:flex;align-items:center;justify-content:center}
+.field .vis{width:100%;max-height:100%;padding:10px}
+.field svg.board{touch-action:none;user-select:none;-webkit-user-select:none;max-height:calc(100vh - 140px)}
+.panel{min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:12px}
+.box{background:rgba(255,255,255,.05);border-radius:16px;padding:14px 16px}
+.box h3{margin:0 0 8px;font-size:13px;letter-spacing:.06em;color:rgba(255,255,255,.55);font-weight:800}
+.status{font-size:17px;font-weight:700;line-height:1.55;min-height:54px}
+.status b{color:var(--volt)}
+.mis{list-style:none;padding:0;margin:0;display:grid;gap:8px}
+.mis li{display:flex;gap:10px;align-items:center;font-size:15px;line-height:1.4}
+.mis .ck{flex:none;width:26px;height:26px;border-radius:50%;border:2px solid rgba(255,255,255,.3);display:grid;place-items:center;font-size:12px;font-weight:800}
+.mis li.done .ck{background:#3fcf7f;border-color:#3fcf7f;color:#073}
+.mis li.done span{color:rgba(255,255,255,.55)}
+.mis .cnt{margin-left:auto;font-family:var(--display);color:var(--volt);font-size:15px}
+.toggles{display:flex;flex-wrap:wrap;gap:8px}
+.rules-mini{font-size:14px;line-height:1.7;color:rgba(255,255,255,.75);margin:0;padding-left:18px}
+.rules-mini b{color:#fff}
+.overlay{position:absolute;inset:0;display:none;align-items:center;justify-content:center;padding:16px;z-index:5}
+.overlay.on{display:flex}
+.overlay .card{width:100%;max-width:560px;background:#fff;color:var(--ink);border-radius:22px;padding:24px 26px;box-shadow:0 24px 60px -20px rgba(0,0,0,.6)}
+.overlay .card .whistle{display:inline-flex;align-items:center;gap:8px;font-family:var(--display);font-size:15px;color:#fff;background:var(--foul);border-radius:999px;padding:4px 14px 3px}
+.overlay .card .whistle.ok{background:var(--ok)}
+.overlay .card .whistle.info{background:var(--turf-700)}
+.overlay .card h2{margin:10px 0 6px}
+.overlay .card p{margin:0 0 12px;font-size:17px}
+.overlay .card .res{font-weight:800;background:var(--volt-soft);border-left:5px solid var(--volt);padding:10px 14px;border-radius:0 10px 10px 0;margin-bottom:14px}
+.howto{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:14px 0}
+.howto div{background:#f3f5ef;border-radius:14px;padding:12px;font-size:14.5px;line-height:1.5}
+.howto b{display:block;font-family:var(--display);font-weight:400;font-size:20px;color:var(--turf-600);margin-bottom:4px}
+.ground{position:absolute;right:6%;top:50%;transform:translateY(-50%);display:none;z-index:4;min-height:64px;font-size:20px}
+.ground.on{display:inline-flex}
+@media (max-width:900px),(orientation:portrait){
+  body{overflow:auto}
+  .page{position:static;min-height:100%}
+  .main{grid-template-columns:1fr;padding:12px}
+  .field svg.board{max-height:none}
+  .sb .ttl{display:none}
+  .sb .cell{flex:1;min-width:0;padding:4px 6px}
+  .howto{grid-template-columns:1fr}
+  .overlay{position:fixed;inset:0;background:rgba(4,14,10,.55)}
+}
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="sb">
+    <div class="ttl">03 규칙 놀이터 · 직접 뛰며 규칙 익히기</div>
+    <div class="cell"><small>트라이</small><b id="sTry">0</b></div>
+    <div class="cell"><small>태그</small><b id="sTag">0 / 5</b><div class="tags" id="sTags"></div></div>
+    <div class="cell"><small>반칙</small><b id="sFoul">0</b></div>
+    <div class="cell"><small>태그 후</small><b id="sClock">-</b></div>
+  </div>
+  <div class="main">
+    <div class="field">
+      <div class="vis">
+        <svg id="pitch"></svg>
+        <button class="btn volt ground" id="ground">공 내려놓기</button>
+        <div class="model-note">개념 이해를 위한 놀이 모형이에요. 실제 경기에서는 심판과 선생님이 정한 규칙을 따라요.</div>
+      </div>
+      <div class="overlay on" id="ov"><div class="card" id="ovCard"></div></div>
+    </div>
+    <aside class="panel">
+      <div class="box"><h3>지금 상황</h3><div class="status" id="status">경기장을 누르면 시작해요.</div></div>
+      <div class="box"><h3>미션</h3><ul class="mis" id="mis"></ul></div>
+      <div class="box"><h3>보기 설정</h3>
+        <div class="toggles">
+          <button class="vbtn on" id="tLine">판정선 보이기</button>
+          <button class="vbtn" id="tSlow">수비 느리게</button>
+          <button class="vbtn" id="tReset">처음부터</button>
+        </div>
+      </div>
+      <div class="box"><h3>기억할 규칙</h3>
+        <ol class="rules-mini">
+          <li>패스는 <b>옆이나 뒤로</b>만</li>
+          <li>태그되면 <b>3걸음 안에 멈추고 3초 안에</b> 패스</li>
+          <li>태그한 수비는 <b>3m</b> 물러남</li>
+          <li><b>5번째 태그</b>면 상대 공</li>
+          <li>인골에서 <b>손으로 공을 내려놓아야</b> 트라이</li>
+        </ol>
+      </div>
+      <button class="btn volt" data-nav="referee">04 내가 심판으로 →</button>
+    </aside>
+  </div>
+</div>
+
+<script>
+/*@@KIT:kit.js@@*/
+</script>
+<script>
+/*@@KIT:board.js@@*/
+</script>
+
+<script>
+/* ===== 규칙 값 (선생님이 바꿀 수 있어요) ===== */
+var RULE = {
+  maxTags: 5,        // 이 번째 태그에서 공수교대
+  steps: 3,          // 태그 뒤 멈춰야 하는 걸음 수
+  stepLen: 0.8,      // 한 걸음 길이(m)
+  seconds: 3,        // 태그 뒤 패스해야 하는 시간(초)
+  retreat: 3         // 태그 뒤 수비가 물러나는 거리(m)
+};
+var SPEED = {carrier:5.4, mate:5.6, def:3.7, defSlow:2.7, retreat:5.5};
+var MISSIONS = [
+  {id:'pass', text:'옆이나 뒤로 패스 성공', goal:3},
+  {id:'tagpass', text:'태그된 뒤 멈춰서 3초 안에 패스', goal:2},
+  {id:'try', text:'트라이하기', goal:1},
+  {id:'clean', text:'반칙 없이 공격해서 트라이', goal:1}
+];
+var FOULS = {
+  fwd:   {t:'앞으로 패스', p:'공보다 앞(상대 인골 쪽)에 있던 친구에게 패스했어요. 패스는 옆이나 뒤로만 해요.'},
+  run:   {t:'태그 뒤 계속 달리기', p:'태그를 당하면 3걸음 안에 멈춰야 해요.'},
+  hold:  {t:'3초 넘게 들고 있기', p:'태그를 당하면 3초 안에 옆이나 뒤에 있는 친구에게 패스해요.'},
+  touch: {t:'터치라인 밖', p:'공을 든 채 터치라인 밖으로 나갔어요.'}
+};
+</script>
+
+<script>
+try{
+(function(){
+  var svg = document.getElementById('pitch');
+  var B = new PB.Board(svg, {});
+  var E = PB.E, L = B.L, W = B.W;
+  var gM = B.gMarks;
+
+  /* 판정선 */
+  var zoneF = E('rect', {y:0, height:W, fill:'rgba(223,74,47,.2)'}, gM);
+  var pline = E('line', {y1:0, y2:W, stroke:'#fff', 'stroke-width':.18, 'stroke-dasharray':'.6 .35'}, gM);
+  var plab = E('text', {y:1.5, 'font-size':.95, 'font-family':'Black Han Sans, Pretendard', fill:'#ffe1da', stroke:'rgba(0,0,0,.5)', 'stroke-width':.22, 'paint-order':'stroke'}, gM); plab.textContent = '앞 →';
+  var oline = E('line', {y1:0, y2:W, stroke:'#ffd23f', 'stroke-width':.22, 'stroke-dasharray':'.7 .4'}, gM);
+  var olab = E('text', {y:W - 1, 'font-size':.95, 'font-family':'Black Han Sans, Pretendard', fill:'#ffd23f', stroke:'rgba(0,0,0,.5)', 'stroke-width':.22, 'paint-order':'stroke'}, gM); olab.textContent = '3m';
+  var gSteps = E('g', null, gM);
+  var gTarget = E('circle', {r:.5, fill:'none', stroke:'rgba(255,255,255,.6)', 'stroke-width':.12}, gM);
+  /* 3초 시계 */
+  var clockBg = E('circle', {r:1.7, fill:'none', stroke:'rgba(0,0,0,.35)', 'stroke-width':.3}, B.gFx);
+  var clock = E('circle', {r:1.7, fill:'none', stroke:'#ffd23f', 'stroke-width':.3, 'stroke-linecap':'round', 'stroke-dasharray':'10.68 10.68', transform:'rotate(-90)'}, B.gFx);
+
+  var blue = [], red = [];
+  var NUMS_B = [7, 10, 4, 12, 11], NUMS_R = [2, 5, 8, 3, 6];
+  for(var i = 0; i < 5; i++){ blue.push(B.player('b' + i, 'blue', NUMS_B[i])); red.push(B.player('r' + i, 'red', NUMS_R[i])); }
+  var ball = B.ball();
+  var OFF = [[-2.6, -4.6], [-2.6, 4.6], [-5.2, -9], [3.4, 8.2]];
+
+  var S = {}, opt = {line:true, slow:false}, M = {}, score = {try:0, foul:0};
+  MISSIONS.forEach(function(m){ M[m.id] = 0; });
+  var ptr = null, allDone = false;
+
+  function drive(){
+    S = {state:'set', carrier:0, tags:0, t:0, tagT:0, tagPos:null, moved:0, pass:null, retreatUntil:0, fouled:false, steer:null, sinceTag:false};
+    blue.forEach(function(p, i){
+      var o = i === 0 ? [0, 0] : OFF[i - 1];
+      p.x = 6 + o[0]; p.y = 12.5 + o[1]; p.vx = 0; p.vy = 0; p.setTags(true, true); p.say(null); p.ring(false);
+      p.slot = i === 0 ? -1 : i - 1;
+      p.pos(Math.max(-4, p.x), PB.clamp(p.y, 1, 24)); p.face(0);
+    });
+    [4, 9, 12.5, 16, 21].forEach(function(y, i){ var r = red[i]; r.x = 25 + (i % 2) * 2.5; r.y = y; r.pos(r.x, r.y); r.face(180); r.say(null); r.raise(false); });
+    gSteps.replaceChildren();
+    ui();
+    setStatus('경기장을 손가락으로 누르고 있으면 <b>7번</b>이 그쪽으로 달려요. 친구를 톡 누르면 패스해요.');
+  }
+  function C(){ return blue[S.carrier]; }
+  function setStatus(h){ document.getElementById('status').innerHTML = h; }
+  function ui(){
+    document.getElementById('sTry').textContent = score.try;
+    document.getElementById('sFoul').textContent = score.foul;
+    document.getElementById('sTag').textContent = S.tags + ' / ' + RULE.maxTags;
+    var tg = document.getElementById('sTags'); tg.innerHTML = '';
+    for(var i = 0; i < RULE.maxTags; i++){ var d = document.createElement('i'); if(i < S.tags) d.className = 'on' + (i === RULE.maxTags - 1 ? ' last' : ''); tg.appendChild(d); }
+    var ml = document.getElementById('mis');
+    ml.innerHTML = MISSIONS.map(function(m){ var n = Math.min(M[m.id], m.goal); return '<li class="' + (n >= m.goal ? 'done' : '') + '"><span class="ck">' + (n >= m.goal ? '✓' : '') + '</span><span>' + m.text + '</span><span class="cnt">' + n + '/' + m.goal + '</span></li>'; }).join('');
+  }
+  function mission(id){ M[id]++; ui(); if(MISSIONS.every(function(m){ return M[m.id] >= m.goal; }) && !allDone){ allDone = true; setTimeout(function(){ card('ok', '미션 완료', '규칙을 지키며 공격했어요', '<p>앞으로 패스 없이, 태그되면 멈춰서 패스하고, 인골에 공을 내려놓았어요. 다음 페이지에서는 심판이 되어 반칙을 찾아봐요.</p>', '계속 연습하기'); }, 1600); } }
+
+  /* ---- 안내 카드 ---- */
+  var ov = document.getElementById('ov'), ovCard = document.getElementById('ovCard');
+  function card(kind, tag, title, body, btn, res){
+    ovCard.innerHTML = '<span class="whistle ' + kind + '">' + tag + '</span><h2>' + title + '</h2>' + body + (res ? '<div class="res">' + res + '</div>' : '') + '<button class="btn volt" id="ovBtn">' + btn + '</button>';
+    ov.classList.add('on');
+    document.getElementById('ovBtn').onclick = function(){ ov.classList.remove('on'); if(S.state === 'over') drive(); };
+  }
+  card('info', '규칙 놀이터', '파랑 팀 공격수가 되어 보세요', '<div class="howto"><div><b>달리기</b>경기장을 손가락으로 누르고 있으면 공을 든 선수가 그쪽으로 달려요. 손을 떼면 멈춰요.</div><div><b>패스</b>파랑 팀 친구를 톡 누르면 패스해요. 빨간 구역(앞)에 있는 친구는 안 돼요.</div><div><b>태그되면</b>손을 떼서 멈추고, 노란 시계가 다 돌기 전에 패스해요.</div></div><p>오른쪽 인골까지 가서 <b>공 내려놓기</b> 버튼을 누르면 트라이예요.</p>', '시작하기');
+
+  function foul(code, extra){
+    if(S.state === 'over') return;
+    S.state = 'over'; S.fouled = true; score.foul++;
+    var f = FOULS[code];
+    C().say('반칙!', 'foul');
+    ui();
+    setStatus('<b>삐익!</b> ' + f.t);
+    setTimeout(function(){ card('', '휘슬', f.t, '<p>' + f.p + (extra || '') + '</p>', '다시 공격하기', '판정: 상대 팀 프리패스 (공격권이 넘어가요)'); }, 650);
+  }
+  function turnover(){
+    S.state = 'over';
+    setStatus('<b>5번째 태그!</b> 공격권이 상대에게 넘어가요.');
+    setTimeout(function(){ card('info', '공수교대', '5번째 태그를 당했어요', '<p>공격 기회 5번을 모두 썼어요. 수비가 몰려오기 전에 패스를 돌려 빈 곳을 찾아봐요.</p>', '다시 공격하기', '판정: 태그 지점에서 상대 팀 프리패스'); }, 600);
+  }
+
+  /* ---- 손가락 ---- */
+  svg.addEventListener('pointerdown', function(ev){
+    var p = B.toLocal(ev);
+    if(ov.classList.contains('on')) return;
+    for(var i = 0; i < 5; i++){
+      if(i === S.carrier) continue;
+      var m = blue[i];
+      if(Math.hypot(m.x - p.x, m.y - p.y) < 1.9){ tryPass(i); return; }
+    }
+    if(S.state === 'set'){ S.state = 'run'; setStatus('달려요! 빨강 수비가 태그를 떼러 와요.'); }
+    ptr = ev.pointerId; svg.setPointerCapture(ev.pointerId);
+    S.steer = p;
+  });
+  svg.addEventListener('pointermove', function(ev){ if(ev.pointerId === ptr) S.steer = B.toLocal(ev); });
+  function up(ev){ if(ev.pointerId === ptr){ ptr = null; S.steer = null; } }
+  svg.addEventListener('pointerup', up); svg.addEventListener('pointercancel', up);
+
+  function tryPass(i){
+    if(S.state !== 'run' && S.state !== 'tagged') { if(S.state === 'set'){ S.state = 'run'; } else return; }
+    if(S.pass) return;
+    var c = C(), to = blue[i];
+    var bx = ball.x;
+    S.pass = {from:S.carrier, to:i, t:0, dur:.45, x0:ball.x, y0:ball.y, fwd:to.x > bx + .15, wasTagged:S.state === 'tagged'};
+    S.steer = null; ptr = null;
+  }
+
+  /* ---- 매 프레임 ---- */
+  var last = performance.now();
+  function step(now){
+    var dt = Math.min(.05, (now - last) / 1000); last = now;
+    try{ update(dt); }catch(e){ PE_ERR(e, '놀이터'); return; }
+    requestAnimationFrame(step);
+  }
+  function moveToward(p, tx, ty, sp, dt){
+    var dx = tx - p.x, dy = ty - p.y, d = Math.hypot(dx, dy);
+    if(d < .05) return 0;
+    var s = Math.min(d, sp * dt);
+    p.x += dx / d * s; p.y += dy / d * s;
+    p.face(Math.atan2(dy, dx) * 180 / Math.PI);
+    return s;
+  }
+  function update(dt){
+    var c = C(), playing = S.state === 'run' || S.state === 'tagged' || S.state === 'ingoal';
+    S.t += dt;
+    /* 공 가진 선수 */
+    if(playing && S.steer && !S.pass && S.state !== 'ingoal'){
+      var moved = moveToward(c, PB.clamp(S.steer.x, -4.5, 44.5), S.steer.y, SPEED.carrier, dt);
+      if(S.state === 'tagged'){
+        S.moved += moved;
+        var n = Math.floor(S.moved / RULE.stepLen);
+        while(gSteps.childNodes.length < n){
+          var k = gSteps.childNodes.length + 1;
+          E('circle', {cx:c.x, cy:c.y + (k % 2 ? .35 : -.35), r:.26, fill:k > RULE.steps ? '#ff6b52' : '#fff', stroke:'rgba(0,0,0,.35)', 'stroke-width':.05}, gSteps);
+        }
+        if(n > RULE.steps){ foul('run', ' 지금 ' + n + '걸음을 달렸어요.'); }
+      }
+      gTarget.setAttribute('cx', S.steer.x); gTarget.setAttribute('cy', S.steer.y); gTarget.style.display = '';
+    } else gTarget.style.display = 'none';
+    if(playing && (c.y < -.2 || c.y > W + .2)) foul('touch');
+    if(S.state === 'run' && c.x >= L + .3 && !S.pass){
+      S.state = 'ingoal'; S.steer = null; ptr = null;
+      document.getElementById('ground').classList.add('on');
+      setStatus('인골에 들어왔어요! <b>공 내려놓기</b>를 눌러 트라이해요.');
+    }
+    /* 공 */
+    if(S.pass){
+      var P = S.pass; P.t += dt;
+      var to = blue[P.to], u = Math.min(1, P.t / P.dur);
+      var tx = to.x - .3, ty = to.y + .5;
+      ball.set(PB.lerp(P.x0, tx, u), PB.lerp(P.y0, ty, u), Math.atan2(ty - P.y0, tx - P.x0) * 180 / Math.PI, 1.3 * Math.sin(Math.PI * u));
+      if(u >= 1){
+        S.pass = null;
+        if(P.fwd){ S.carrier = P.to; foul('fwd'); }
+        else {
+          if(P.wasTagged){
+            blue[P.from].setTags(true, true); blue[P.from].ring(false);
+            if(S.t - S.tagT <= RULE.seconds) mission('tagpass');
+            S.retreatUntil = S.t + .7;
+          }
+          S.carrier = P.to; S.state = 'run'; S.moved = 0; gSteps.replaceChildren();
+          mission('pass');
+          setStatus('패스 성공! 이제 <b>' + NUMS_B[P.to] + '번</b>이 공을 들었어요.');
+        }
+      }
+    } else if(S.state !== 'grounded'){
+      var a = c.ang * Math.PI / 180;
+      ball.set(c.x + Math.cos(a) * .55 - Math.sin(a) * .55, c.y + Math.sin(a) * .55 + Math.cos(a) * .55, c.ang + 90, 0);
+    }
+    var bx = ball.x;
+    /* 동료 */
+    var sway = Math.sin(S.t * .9) * 4.2;
+    var k = 0;
+    blue.forEach(function(p, i){
+      if(i === S.carrier){ p.pos(p.x, p.y); return; }
+      var o = OFF[k++].slice();
+      if(k === 4) o[0] = sway;
+      var ty = c.y + o[1]; if(ty < 1 || ty > W - 1) ty = c.y - o[1];
+      var tx = Math.min(c.x + o[0], L - .5);
+      if(playing && S.state !== 'set') moveToward(p, tx, PB.clamp(ty, 1, W - 1), SPEED.mate, dt);
+      else { p.x = tx; p.y = PB.clamp(ty, 1, W - 1); p.face(0); }
+      p.pos(p.x, p.y);
+    });
+    c.pos(c.x, c.y);
+    /* 수비 */
+    var retreating = S.state === 'tagged' || S.t < S.retreatUntil;
+    var dsp = opt.slow ? SPEED.defSlow : SPEED.def;
+    var order = red.slice().sort(function(a, b){ return Math.hypot(a.x - c.x, a.y - c.y) - Math.hypot(b.x - c.x, b.y - c.y); });
+    red.forEach(function(r, i){
+      if(S.state === 'set' || S.state === 'over' || S.state === 'grounded'){ r.pos(r.x, r.y); return; }
+      if(retreating){
+        var line = bx + RULE.retreat + .4;
+        if(r.x < line) moveToward(r, line, r.y, SPEED.retreat, dt);
+        else r.face(180);
+      } else if(S.state === 'ingoal'){
+        moveToward(r, Math.min(c.x - 1.8, L - .3), c.y, dsp * .6, dt);
+      } else {
+        var rank = order.indexOf(r);
+        var tx, ty;
+        if(rank < 2){ tx = c.x + 1.0; ty = c.y + (rank ? 1.2 : -.4); }
+        else { var mate = blue[(rank + S.carrier) % 5]; tx = Math.max(mate.x + 3, bx + 1); ty = mate.y; }
+        moveToward(r, Math.min(tx, L - .2), PB.clamp(ty, .5, W - .5), dsp * (rank < 2 ? 1 : .8), dt);
+      }
+      /* 서로 겹치지 않게 */
+      red.forEach(function(o){ if(o === r) return; var dx = r.x - o.x, dy = r.y - o.y, d = Math.hypot(dx, dy); if(d < 1.8 && d > 0){ r.x += dx / d * (1.8 - d) * .5; r.y += dy / d * (1.8 - d) * .5; } });
+      r.pos(r.x, r.y);
+    });
+    /* 태그 */
+    if(S.state === 'run' && !S.pass && !retreating){
+      for(var j = 0; j < red.length; j++){
+        var r = red[j];
+        if(Math.hypot(r.x - c.x, r.y - c.y) < 1.25){
+          S.tags++; S.state = 'tagged'; S.tagT = S.t; S.moved = 0; S.tagger = r;
+          gSteps.replaceChildren();
+          c.setTags(r.y < c.y ? false : true, r.y < c.y ? true : false);
+          r.say('태그!'); r.raise(true);
+          setTimeout(function(rr){ return function(){ rr.say(null); rr.raise(false); }; }(r), 1300);
+          c.ring(true, '#ffd23f');
+          ui();
+          if(S.tags >= RULE.maxTags){ turnover(); }
+          else setStatus('<b>태그!</b> 손을 떼서 멈추고, 3초 안에 옆이나 뒤에 있는 친구를 눌러 패스해요.');
+          break;
+        }
+      }
+    }
+    if(S.state === 'tagged' && !S.pass && S.t - S.tagT > RULE.seconds) foul('hold');
+    /* 3초 시계 */
+    if(S.state === 'tagged'){
+      var left = Math.max(0, 1 - (S.t - S.tagT) / RULE.seconds);
+      clock.setAttribute('stroke-dasharray', (10.68 * left).toFixed(2) + ' 10.68');
+      [clock, clockBg].forEach(function(e){ e.setAttribute('cx', c.x); e.setAttribute('cy', c.y); e.style.display = ''; });
+      clock.setAttribute('transform', 'rotate(-90 ' + c.x + ' ' + c.y + ')');
+      document.getElementById('sClock').textContent = (S.t - S.tagT).toFixed(1) + '초';
+    } else {
+      clock.style.display = clockBg.style.display = 'none';
+      document.getElementById('sClock').textContent = '-';
+    }
+    /* 판정선 */
+    var show = opt.line && S.state !== 'grounded';
+    [zoneF, pline, plab].forEach(function(e){ e.style.display = show ? '' : 'none'; });
+    zoneF.setAttribute('x', bx); zoneF.setAttribute('width', Math.max(0, L + B.IG - bx));
+    pline.setAttribute('x1', bx); pline.setAttribute('x2', bx); plab.setAttribute('x', bx + .5);
+    var showO = opt.line && S.state === 'tagged';
+    [oline, olab].forEach(function(e){ e.style.display = showO ? '' : 'none'; });
+    var ox = bx + RULE.retreat; oline.setAttribute('x1', ox); oline.setAttribute('x2', ox); olab.setAttribute('x', ox + .4);
+    /* 앞에 있는 동료 표시 */
+    blue.forEach(function(p, i){ if(i !== S.carrier && S.state !== 'over') p.ring(opt.line && p.x > bx + .15, '#ff6b52'); });
+    if(S.state === 'tagged') c.ring(true, '#ffd23f');
+  }
+
+  document.getElementById('ground').onclick = function(){
+    if(S.state !== 'ingoal') return;
+    document.getElementById('ground').classList.remove('on');
+    S.state = 'grounded';
+    var c = C(); ball.set(c.x + .9, c.y + .3, 20, 0);
+    c.say('트라이!', 'volt');
+    score.try++; mission('try'); if(!S.fouled) mission('clean');
+    setStatus('<b>트라이! 1점.</b> 인골에 손으로 공을 내려놓았어요.');
+    setTimeout(function(){ S.state = 'over'; drive(); }, 1800);
+  };
+  document.getElementById('tLine').onclick = function(){ opt.line = !opt.line; this.classList.toggle('on', opt.line); };
+  document.getElementById('tSlow').onclick = function(){ opt.slow = !opt.slow; this.classList.toggle('on', opt.slow); };
+  document.getElementById('tReset').onclick = function(){ ov.classList.remove('on'); document.getElementById('ground').classList.remove('on'); drive(); };
+
+  drive();
+  requestAnimationFrame(step);
+})();
+}catch(e){ PE_ERR(e, '규칙 놀이터'); }
+</script>
+</body>
+</html>

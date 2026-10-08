@@ -1,0 +1,953 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&display=swap">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 32 32%22%3E%3Crect width=%2232%22 height=%2232%22 rx=%228%22 fill=%22%230c2a20%22/%3E%3Cellipse cx=%2216%22 cy=%2216%22 rx=%2211%22 ry=%227%22 fill=%22%23fff%22 transform=%22rotate(-30 16 16)%22/%3E%3Cpath d=%22M11 10q-2 6 1 12M21 10q2 6-1 12%22 stroke=%22%23ffd23f%22 stroke-width=%222%22 fill=%22none%22 transform=%22rotate(-30 16 16)%22/%3E%3C/svg%3E">
+
+<title>경기장 밖 과학 - 태그럭비</title>
+<style>
+/* ===== PLAYBOOK 공통 디자인 ===== */
+:root{
+  --turf-950:#071c15; --turf-900:#0c2a20; --turf-800:#123a2c; --turf-700:#175038; --turf-600:#1c6646; --turf-500:#2a8055;
+  --paper:#f6f4ec; --card:#ffffff; --ink:#14201a; --muted:#56655c; --line:#e1e5da;
+  --volt:#ffd23f; --volt-deep:#e6b400; --volt-soft:#fff6d1;
+  --blue:#2563d9; --blue-soft:#e7eefc; --red:#df4a2f; --red-soft:#fdebe6;
+  --ok:#15834a; --ok-soft:#e2f3e8; --foul:#d2372c; --foul-soft:#fce9e7;
+  --display:"Black Han Sans","Pretendard",sans-serif;
+  --fs:18px;
+  --shadow:0 14px 34px -16px rgba(7,28,21,.45);
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{
+  font-family:"Pretendard",-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+  color:var(--ink);background:var(--paper);-webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent;
+  word-break:keep-all;overflow-wrap:break-word;
+}
+button{font:inherit;color:inherit;cursor:pointer;touch-action:manipulation}
+button:focus-visible{outline:3px solid var(--volt);outline-offset:2px}
+svg text{font-family:"Pretendard",sans-serif}
+.dsp{font-family:var(--display);font-weight:400;letter-spacing:-.005em}
+
+/* ---- 가로로 넘기는 카드 묶음 ---- */
+.deck{position:fixed;inset:0;display:flex;flex-direction:column;background:var(--paper)}
+.rail{flex:none;display:flex;align-items:center;gap:14px;padding:6px 14px 6px 18px;background:var(--turf-900);color:#fff;min-height:52px}
+.rail .ttl{font-weight:700;font-size:14px;color:rgba(255,255,255,.72);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:34%}
+.rail .segs{flex:1;display:flex;gap:4px;min-width:0}
+.rail .seg{flex:1;min-width:0;height:40px;border:0;background:none;padding:0;position:relative}
+.rail .seg::before{content:"";position:absolute;left:0;right:0;top:16px;height:8px;border-radius:4px;background:rgba(255,255,255,.15);transition:background .3s}
+.rail .seg.quiz::before{background:rgba(255,255,255,.28)}
+.rail .seg.done::before{background:rgba(255,210,63,.45)}
+.rail .seg.on::before{background:var(--volt);box-shadow:0 0 0 3px rgba(255,210,63,.25)}
+.rail .count{font-family:var(--display);font-size:20px;color:var(--volt);min-width:62px;text-align:right;font-variant-numeric:tabular-nums}
+.rail .fsz{display:flex;gap:4px}
+.rail .fsz button{width:44px;height:40px;border-radius:10px;border:0;background:rgba(255,255,255,.1);color:#fff;font-weight:800}
+.rail .fsz button:last-child{font-size:20px}
+.track{flex:1;display:flex;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;scrollbar-width:none;overscroll-behavior-x:contain;min-height:0}
+.track::-webkit-scrollbar{display:none}
+.slide{flex:0 0 100%;width:100%;height:100%;scroll-snap-align:start;scroll-snap-stop:always;overflow-y:auto;overflow-x:hidden;padding:24px 36px 96px;position:relative}
+.ctrl{position:fixed;right:18px;bottom:16px;display:flex;gap:10px;z-index:20}
+.ctrl button{width:58px;height:58px;border-radius:50%;border:0;background:var(--turf-900);color:#fff;box-shadow:var(--shadow);display:grid;place-items:center;transition:transform .15s,opacity .2s}
+.ctrl button:active{transform:scale(.94)}
+.ctrl button.next{background:var(--volt);color:var(--turf-950)}
+.ctrl button:disabled{opacity:.3;pointer-events:none}
+.swipe-hint{position:fixed;left:50%;bottom:30px;transform:translateX(-50%);background:rgba(12,42,32,.88);color:#fff;font-size:14px;font-weight:700;padding:8px 16px;border-radius:999px;pointer-events:none;z-index:15;transition:opacity .5s}
+
+/* ---- 카드 안 배치 ---- */
+.split{display:grid;grid-template-columns:minmax(0,1.22fr) minmax(0,.78fr);gap:36px;align-items:center;min-height:100%;max-width:1320px;margin:0 auto}
+.split:has(> .txt:first-child),.split.text-first{grid-template-columns:minmax(0,.78fr) minmax(0,1.22fr)}
+.split.even{grid-template-columns:1fr 1fr}
+.split.text-first .txt{order:-1}
+.solo{max-width:900px;margin:0 auto}
+.wide{max-width:1240px;margin:0 auto}
+@media (max-width:900px),(orientation:portrait){
+  .split,.split.even,.split:has(> .txt:first-child),.split.text-first{grid-template-columns:1fr;gap:22px;align-items:start;min-height:0}
+  .split.text-first .txt{order:0}
+  .slide{padding:22px 20px 112px}
+  .rail .ttl{display:none}
+}
+.kicker{display:inline-flex;align-items:center;gap:10px;font-weight:800;font-size:13px;letter-spacing:.06em;color:var(--turf-600)}
+.kicker b{font-family:var(--display);font-weight:400;background:var(--turf-900);color:var(--volt);border-radius:7px;padding:3px 9px 2px;font-size:15px;letter-spacing:0}
+h1.big{font-family:var(--display);font-weight:400;font-size:clamp(40px,5.6vw,68px);line-height:1.1;margin:.25em 0 .3em;letter-spacing:-.01em}
+h2{font-family:var(--display);font-weight:400;font-size:clamp(28px,3.3vw,40px);line-height:1.22;margin:.3em 0 .5em}
+h3{font-size:20px;margin:1em 0 .4em}
+p,li{font-size:var(--fs);line-height:1.8}
+p{margin:0 0 .8em}
+.lead{font-size:calc(var(--fs) + 2px);color:var(--muted)}
+.mark{background:linear-gradient(transparent 58%,rgba(255,210,63,.6) 58%);font-weight:700}
+.rule{display:flex;gap:14px;align-items:flex-start;background:var(--volt-soft);border-left:6px solid var(--volt);padding:14px 18px;border-radius:0 14px 14px 0;margin:14px 0}
+.rule .ico{flex:none;font-family:var(--display);font-size:15px;color:var(--turf-950);background:var(--volt);border-radius:6px;padding:2px 8px 1px;margin-top:4px}
+.rule p{margin:0;font-weight:600}
+.note{font-size:14px;color:var(--muted);line-height:1.6;margin-top:10px}
+.pillrow{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}
+.pill{display:inline-flex;align-items:center;gap:6px;min-height:34px;padding:0 14px;border-radius:999px;background:#fff;border:1px solid var(--line);font-weight:700;font-size:15px}
+.call{display:inline-flex;align-items:center;gap:8px;font-weight:800;padding:5px 14px;border-radius:999px;font-size:15px}
+.call.ok{background:var(--ok-soft);color:var(--ok)}
+.call.foul{background:var(--foul-soft);color:var(--foul)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:10px;min-height:52px;padding:0 24px;border-radius:14px;border:0;background:var(--turf-900);color:#fff;font-weight:800;font-size:17px;text-decoration:none;box-shadow:var(--shadow)}
+.btn.volt{background:var(--volt);color:var(--turf-950)}
+.btn.ghost{background:#fff;color:var(--ink);border:2px solid var(--line);box-shadow:none}
+
+/* ---- 그림 판 (잔디) ---- */
+.vis{background:var(--turf-800);border-radius:24px;padding:12px;box-shadow:var(--shadow);position:relative;overflow:hidden}
+.vis svg.board{display:block;width:100%;height:auto;border-radius:14px}
+.vis .bar{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:10px 4px 2px}
+.vis .bar .grow{flex:1}
+.vis .cap{color:#d5e3da;font-size:14px;line-height:1.5}
+.vbtn{min-height:44px;padding:0 16px;border-radius:999px;border:0;background:rgba(255,255,255,.12);color:#fff;font-weight:700;font-size:15px;display:inline-flex;align-items:center;gap:8px}
+.vbtn.on{background:var(--volt);color:var(--turf-950)}
+.vis.paper{background:#fff;border:1px solid var(--line)}
+.model-note{font-size:12.5px;color:rgba(255,255,255,.55);padding:6px 4px 0}
+.vis.paper .model-note{color:var(--muted)}
+
+/* ---- 퀴즈 ---- */
+.quiz{background:var(--card);border:1px solid var(--line);border-radius:22px;padding:22px 24px;box-shadow:0 8px 24px -18px rgba(0,0,0,.35);margin:0 0 18px}
+.quiz .qn{font-family:var(--display);color:var(--turf-600);font-size:16px;display:flex;align-items:center;gap:8px}
+.quiz .qn .src{font-family:"Pretendard";font-size:13px;font-weight:600;color:var(--muted)}
+.quiz .q{font-size:calc(var(--fs) + 1px);font-weight:700;line-height:1.65;margin:6px 0 14px}
+.opts{display:grid;gap:10px}
+.opts.two{grid-template-columns:1fr 1fr}
+.opt{min-height:54px;text-align:left;padding:12px 16px;border-radius:14px;border:2px solid var(--line);background:#fff;font-size:17px;font-weight:600;display:flex;gap:12px;align-items:center;line-height:1.5;transition:border-color .2s,background .2s}
+.opt .k{flex:none;width:30px;height:30px;border-radius:8px;background:#edf1ea;display:grid;place-items:center;font-family:var(--display);font-size:15px}
+.opt:hover{border-color:#c9d3c4}
+.opt.right{border-color:var(--ok);background:var(--ok-soft)}
+.opt.right .k{background:var(--ok);color:#fff}
+.opt.wrong{border-color:var(--foul);background:var(--foul-soft)}
+.opt.wrong .k{background:var(--foul);color:#fff}
+.opt[disabled]{cursor:default}
+.opts.ox{grid-template-columns:1fr 1fr}
+.opts.ox .opt{justify-content:center;font-family:var(--display);font-size:38px;min-height:88px}
+.opts.pics{grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
+.opts.pics .opt{flex-direction:column;justify-content:flex-start;text-align:center;padding:10px;font-size:15px}
+.opts.pics .opt svg{width:100%;height:auto;max-width:150px}
+.fb{margin-top:12px;padding:12px 16px;border-radius:12px;font-size:16px;line-height:1.7;display:none}
+.fb.show{display:block}
+.fb.ok{background:var(--ok-soft)}
+.fb.no{background:var(--foul-soft)}
+.fb b{font-weight:800}
+.sentence{font-size:calc(var(--fs) + 1px);line-height:2.3;font-weight:600}
+.blank{display:inline-flex;align-items:center;justify-content:center;min-width:92px;min-height:44px;border:0;border-bottom:3px solid var(--turf-500);background:#f1f5ef;border-radius:8px 8px 0 0;padding:0 10px;font-weight:800;color:var(--turf-700);vertical-align:middle;margin:0 2px}
+.blank.right{background:var(--ok-soft);border-color:var(--ok);color:var(--ok)}
+.blank.wrong{background:var(--foul-soft);border-color:var(--foul);color:var(--foul)}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.chip{min-height:46px;padding:0 18px;border-radius:999px;border:2px solid var(--line);background:#fff;font-weight:700;font-size:16px}
+.chip.used{opacity:.35}
+.scorebox{background:#0b120f;color:#fff;border-radius:22px;padding:22px 26px;display:flex;align-items:center;gap:22px;flex-wrap:wrap;box-shadow:var(--shadow)}
+.scorebox .digits{font-family:var(--display);font-size:76px;line-height:1;color:var(--volt);font-variant-numeric:tabular-nums}
+.scorebox .digits small{font-size:34px;color:rgba(255,255,255,.5)}
+.scorebox .lbl{font-weight:700;color:rgba(255,255,255,.7);font-size:15px}
+.scorebox .msg{font-size:18px;font-weight:700;margin-top:4px}
+.review{display:grid;gap:8px;margin-top:14px}
+.review button{min-height:48px;text-align:left;border-radius:12px;border:1px solid var(--line);background:#fff;padding:8px 14px;font-weight:600;font-size:15px}
+
+/* ---- 용어 풀이 ---- */
+.term{border:0;background:none;padding:0;font:inherit;color:inherit;font-weight:700;border-bottom:2px dotted var(--turf-500);cursor:help}
+.gloss{position:fixed;z-index:50;max-width:300px;background:var(--turf-950);color:#fff;border-radius:14px;padding:12px 16px;font-size:15px;line-height:1.6;box-shadow:var(--shadow)}
+.gloss b{color:var(--volt);display:block;font-size:14px;margin-bottom:2px}
+
+/* ---- 등장 효과 (내용을 숨기지 않음) ---- */
+@keyframes rise{from{transform:translateY(16px)}to{transform:none}}
+.slide.enter .rise{animation:rise .55s cubic-bezier(.2,.7,.2,1) both}
+.slide.enter .rise.d1{animation-delay:.08s}.slide.enter .rise.d2{animation-delay:.16s}.slide.enter .rise.d3{animation-delay:.24s}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+
+/* ---- 오류 상자 ---- */
+#errbox{position:fixed;left:12px;right:12px;bottom:12px;z-index:99;background:#b3261e;color:#fff;border-radius:12px;padding:12px 16px;font-size:14px;line-height:1.5;display:none;box-shadow:var(--shadow)}
+
+.sci{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:800;color:#0b5a8a;background:#e3f1fb;border-radius:999px;padding:4px 12px;margin:4px 0 6px}
+.lab{background:#0e1f19;border-radius:24px;padding:14px;box-shadow:var(--shadow);color:#fff}
+.lab svg{display:block;width:100%;height:auto;border-radius:16px}
+.lab .bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:12px 4px 2px}
+.lab .bar .grow{flex:1}
+.lab .read{font-size:16px;font-weight:700;line-height:1.5;padding:10px 6px 2px;min-height:52px}
+.lab .read b{color:var(--volt)}
+.range{display:flex;align-items:center;gap:12px;padding:6px 6px;width:100%}
+.range label{font-size:14px;font-weight:800;color:rgba(255,255,255,.75);min-width:110px}
+.range output{font-family:var(--display);color:var(--volt);font-size:20px;min-width:74px;text-align:right;font-variant-numeric:tabular-nums}
+input[type=range]{flex:1;-webkit-appearance:none;appearance:none;height:34px;background:transparent}
+input[type=range]::-webkit-slider-runnable-track{height:8px;border-radius:4px;background:rgba(255,255,255,.2)}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:34px;height:34px;border-radius:50%;background:var(--volt);margin-top:-13px;border:4px solid #0e1f19;box-shadow:0 0 0 2px var(--volt)}
+input[type=range]::-moz-range-track{height:8px;border-radius:4px;background:rgba(255,255,255,.2)}
+input[type=range]::-moz-range-thumb{width:28px;height:28px;border-radius:50%;background:var(--volt);border:4px solid #0e1f19}
+.hero-ball{width:min(100%,520px);margin:0 auto;display:block;animation:sway 6s ease-in-out infinite;transform-origin:50% 50%}
+@keyframes sway{0%,100%{transform:rotate(-14deg)}50%{transform:rotate(8deg) translateY(-8px)}}
+.qlist{list-style:none;padding:0;margin:16px 0;display:grid;gap:10px}
+.qlist li{background:#fff;border:1px solid var(--line);border-radius:14px;padding:12px 16px;display:flex;gap:12px;align-items:center;font-weight:700}
+.qlist b{font-family:var(--display);font-weight:400;color:var(--turf-950);background:var(--volt);border-radius:8px;width:34px;height:34px;display:grid;place-items:center;flex:none}
+.steps4{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:8px}
+.steps4 button{min-height:48px;border-radius:12px;border:2px solid rgba(255,255,255,.14);background:rgba(255,255,255,.05);color:#fff;font-weight:800;font-size:14px;padding:4px}
+.steps4 button.on{background:var(--volt);color:var(--turf-950);border-color:var(--volt)}
+.era{font-family:var(--display);font-size:24px;color:var(--volt);margin:2px 0}
+.spec{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:14px 0}
+.spec div{background:#fff;border:1px solid var(--line);border-radius:16px;padding:14px;text-align:center}
+.spec small{display:block;font-size:13px;font-weight:800;color:var(--muted)}
+.spec b{display:block;font-family:var(--display);font-weight:400;font-size:24px;margin:4px 0;color:var(--turf-700)}
+.spec span{font-size:13px;color:var(--muted)}
+.eq{display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap;font-family:var(--display);font-size:26px;padding:8px 0}
+.eq .t{background:rgba(255,255,255,.08);border-radius:12px;padding:6px 14px}
+.eq .t.r{background:var(--volt);color:var(--turf-950)}
+.eq small{display:block;font-family:Pretendard;font-size:11px;font-weight:800;opacity:.7;text-align:center}
+.keys{display:grid;gap:10px;margin:14px 0}
+.keys div{background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px 16px;font-size:var(--fs);line-height:1.65}
+.keys b.n{font-family:var(--display);font-weight:400;color:var(--turf-600);margin-right:8px}
+@media (orientation:portrait),(max-width:900px){.spec{grid-template-columns:1fr 1fr 1fr}.steps4{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+<div class="deck" id="deck" data-title="05 경기장 밖 과학">
+<div class="rail">
+  <div class="ttl"></div>
+  <div class="segs"></div>
+  <div class="fsz"><button type="button" aria-label="글자 작게">가</button><button type="button" aria-label="글자 크게">가</button></div>
+  <div class="count">1 / 1</div>
+</div>
+<div class="track">
+
+
+  <!-- 1 표지 -->
+  <section class="slide" data-title="표지">
+    <div class="split">
+      <div class="txt">
+        <div class="kicker rise"><b>05</b>경기장 밖 이야기 · 체육 × 과학</div>
+        <h1 class="big rise d1">럭비공은<br>왜 달걀 모양일까?</h1>
+        <p class="lead rise d2">럭비공은 이상하게 튀고, 회전하며 날아가고, 뒤로 던졌는데 앞으로 가는 것처럼 보이기도 해요. 과학 시간에 배운 <b>힘</b>과 <b>운동</b>으로 그 이유를 풀어 봐요.</p>
+        <ul class="qlist rise d3">
+          <li><b>1</b>럭비공은 왜 이런 모양이 되었을까?</li>
+          <li><b>2</b>럭비공은 왜 어디로 튈지 모를까?</li>
+          <li><b>3</b>뒤로 패스했는데 공이 앞으로 간다면?</li>
+        </ul>
+      </div>
+      <div class="rise d1"><svg class="hero-ball" id="heroBall" viewBox="-170 -120 340 240" role="img" aria-label="럭비공 그림"></svg></div>
+    </div>
+  </section>
+
+  <!-- 2 모양의 역사 -->
+  <section class="slide" data-title="모양의 역사">
+    <div class="split">
+      <div class="lab rise">
+        <svg id="shapeSvg" viewBox="-200 -130 400 260"></svg>
+        <div class="steps4" id="eraBtns"><button class="on">돼지 방광</button><button>고무 튜브</button><button>달걀 모양</button><button>오늘날</button></div>
+        <div class="read" id="eraRead"></div>
+      </div>
+      <div class="txt">
+        <div class="kicker">질문 1 · 역사</div>
+        <h2>처음부터 달걀 모양은 아니었어요</h2>
+        <p>19세기 영국 럭비 마을의 구두 장인들은 부풀린 <b>돼지 방광</b>을 가죽으로 감싸 공을 만들었어요. 방광의 모양을 따라가다 보니 초기 공은 자두처럼 둥글고 크기도 제각각이었어요.</p>
+        <p>그 뒤 <b>고무 튜브와 펌프</b>가 쓰이면서 원하는 모양으로 공을 만들 수 있게 되었어요. 공을 들고 달리고 패스하는 경기가 되면서 공은 점점 손에 쥐기 좋은 <span class="mark">달걀 모양</span>이 되었어요.</p>
+        <p class="note">출처: World Rugby Museum, 「The evolution of the rugby ball」. 공의 크기는 1892년 처음 규칙에 들어갔어요.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3 규격과 공기압 -->
+  <section class="slide" data-title="규격과 공기압">
+    <div class="split">
+      <div class="txt">
+        <div class="kicker">공의 규칙</div>
+        <h2>규칙에 정해진 럭비공</h2>
+        <div class="sci">과학 연결 · 기체의 압력</div>
+        <div class="spec">
+          <div><small>무게</small><b>410~460g</b><span>정규 럭비공</span></div>
+          <div><small>길이</small><b>28~30cm</b><span>긴 쪽</span></div>
+          <div><small>공기압</small><b>약 66~69kPa</b><span>경기 시작 때</span></div>
+        </div>
+        <p>공 안의 공기 입자들은 끊임없이 움직이며 공의 안쪽 벽에 부딪혀요. 이 부딪힘이 공을 밖으로 미는 <b>압력</b>이 되어 공이 탱탱해져요.</p>
+        <p>추운 날에는 입자의 움직임이 느려져서 벽을 미는 힘이 약해지고, 공이 덜 탱탱해질 수 있어요. 그래서 규칙은 경기를 시작할 때의 공기압을 정해 두었어요.</p>
+        <p class="note">출처: World Rugby 경기 규칙 제2조(공). 수업용 공은 크기와 무게가 다를 수 있어요.</p>
+      </div>
+      <div class="lab rise">
+        <svg id="gasSvg" viewBox="-200 -120 400 240"></svg>
+        <div class="bar"><button class="vbtn" data-temp="0">추운 날</button><button class="vbtn on" data-temp="1">보통 날</button><button class="vbtn" data-temp="2">더운 날</button></div>
+        <div class="read" id="gasRead"></div>
+        <div class="model-note">입자의 수와 크기를 크게 줄여 나타낸 모형이에요.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4 바운드 -->
+  <section class="slide" data-title="불규칙한 바운드">
+    <div class="split">
+      <div class="lab rise">
+        <svg id="bounceSvg" viewBox="-220 -230 440 300"></svg>
+        <div class="range"><label for="tilt">떨어지는 각도</label><input type="range" id="tilt" min="-75" max="75" value="35"><output id="tiltOut">35°</output></div>
+        <div class="bar"><button class="vbtn on" id="bBall">럭비공</button><button class="vbtn" id="sBall">축구공</button><span class="grow"></span><button class="btn volt" id="drop" style="min-height:46px">떨어뜨리기</button></div>
+        <div class="read" id="bRead"></div>
+        <div class="model-note">튀는 방향을 보여 주기 위한 모형이에요. 실제 공은 빠르기, 회전, 바닥 상태에 따라 달라져요.</div>
+      </div>
+      <div class="txt">
+        <div class="kicker">질문 2 · 힘</div>
+        <h2>바닥이 미는 힘이 공의 중심을 지날까?</h2>
+        <div class="sci">과학 연결 · 힘의 작용(탄성력)</div>
+        <p>공이 바닥에 닿으면 바닥이 공을 위로 밀어 올려요. <b>축구공</b>은 어느 쪽으로 떨어져도 이 힘이 공의 중심을 향해서, 예상한 대로 똑바로 튀어 올라요.</p>
+        <p><b>럭비공</b>은 뾰족한 끝이 닿는지, 옆면이 닿는지에 따라 바닥이 미는 힘이 <span class="mark">중심을 비껴갈</span> 때가 많아요. 그러면 공이 빙글 돌면서 엉뚱한 방향으로 튀어요.</p>
+        <div class="rule"><span class="ico">해 보기</span><p>각도를 0°(옆으로 누운 공)로 했을 때와 35°로 했을 때 튀는 모습을 비교해 봐요.</p></div>
+        <p class="note">출처: 오클랜드 대학교 물리학 블로그(Willmott, 2015).</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 5 스핀 패스 -->
+  <section class="slide" data-title="스핀 패스">
+    <div class="split">
+      <div class="txt">
+        <div class="kicker">더 알아보기</div>
+        <h2>회전하는 공이 더 곧게 날아가는 까닭</h2>
+        <div class="sci">과학 연결 · 운동을 방해하는 힘(공기 저항)</div>
+        <p>럭비 선수들은 공을 긴 축을 따라 회전시켜 던지는 <b>스핀 패스</b>를 써요. 회전하는 공은 팽이처럼 자세를 유지해서 앞뒤로 뒤집히지 않아요.</p>
+        <p>뾰족한 끝이 앞을 향하면 <b>공기와 맞닿는 면</b>이 작아져서 공기 저항을 덜 받아요. 그래서 공이 더 멀리, 더 곧게 날아가요.</p>
+        <p class="note">태그럭비에서는 가까운 친구에게 짧게 옆 패스를 하는 경우가 많아요. 스핀 패스는 먼 친구에게 패스할 때 쓰는 기술이에요.</p>
+      </div>
+      <div class="lab rise">
+        <svg id="spinSvg" viewBox="0 0 640 330"></svg>
+        <div class="bar"><span class="cap grow" style="color:#cfe0d6;font-size:14px">노란 막대 = 공기와 맞닿는 면의 크기</span><button class="btn volt" id="throw" style="min-height:46px">두 공 던지기</button></div>
+        <div class="model-note">날아간 거리 차이는 이해를 돕기 위해 과장한 모형이에요.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 6 상대 운동 -->
+  <section class="slide" data-title="뒤로 던졌는데 앞으로?">
+    <div class="split">
+      <div class="lab rise">
+        <svg id="relSvg" viewBox="0 0 640 260"></svg>
+        <div class="eq" id="eq"></div>
+        <div class="range"><label for="vRun">달리는 빠르기</label><input type="range" id="vRun" min="0" max="8" step="1" value="6"><output id="vRunOut">6 m/s</output></div>
+        <div class="range"><label for="vThrow">뒤로 던지는 빠르기</label><input type="range" id="vThrow" min="1" max="8" step="1" value="4"><output id="vThrowOut">4 m/s</output></div>
+        <div class="bar"><button class="vbtn on" id="camFan">관중이 보기</button><button class="vbtn" id="camRun">선수와 함께 달리며 보기</button><span class="grow"></span><button class="btn volt" id="relGo" style="min-height:46px">달리며 패스</button></div>
+        <div class="read" id="relRead"></div>
+      </div>
+      <div class="txt">
+        <div class="kicker">질문 3 · 운동</div>
+        <h2>뒤로 던졌는데 공이 앞으로 간다면?</h2>
+        <div class="sci">과학 연결 · 운동(빠르기)</div>
+        <p>앞쪽을 +, 뒤쪽을 −로 정해 봐요. 초속 6m로 달리는 선수가 자기 몸을 기준으로 초속 4m로 공을 뒤로 던지면, 공은 손을 떠나기 전부터 선수와 함께 앞으로 움직이고 있었어요.</p>
+        <p>그래서 관중이 보면 공은 (+6) + (−4) = <span class="mark">+2</span>, 초속 2m로 <b>앞으로</b> 가요. 하지만 선수가 보면 공은 분명히 뒤로 갔어요.</p>
+        <div class="rule"><span class="ico">판정</span><p>심판은 땅 위의 선이 아니라 공이 손을 떠나는 순간, 팔이 뒤로 던졌는지를 봐요. 이 패스는 반칙이 아니에요.</p></div>
+        <p class="note">출처: World Rugby 경기 규칙 용어 정의(앞으로 던지기), 오클랜드 대학교 물리학 블로그(Willmott, 2015). 숫자는 설명을 위한 예시예요.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 7 퀴즈 -->
+  <section class="slide is-quiz" data-title="퀴즈">
+    <div class="solo">
+      <div class="kicker">확인 문제</div>
+      <h2>과학으로 다시 보는 럭비</h2>
+      <div class="quiz" data-q="s1"></div>
+      <div class="quiz" data-q="s2"></div>
+      <div class="quiz" data-q="s3"></div>
+      <div class="quiz" data-q="s4"></div>
+    </div>
+  </section>
+
+  <!-- 8 정리 -->
+  <section class="slide" data-title="정리">
+    <div class="solo">
+      <div class="kicker">정리</div>
+      <h2>오늘 연결한 과학</h2>
+      <div id="score"></div>
+      <div class="keys">
+        <div><b class="n">1</b>럭비공은 돼지 방광 공에서 시작해, 들고 달리고 패스하기 좋은 <b>달걀 모양</b>으로 바뀌었어요.</div>
+        <div><b class="n">2</b>바닥이 미는 힘이 공의 <b>중심을 비껴가면</b> 공이 돌면서 엉뚱한 방향으로 튀어요.</div>
+        <div><b class="n">3</b>달리는 선수가 뒤로 던진 공도 관중에게는 앞으로 가 보일 수 있어요. 판정은 <b>공이 손을 떠나는 순간</b>을 봐요.</div>
+      </div>
+      <div class="rule"><span class="ico">생각해 보기</span><p>럭비공이 축구공처럼 동그랗다면 태그럭비 경기는 어떻게 달라질까요? 짝과 이야기해 봐요.</p></div>
+    </div>
+  </section>
+
+</div>
+<div class="ctrl">
+  <button type="button" class="prev" aria-label="이전 카드"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button>
+  <button type="button" class="next" aria-label="다음 카드"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg></button>
+</div>
+<div class="swipe-hint">옆으로 밀거나 오른쪽 아래 버튼을 눌러 넘겨요</div>
+
+</div>
+
+<script>
+/* ===== PLAYBOOK 공통 스크립트: 오류 상자, 이동, 카드 넘김, 퀴즈, 용어 풀이 ===== */
+(function(){
+  var shown = [];
+  window.PE_ERR = function(e, where){
+    try{
+      var box = document.getElementById('errbox');
+      if(!box){ box = document.createElement('div'); box.id = 'errbox'; document.body.appendChild(box); }
+      var msg = (where ? '[' + where + '] ' : '') + (e && e.message ? e.message : String(e));
+      if(shown.indexOf(msg) > -1) return;
+      shown.push(msg);
+      box.style.display = 'block';
+      box.innerHTML = '<b>화면 일부가 제대로 열리지 않았어요.</b> 새로고침해 보고, 계속되면 선생님께 알려 주세요.<br><small>' + shown.join('<br>').replace(/</g,'&lt;') + '</small>';
+    }catch(_){}
+  };
+  window.addEventListener('error', function(ev){ PE_ERR(ev.error || ev.message, '페이지'); });
+})();
+
+window.PE = window.PE || {};
+
+/* 탭 껍데기로 이동 요청 */
+PE.nav = function(target){
+  try{ if(window.parent && window.parent !== window) window.parent.postMessage({type:'pe-nav', target:target}, '*'); }catch(e){}
+};
+document.addEventListener('click', function(ev){
+  var a = ev.target.closest && ev.target.closest('[data-nav]');
+  if(a){ ev.preventDefault(); PE.nav(a.getAttribute('data-nav')); }
+});
+
+PE.reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/* ---- 카드 넘김 ---- */
+PE.deck = function(root){
+  var track = root.querySelector('.track');
+  var slides = Array.prototype.slice.call(track.children);
+  var segs = root.querySelector('.segs');
+  var count = root.querySelector('.count');
+  var prev = root.querySelector('.ctrl .prev'), next = root.querySelector('.ctrl .next');
+  var idx = -1, seen = {}, listeners = [];
+  var ttl = root.querySelector('.rail .ttl'); if(ttl) ttl.textContent = root.dataset.title || '';
+  slides.forEach(function(s, i){
+    var b = document.createElement('button');
+    b.className = 'seg' + (s.classList.contains('is-quiz') ? ' quiz' : '');
+    b.setAttribute('aria-label', (i+1) + '번째 카드' + (s.dataset.title ? ': ' + s.dataset.title : ''));
+    b.onclick = function(){ go(i); };
+    segs.appendChild(b);
+  });
+  var segEls = segs.children;
+  function go(i, smooth){
+    i = Math.max(0, Math.min(slides.length - 1, i));
+    track.scrollTo({left: i * track.clientWidth, behavior: (smooth === false || PE.reduce) ? 'auto' : 'smooth'});
+  }
+  function update(){
+    var i = Math.round(track.scrollLeft / Math.max(1, track.clientWidth));
+    if(i === idx) return;
+    idx = i; seen[i] = true;
+    slides.forEach(function(s, k){ s.classList.toggle('enter', k === i); s.toggleAttribute('inert', false); });
+    for(var k = 0; k < segEls.length; k++){
+      segEls[k].classList.toggle('on', k === i);
+      segEls[k].classList.toggle('done', !!seen[k] && k !== i);
+    }
+    count.textContent = (i+1) + ' / ' + slides.length;
+    prev.disabled = i === 0; next.disabled = i === slides.length - 1;
+    listeners.forEach(function(fn){ try{ fn(i, slides[i]); }catch(e){ PE_ERR(e, '카드 넘김'); } });
+  }
+  var raf = 0;
+  track.addEventListener('scroll', function(){ cancelAnimationFrame(raf); raf = requestAnimationFrame(update); }, {passive:true});
+  prev.onclick = function(){ go(idx - 1); };
+  next.onclick = function(){ go(idx + 1); };
+  window.addEventListener('resize', function(){ var k = idx; idx = -1; go(k, false); setTimeout(update, 60); });
+  document.addEventListener('keydown', function(e){
+    if(/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)) return;
+    if(e.key === 'ArrowRight' || e.key === 'PageDown'){ go(idx + 1); e.preventDefault(); }
+    if(e.key === 'ArrowLeft' || e.key === 'PageUp'){ go(idx - 1); e.preventDefault(); }
+  });
+  var fsz = root.querySelectorAll('.fsz button');
+  var sizes = [16, 18, 20, 22], si = 1;
+  try{ si = +(localStorage.getItem('pe-fs') || 1); }catch(e){}
+  function applyFs(){ document.documentElement.style.setProperty('--fs', sizes[si] + 'px'); try{ localStorage.setItem('pe-fs', si); }catch(e){} }
+  if(fsz.length === 2){
+    fsz[0].onclick = function(){ si = Math.max(0, si - 1); applyFs(); };
+    fsz[1].onclick = function(){ si = Math.min(sizes.length - 1, si + 1); applyFs(); };
+  }
+  applyFs();
+  var hint = root.querySelector('.swipe-hint');
+  if(hint){ setTimeout(function(){ hint.style.opacity = 0; }, 3800); }
+  setTimeout(update, 30);
+  return {
+    go: go,
+    slides: slides,
+    get idx(){ return idx; },
+    onChange: function(fn){ listeners.push(fn); },
+    indexOf: function(el){ var s = el.closest('.slide'); return slides.indexOf(s); }
+  };
+};
+
+/* ---- 퀴즈 ----
+   QUIZ = { id: {type:'mc'|'ox'|'pics'|'chips', q, opts, a, ex, src} }
+   <div class="quiz" data-q="id"></div> 자리에 그린다. 첫 번째 답만 점수에 넣는다. */
+PE.quiz = function(QUIZ, opt){
+  opt = opt || {};
+  var state = {}; // id -> {first:true/false}
+  var order = [];
+  var nums = {};
+  var holders = document.querySelectorAll('.quiz[data-q]');
+  Array.prototype.forEach.call(holders, function(h, n){
+    var id = h.getAttribute('data-q'), d = QUIZ[id];
+    if(!d){ h.textContent = '문제 데이터 없음: ' + id; return; }
+    order.push(id); nums[id] = order.length;
+    var head = '<div class="qn">문제 ' + order.length + (d.src ? ' <span class="src">' + d.src + '</span>' : '') + '</div>';
+    var q = '<div class="q">' + d.q + '</div>';
+    h.innerHTML = head + q;
+    var fb = document.createElement('div'); fb.className = 'fb';
+    function done(ok){
+      if(!(id in state)) state[id] = ok;
+      fb.className = 'fb show ' + (ok ? 'ok' : 'no');
+      fb.innerHTML = (ok ? '<b>정답이에요.</b> ' : '<b>다시 생각해 봐요.</b> ') + (d.ex || '');
+      if(opt.onAnswer) opt.onAnswer(id, ok, state);
+    }
+    if(d.type === 'chips'){
+      var parts = d.q.split(/\[\[(\d+)\]\]/);
+      var sent = document.createElement('div'); sent.className = 'sentence';
+      var blanks = [];
+      h.querySelector('.q').remove();
+      parts.forEach(function(p, i){
+        if(i % 2 === 0){ sent.appendChild(document.createTextNode(p)); return; }
+        var b = document.createElement('button'); b.className = 'blank'; b.textContent = ' ';
+        b.setAttribute('aria-label', '빈칸'); b._val = null;
+        b.onclick = function(){ if(b._val == null || b.classList.contains('right')) return; b._chip.classList.remove('used'); b._val = null; b.textContent = ' '; b.classList.remove('wrong'); };
+        blanks.push(b); sent.appendChild(b);
+      });
+      h.appendChild(sent);
+      var chips = document.createElement('div'); chips.className = 'chips';
+      d.chips.forEach(function(c){
+        var cb = document.createElement('button'); cb.className = 'chip'; cb.textContent = c;
+        cb.onclick = function(){
+          if(cb.classList.contains('used')) return;
+          var empty = blanks.filter(function(b){ return b._val == null; })[0];
+          if(!empty) return;
+          empty._val = c; empty._chip = cb; empty.textContent = c; cb.classList.add('used');
+          if(blanks.every(function(b){ return b._val != null; })){
+            var ok = blanks.every(function(b, i){ return b._val === d.a[i]; });
+            blanks.forEach(function(b, i){ b.classList.toggle('right', b._val === d.a[i]); b.classList.toggle('wrong', b._val !== d.a[i]); });
+            done(ok);
+          }
+        };
+        chips.appendChild(cb);
+      });
+      h.appendChild(chips);
+    } else {
+      var box = document.createElement('div');
+      var opts = d.type === 'ox' ? ['O', 'X'] : d.opts;
+      box.className = 'opts' + (d.type === 'ox' ? ' ox' : '') + (d.type === 'pics' ? ' pics' : '') + (d.two ? ' two' : '');
+      opts.forEach(function(o, i){
+        var b = document.createElement('button'); b.className = 'opt';
+        b.innerHTML = (d.type === 'ox' ? '' : '<span class="k">' + (i+1) + '</span>') + '<span>' + o + '</span>';
+        b.onclick = function(){
+          var ans = d.type === 'ox' ? (d.a ? 0 : 1) : d.a;
+          var ok = i === ans;
+          b.classList.add(ok ? 'right' : 'wrong');
+          if(ok){ Array.prototype.forEach.call(box.children, function(x){ x.disabled = true; }); }
+          done(ok);
+        };
+        box.appendChild(b);
+      });
+      h.appendChild(box);
+    }
+    h.appendChild(fb);
+  });
+  return {
+    order: order,
+    state: state,
+    nums: nums,
+    score: function(){ var s = 0; order.forEach(function(id){ if(state[id] === true) s++; }); return s; },
+    answered: function(){ return order.filter(function(id){ return id in state; }).length; }
+  };
+};
+
+/* 결과 칸 그리기 */
+PE.renderScore = function(el, quiz, deck, msgs){
+  var n = quiz.order.length, s = quiz.score(), a = quiz.answered();
+  var msg = a < n ? '아직 ' + (n - a) + '문제를 풀지 않았어요.' : (s === n ? msgs[0] : s >= n * 0.6 ? msgs[1] : msgs[2]);
+  var wrong = quiz.order.filter(function(id){ return quiz.state[id] === false; });
+  var html = '<div class="scorebox"><div><div class="lbl">맞힌 문제</div><div class="digits">' + s + '<small> / ' + n + '</small></div></div><div style="flex:1;min-width:200px"><div class="msg">' + msg + '</div></div></div>';
+  if(wrong.length){
+    html += '<div class="review">' + wrong.map(function(id){
+      var h = document.querySelector('.quiz[data-q="' + id + '"]');
+      var label = '틀린 문제 ' + quiz.nums[id] + ' 다시 보기';
+      return '<button data-go="' + deck.indexOf(h) + '">' + label + ' →</button>';
+    }).join('') + '</div>';
+  }
+  el.innerHTML = html;
+  Array.prototype.forEach.call(el.querySelectorAll('[data-go]'), function(b){ b.onclick = function(){ deck.go(+b.dataset.go); }; });
+};
+
+/* ---- 용어 풀이 ---- */
+PE.glossary = function(G){
+  var pop = null;
+  function close(){ if(pop){ pop.remove(); pop = null; } }
+  document.addEventListener('click', function(ev){
+    var t = ev.target.closest && ev.target.closest('.term');
+    close();
+    if(!t) return;
+    var key = t.dataset.t || t.textContent.trim();
+    if(!G[key]) return;
+    pop = document.createElement('div'); pop.className = 'gloss';
+    pop.innerHTML = '<b>' + key + '</b>' + G[key];
+    document.body.appendChild(pop);
+    var r = t.getBoundingClientRect(), pw = pop.offsetWidth, ph = pop.offsetHeight;
+    var x = Math.min(window.innerWidth - pw - 10, Math.max(10, r.left + r.width / 2 - pw / 2));
+    var y = r.bottom + 8; if(y + ph > window.innerHeight - 10) y = r.top - ph - 8;
+    pop.style.left = x + 'px'; pop.style.top = y + 'px';
+    ev.stopPropagation();
+  });
+  document.addEventListener('scroll', close, true);
+};
+
+</script>
+
+<script>
+var QUIZ = {
+  s1: {type:'mc', q:'초기 럭비공이 자두처럼 둥글고 크기가 제각각이었던 까닭은?', opts:['공 안에 돼지 방광을 넣어 만들었기 때문에', '공을 발로 차기 좋게 만들었기 때문에', '규칙에서 둥근 공만 쓰게 했기 때문에'], a:0, ex:'부풀린 돼지 방광의 모양을 따라 공의 모양과 크기가 정해졌어요.'},
+  s2: {type:'mc', q:'럭비공이 바닥에 닿은 뒤 빙글 돌면서 옆으로 튀었어요. 가장 알맞은 설명은?', opts:['럭비공은 축구공보다 가볍기 때문이다', '바닥이 미는 힘이 공의 중심을 비껴갔기 때문이다', '중력이 공을 옆으로 당겼기 때문이다'], a:1, ex:'바닥이 위로 미는 힘이 중심을 지나지 않으면 공이 회전하며 튀는 방향이 바뀌어요.'},
+  s3: {type:'chips', q:'초속 5m로 달리는 선수가 초속 3m로 공을 뒤로 던지면, 관중이 볼 때 공은 초속 [[0]]로 [[1]]으로 간다.', chips:['8m', '2m', '앞', '뒤'], a:['2m', '앞'], ex:'(+5) + (−3) = +2이므로 초속 2m로 앞으로 가요. 그래도 팔은 뒤로 던졌으니 정상 패스예요.'},
+  s4: {type:'ox', q:'관중이 볼 때 공이 앞으로 갔다면, 무조건 앞으로 패스 반칙이다.', a:false, ex:'심판은 공이 손을 떠나는 순간 선수가 뒤로 던졌는지를 봐요. 달리던 빠르기 때문에 공이 앞으로 가 보일 수 있어요.'}
+};
+</script>
+
+<script>
+try{
+  var deck = PE.deck(document.getElementById('deck'));
+  var MS = ['모두 맞혔어요. 체육과 과학이 이렇게 이어져요!', '잘했어요. 틀린 문제를 다시 보고 가요.', '틀린 문제를 다시 보고, 실험을 한 번 더 해 봐요.'];
+  var quiz = PE.quiz(QUIZ, {onAnswer:function(){ PE.renderScore(document.getElementById('score'), quiz, deck, MS); }});
+  PE.renderScore(document.getElementById('score'), quiz, deck, MS);
+}catch(e){ PE_ERR(e, '읽기·퀴즈'); }
+</script>
+
+<script>
+/* ===== 공 그리기 도구 ===== */
+var NS = 'http://www.w3.org/2000/svg';
+function E(tag, a, p){ var e = document.createElementNS(NS, tag); for(var k in a) e.setAttribute(k, a[k]); if(p) p.appendChild(e); return e; }
+function ballSvg(g, rx, ry, kind, id){
+  var d = E('defs', {}, g);
+  var lg = E('radialGradient', {id:id, cx:'.38', cy:'.3', r:'.8'}, d);
+  var c = kind === 'leather' ? ['#d7a46a', '#7a4a1f'] : ['#ffffff', '#b9c4bd'];
+  E('stop', {offset:0, 'stop-color':c[0]}, lg); E('stop', {offset:1, 'stop-color':c[1]}, lg);
+  E('ellipse', {cx:6, cy:ry + 14, rx:rx * .9, ry:10, fill:'rgba(0,0,0,.18)'}, g);
+  E('ellipse', {rx:rx, ry:ry, fill:'url(#' + id + ')', stroke:kind === 'leather' ? '#5a3412' : '#66756c', 'stroke-width':3}, g);
+  if(kind === 'leather'){
+    E('path', {d:'M' + (-rx*.55) + ' ' + (-ry*.92) + ' Q0 ' + (-ry*.35) + ' ' + (rx*.55) + ' ' + (-ry*.92), fill:'none', stroke:'rgba(60,30,10,.5)', 'stroke-width':2.5}, g);
+    E('path', {d:'M' + (-rx*.55) + ' ' + (ry*.92) + ' Q0 ' + (ry*.35) + ' ' + (rx*.55) + ' ' + (ry*.92), fill:'none', stroke:'rgba(60,30,10,.5)', 'stroke-width':2.5}, g);
+  } else {
+    E('path', {d:'M' + (-rx*.42) + ' ' + (-ry*.93) + ' Q' + (-rx*.6) + ' 0 ' + (-rx*.42) + ' ' + (ry*.93), fill:'none', stroke:'#ffd23f', 'stroke-width':ry * .16}, g);
+    E('path', {d:'M' + (rx*.42) + ' ' + (-ry*.93) + ' Q' + (rx*.6) + ' 0 ' + (rx*.42) + ' ' + (ry*.93), fill:'none', stroke:'#ffd23f', 'stroke-width':ry * .16}, g);
+    E('path', {d:'M' + (-rx*.98) + ' 0 Q0 ' + (-ry*.12) + ' ' + (rx*.98) + ' 0', fill:'none', stroke:'#8a968f', 'stroke-width':1.6}, g);
+  }
+  var lc = kind === 'leather' ? '#f3e2c9' : '#5c6b63';
+  E('path', {d:'M' + (-rx*.22) + ' ' + (-ry*.18) + ' H' + (rx*.22), stroke:lc, 'stroke-width':3, 'stroke-linecap':'round'}, g);
+  for(var i = -2; i <= 2; i++) E('path', {d:'M' + (i * rx * .09) + ' ' + (-ry*.27) + ' V' + (-ry*.09), stroke:lc, 'stroke-width':2.4, 'stroke-linecap':'round'}, g);
+  E('ellipse', {cx:-rx*.35, cy:-ry*.45, rx:rx*.28, ry:ry*.14, fill:'rgba(255,255,255,.35)', transform:'rotate(-12 ' + (-rx*.35) + ' ' + (-ry*.45) + ')'}, g);
+}
+</script>
+
+<script>
+/* 1. 표지 공 */
+try{ ballSvg(E('g', {}, document.getElementById('heroBall')), 150, 92, 'modern', 'hb'); }catch(e){ PE_ERR(e, '표지 그림'); }
+</script>
+
+<script>
+/* 2. 모양의 역사 */
+try{
+(function(){
+  var svg = document.getElementById('shapeSvg');
+  var ERAS = [
+    {name:'19세기 초 · 돼지 방광 공', rx:112, ry:100, kind:'leather', bump:9, text:'부풀린 돼지 방광을 가죽으로 감쌌어요. 방광 모양 그대로라 <b>자두처럼 둥글고</b> 울퉁불퉁했어요.'},
+    {name:'고무 튜브와 펌프', rx:122, ry:96, kind:'leather', bump:0, text:'고무 튜브와 펌프를 쓰면서 <b>원하는 모양과 크기</b>로 공을 만들 수 있게 됐어요.'},
+    {name:'들고 달리는 경기에 맞게', rx:138, ry:88, kind:'leather', bump:0, text:'공을 들고 달리고 패스하는 경기가 되면서 손에 쥐기 좋은 <b>달걀 모양</b>이 됐어요. 1892년 공의 크기가 처음 규칙에 들어갔어요.'},
+    {name:'오늘날의 럭비공', rx:150, ry:90, kind:'modern', bump:0, text:'지금은 <b>합성 소재 네 조각</b>을 이어 만들고, 손에 잘 잡히도록 표면을 처리해요.'}
+  ];
+  var cur = {rx:112, ry:100}, target = 0, g = null, raf = 0;
+  function draw(e, rx, ry){
+    svg.innerHTML = '';
+    E('rect', {x:-200, y:-130, width:400, height:260, fill:'#123328'}, svg);
+    for(var i = -4; i <= 4; i++) E('line', {x1:i * 50, y1:-130, x2:i * 50, y2:130, stroke:'rgba(255,255,255,.04)', 'stroke-width':1}, svg);
+    g = E('g', {transform:'rotate(-8)'}, svg);
+    ballSvg(g, rx, ry, e.kind, 'sh');
+    if(e.bump){
+      var pts = []; for(var k = 0; k <= 36; k++){ var a = k / 36 * Math.PI * 2, r = 1 + Math.sin(a * 5) * e.bump / 200 + Math.cos(a * 3) * e.bump / 260; pts.push((Math.cos(a) * rx * r).toFixed(1) + ',' + (Math.sin(a) * ry * r).toFixed(1)); }
+      E('polygon', {points:pts.join(' '), fill:'none', stroke:'rgba(60,30,10,.45)', 'stroke-width':2, 'stroke-dasharray':'5 4'}, g);
+    }
+    var tag = E('text', {x:0, y:122, 'text-anchor':'middle', 'font-size':15, 'font-weight':700, fill:'rgba(255,255,255,.55)'}, svg);
+    tag.textContent = '긴 쪽 : 짧은 쪽 = ' + (rx / ry).toFixed(2) + ' : 1';
+  }
+  function go(i){
+    target = i;
+    var e = ERAS[i], from = {rx:cur.rx, ry:cur.ry}, t0 = performance.now();
+    Array.prototype.forEach.call(document.querySelectorAll('#eraBtns button'), function(b, k){ b.classList.toggle('on', k === i); });
+    document.getElementById('eraRead').innerHTML = '<div class="era">' + e.name + '</div>' + e.text;
+    cancelAnimationFrame(raf);
+    (function f(now){
+      var u = Math.min(1, (now - t0) / 600); u = 1 - Math.pow(1 - u, 3);
+      cur.rx = from.rx + (e.rx - from.rx) * u; cur.ry = from.ry + (e.ry - from.ry) * u;
+      draw(e, cur.rx, cur.ry);
+      if(u < 1) raf = requestAnimationFrame(f);
+    })(t0);
+  }
+  Array.prototype.forEach.call(document.querySelectorAll('#eraBtns button'), function(b, k){ b.onclick = function(){ go(k); }; });
+  go(0);
+})();
+}catch(e){ PE_ERR(e, '모양의 역사'); }
+</script>
+
+<script>
+/* 3. 기체 입자 */
+try{
+(function(){
+  var svg = document.getElementById('gasSvg');
+  var defs = E('defs', {}, svg);
+  var cp = E('clipPath', {id:'gclip'}, defs); E('ellipse', {rx:150, ry:92}, cp);
+  E('rect', {x:-200, y:-120, width:400, height:240, fill:'#123328'}, svg);
+  E('ellipse', {rx:158, ry:100, fill:'#f4f6f2', stroke:'#66756c', 'stroke-width':4}, svg);
+  E('ellipse', {rx:150, ry:92, fill:'#dfe9e3'}, svg);
+  var gp = E('g', {'clip-path':'url(#gclip)'}, svg);
+  var hits = E('g', {}, svg);
+  var N = 46, P = [];
+  for(var i = 0; i < N; i++){
+    var a = Math.random() * 6.283, r = Math.random() * .8;
+    P.push({x:Math.cos(a) * 140 * r, y:Math.sin(a) * 82 * r, a:Math.random() * 6.283, el:E('circle', {r:5.5, fill:'#2563d9'}, gp)});
+  }
+  var SP = [55, 120, 190], NAMES = ['추운 날', '보통 날', '더운 날'], temp = 1, flashes = [];
+  var gauge = E('g', {transform:'translate(150 -88)'}, svg);
+  E('circle', {r:30, fill:'#0e1f19', stroke:'#ffd23f', 'stroke-width':3}, gauge);
+  var needle = E('line', {x1:0, y1:0, x2:0, y2:-22, stroke:'#ffd23f', 'stroke-width':4, 'stroke-linecap':'round'}, gauge);
+  var gl = E('text', {y:48, 'text-anchor':'middle', 'font-size':13, 'font-weight':800, fill:'#ffd23f'}, gauge); gl.textContent = '압력';
+  var hitCount = 0, meter = 0, last = performance.now();
+  function read(){
+    var t = ['입자가 <b>느리게</b> 움직여 벽에 덜 세게, 덜 자주 부딪혀요. 공이 덜 탱탱해져요.', '입자가 벽에 부딪히며 공을 밖으로 밀어요. 이 힘이 <b>압력</b>이에요.', '입자가 <b>빠르게</b> 움직여 벽에 더 세게, 더 자주 부딪혀요. 압력이 커져요.'][temp];
+    document.getElementById('gasRead').innerHTML = NAMES[temp] + ': ' + t;
+  }
+  Array.prototype.forEach.call(document.querySelectorAll('[data-temp]'), function(b){
+    b.onclick = function(){ temp = +b.dataset.temp; Array.prototype.forEach.call(document.querySelectorAll('[data-temp]'), function(x){ x.classList.toggle('on', x === b); }); read(); };
+  });
+  read();
+  function step(now){
+    var dt = Math.min(.05, (now - last) / 1000); last = now;
+    var sp = SP[temp];
+    P.forEach(function(p){
+      p.x += Math.cos(p.a) * sp * dt; p.y += Math.sin(p.a) * sp * dt;
+      var q = (p.x * p.x) / (144 * 144) + (p.y * p.y) / (86 * 86);
+      if(q > 1){
+        var nx = p.x / (144 * 144), ny = p.y / (86 * 86), nl = Math.hypot(nx, ny); nx /= nl; ny /= nl;
+        var vx = Math.cos(p.a), vy = Math.sin(p.a), dot = vx * nx + vy * ny;
+        vx -= 2 * dot * nx; vy -= 2 * dot * ny; p.a = Math.atan2(vy, vx) + (Math.random() - .5) * .3;
+        p.x /= Math.sqrt(q) * 1.01; p.y /= Math.sqrt(q) * 1.01;
+        hitCount++;
+        if(Math.random() < .5){ var f = E('circle', {cx:p.x * 1.04, cy:p.y * 1.06, r:4, fill:'none', stroke:'#df4a2f', 'stroke-width':2.5}, hits); flashes.push({el:f, t:0}); }
+      }
+      p.el.setAttribute('cx', p.x.toFixed(1)); p.el.setAttribute('cy', p.y.toFixed(1));
+    });
+    flashes = flashes.filter(function(f){ f.t += dt; f.el.setAttribute('r', 4 + f.t * 40); f.el.setAttribute('opacity', Math.max(0, 1 - f.t * 3)); if(f.t > .35){ f.el.remove(); return false; } return true; });
+    var targetM = [.25, .55, .85][temp]; meter += (targetM - meter) * Math.min(1, dt * 3);
+    var ang = -120 + meter * 240; needle.setAttribute('transform', 'rotate(' + ang.toFixed(1) + ')');
+    requestAnimationFrame(step);
+  }
+  requestAnimationFrame(step);
+})();
+}catch(e){ PE_ERR(e, '기체 입자'); }
+</script>
+
+<script>
+/* 4. 바운드 */
+try{
+(function(){
+  var svg = document.getElementById('bounceSvg');
+  var GY = 30, A = 76, Bb = 46;
+  var shape = 'rugby', tilt = 35, anim = null;
+  var tiltIn = document.getElementById('tilt');
+  E('rect', {x:-220, y:-230, width:440, height:300, fill:'#123328'}, svg);
+  E('rect', {x:-220, y:GY, width:440, height:40, fill:'#2c8752'}, svg);
+  E('line', {x1:-220, y1:GY, x2:220, y2:GY, stroke:'#e9f2e6', 'stroke-width':3}, svg);
+  var trail = E('g', {}, svg);
+  var gBall = E('g', {}, svg);
+  var gInfo = E('g', {}, svg);
+  function geom(th){
+    var a = shape === 'rugby' ? A : 58, b = shape === 'rugby' ? Bb : 58;
+    var t = th * Math.PI / 180, s = Math.sin(t), c = Math.cos(t);
+    var u = Math.atan2(b * c, a * s);
+    var x = a * Math.cos(u) * c - b * Math.sin(u) * s, y = a * Math.cos(u) * s + b * Math.sin(u) * c;
+    if(y < 0){ x = -x; y = -y; }
+    return {a:a, b:b, cx:x, cy:y};
+  }
+  function drawBall(x, y, th){
+    gBall.innerHTML = '';
+    var g = E('g', {transform:'translate(' + x.toFixed(1) + ' ' + y.toFixed(1) + ') rotate(' + th.toFixed(1) + ')'}, gBall);
+    if(shape === 'rugby') ballSvg(g, A, Bb, 'modern', 'bb');
+    else {
+      var d = E('defs', {}, g), lg = E('radialGradient', {id:'sb', cx:'.38', cy:'.3', r:'.8'}, d);
+      E('stop', {offset:0, 'stop-color':'#fff'}, lg); E('stop', {offset:1, 'stop-color':'#b9c4bd'}, lg);
+      E('circle', {r:58, fill:'url(#sb)', stroke:'#66756c', 'stroke-width':3}, g);
+      E('polygon', {points:'0,-18 17,-6 11,15 -11,15 -17,-6', fill:'#24302a'}, g);
+      [[0,-48],[42,-18],[28,40],[-28,40],[-42,-18]].forEach(function(p){ E('circle', {cx:p[0], cy:p[1], r:9, fill:'#24302a', opacity:.85}, g); });
+    }
+  }
+  function info(){
+    gInfo.innerHTML = '';
+    var gm = geom(tilt), cx = 0, cy = GY - gm.cy;
+    var px = cx + gm.cx;
+    drawBall(cx, cy, tilt);
+    E('circle', {cx:cx, cy:cy, r:6, fill:'#df4a2f', stroke:'#fff', 'stroke-width':2}, gInfo);
+    var lab = E('text', {x:cx + 10, y:cy - 10, 'font-size':13, 'font-weight':800, fill:'#fff'}, gInfo); lab.textContent = '중심';
+    E('line', {x1:px, y1:GY, x2:px, y2:GY - 150, stroke:'#ffd23f', 'stroke-width':5, 'stroke-linecap':'round'}, gInfo);
+    E('path', {d:'M' + px + ' ' + (GY - 166) + ' l-11 18 h22 Z', fill:'#ffd23f'}, gInfo);
+    E('line', {x1:px, y1:GY - 166, x2:px, y2:-220, stroke:'rgba(255,210,63,.4)', 'stroke-width':2, 'stroke-dasharray':'5 5'}, gInfo);
+    var t2 = E('text', {x:px + (px >= 0 ? 12 : -12), y:GY - 120, 'text-anchor':px >= 0 ? 'start' : 'end', 'font-size':14, 'font-weight':800, fill:'#ffd23f'}, gInfo); t2.textContent = '바닥이 미는 힘';
+    if(Math.abs(gm.cx) > 3){
+      E('line', {x1:cx, y1:cy, x2:px, y2:cy, stroke:'#fff', 'stroke-width':2, 'stroke-dasharray':'4 4'}, gInfo);
+    }
+    var off = Math.abs(gm.cx);
+    document.getElementById('bRead').innerHTML = off < 4
+      ? '힘의 화살표가 <b>중심을 지나요</b>. 공이 거의 똑바로 튀어 올라요.'
+      : '힘의 화살표가 중심에서 <b>' + (off > 40 ? '많이' : '조금') + ' 비껴가요</b>. 공이 돌면서 ' + (gm.cx > 0 ? '왼쪽' : '오른쪽') + '으로 튈 거예요.';
+    return gm;
+  }
+  function setTilt(v){ tilt = v; document.getElementById('tiltOut').textContent = v + '°'; if(!anim) info(); }
+  tiltIn.oninput = function(){ setTilt(+tiltIn.value); };
+  document.getElementById('bBall').onclick = function(){ shape = 'rugby'; this.classList.add('on'); document.getElementById('sBall').classList.remove('on'); tiltIn.disabled = false; info(); };
+  document.getElementById('sBall').onclick = function(){ shape = 'soccer'; this.classList.add('on'); document.getElementById('bBall').classList.remove('on'); info(); };
+  document.getElementById('drop').onclick = function(){
+    if(anim) return;
+    var gm = geom(tilt), off = gm.cx;
+    gInfo.innerHTML = ''; trail.innerHTML = '';
+    var x = 0, y = GY - gm.cy - 190, vy = 0, vx = 0, th = tilt, w = 0, phase = 0, t0 = performance.now(), last = t0, tt = 0;
+    anim = true;
+    function f(now){
+      var dt = Math.min(.033, (now - last) / 1000); last = now; tt += dt;
+      if(phase === 0){
+        vy += 900 * dt; y += vy * dt;
+        if(y >= GY - gm.cy){ y = GY - gm.cy; phase = 1; var k = off / gm.a; vy = -430 * (1 - Math.min(.55, Math.abs(k) * .7)); vx = -k * 330; w = -k * 900; }
+      } else {
+        vy += 900 * dt; x += vx * dt; y += vy * dt; th += w * dt;
+        if(Math.random() < .5) E('circle', {cx:x, cy:y, r:2.5, fill:'rgba(255,210,63,.6)'}, trail);
+      }
+      drawBall(x, y, th);
+      if(phase === 1 && (y > GY + 40 || tt > 2.2 || Math.abs(x) > 260)){
+        anim = null;
+        setTimeout(function(){ trail.innerHTML = ''; info(); }, 900);
+        return;
+      }
+      requestAnimationFrame(f);
+    }
+    requestAnimationFrame(f);
+  };
+  setTilt(35);
+})();
+}catch(e){ PE_ERR(e, '바운드'); }
+</script>
+
+<script>
+/* 5. 스핀 패스 */
+try{
+(function(){
+  var svg = document.getElementById('spinSvg');
+  E('rect', {x:0, y:0, width:640, height:330, fill:'#123328'}, svg);
+  var lanes = [{y:120, name:'그냥 던진 공 · 앞뒤로 뒤집혀요', spin:false, dist:360}, {y:290, name:'스핀 패스 · 긴 축으로 회전해요', spin:true, dist:540}];
+  lanes.forEach(function(l){
+    E('rect', {x:0, y:l.y, width:640, height:40, fill:'#2c8752'}, svg);
+    E('line', {x1:0, y1:l.y, x2:640, y2:l.y, stroke:'#e9f2e6', 'stroke-width':2}, svg);
+    for(var m = 100; m < 640; m += 100){ E('line', {x1:m, y1:l.y, x2:m, y2:l.y + 8, stroke:'rgba(255,255,255,.5)', 'stroke-width':2}, svg); }
+    var t = E('text', {x:14, y:l.y - 96, 'font-size':15, 'font-weight':800, fill:'#fff'}, svg); t.textContent = l.name;
+    l.g = E('g', {}, svg); l.bar = E('rect', {width:8, rx:3, fill:'#ffd23f'}, svg); l.trail = E('g', {}, svg);
+    l.mark = E('g', {}, svg);
+  });
+  function ball(l, x, y, ang, phase){
+    l.g.innerHTML = '';
+    var g = E('g', {transform:'translate(' + x.toFixed(1) + ' ' + y.toFixed(1) + ') rotate(' + ang.toFixed(1) + ')'}, l.g);
+    var d = E('defs', {}, g), lg = E('radialGradient', {id:'sp' + l.y, cx:'.4', cy:'.3', r:'.8'}, d);
+    E('stop', {offset:0, 'stop-color':'#fff'}, lg); E('stop', {offset:1, 'stop-color':'#b9c4bd'}, lg);
+    E('ellipse', {rx:30, ry:18, fill:'url(#sp' + l.y + ')', stroke:'#66756c', 'stroke-width':2}, g);
+    if(l.spin){
+      for(var k = 0; k < 2; k++){ var s = ((phase * 3 + k * .5) % 1) * 2 - 1; E('path', {d:'M' + (s * 22 - 4) + ' -16 Q' + (s * 22 + 4) + ' 0 ' + (s * 22 - 4) + ' 16', stroke:'#ffd23f', 'stroke-width':4, fill:'none', opacity:1 - Math.abs(s) * .6}, g); }
+    } else {
+      E('path', {d:'M-12 -17 Q-17 0 -12 17 M12 -17 Q17 0 12 17', stroke:'#ffd23f', 'stroke-width':4, fill:'none'}, g);
+    }
+    var face = l.spin ? 18 : Math.abs(Math.sin(ang * Math.PI / 180)) * 30 + Math.abs(Math.cos(ang * Math.PI / 180)) * 18;
+    l.bar.setAttribute('x', x + 40); l.bar.setAttribute('y', y - face); l.bar.setAttribute('height', face * 2);
+  }
+  function reset(){ lanes.forEach(function(l){ l.trail.innerHTML = ''; l.mark.innerHTML = ''; ball(l, 40, l.y - 30, l.spin ? -20 : 0, 0); }); }
+  reset();
+  var running = false;
+  document.getElementById('throw').onclick = function(){
+    if(running) return; running = true; reset();
+    var t0 = performance.now(), dur = 1700;
+    (function f(now){
+      var u = Math.min(1, (now - t0) / dur);
+      lanes.forEach(function(l){
+        var x = 40 + l.dist * u, h = (l.spin ? 140 : 120) * 4 * u * (1 - u), y = l.y - 30 - h + (l.spin ? 0 : 0);
+        var slope = (l.spin ? 140 : 120) * 4 * (1 - 2 * u) / l.dist;
+        var ang = l.spin ? -Math.atan(slope) * 180 / Math.PI : u * 900;
+        if(u > 0 && Math.random() < .6) E('circle', {cx:x, cy:y, r:2.4, fill:'rgba(255,255,255,.45)'}, l.trail);
+        ball(l, x, y, ang, u * 6);
+        if(u >= 1){ var tx = E('text', {x:x, y:l.y + 30, 'text-anchor':'middle', 'font-size':14, 'font-weight':800, fill:'#ffd23f'}, l.mark); tx.textContent = l.spin ? '더 멀리' : '여기까지'; }
+      });
+      if(u < 1) requestAnimationFrame(f); else running = false;
+    })(t0);
+  };
+})();
+}catch(e){ PE_ERR(e, '스핀 패스'); }
+</script>
+
+<script>
+/* 6. 상대 운동 */
+try{
+(function(){
+  var svg = document.getElementById('relSvg');
+  var vR = 6, vT = 4, cam = 'fan', running = false;
+  var SC = 22; // 1m = 22px
+  var root = E('g', {}, svg);
+  function $(id){ return document.getElementById(id); }
+  function eq(){
+    var r = vR - vT;
+    $('eq').innerHTML = '<span class="t"><small>달리기</small>+' + vR + '</span>+<span class="t"><small>뒤로 던지기</small>−' + vT + '</span>=<span class="t r"><small>관중이 본 공</small>' + (r > 0 ? '+' : r < 0 ? '−' : '') + Math.abs(r) + '</span>';
+    var dir = r > 0 ? '<b>앞으로</b> 초속 ' + r + 'm' : r < 0 ? '<b>뒤로</b> 초속 ' + (-r) + 'm' : '<b>제자리</b>(초속 0m)';
+    $('relRead').innerHTML = '관중이 보면 공은 ' + dir + '로 움직여요. 선수가 보면 언제나 <b>뒤로</b> 초속 ' + vT + 'm예요. 팔은 뒤로 던졌으니 <b>정상 패스</b>!';
+  }
+  function runner(g, x, y, ph){
+    var leg = Math.sin(ph) * 14, arm = Math.cos(ph) * 10;
+    var p = E('g', {transform:'translate(' + x.toFixed(1) + ' ' + y + ')'}, g);
+    var c = '#2563d9';
+    E('line', {x1:0, y1:-34, x2:-leg, y2:0, stroke:'#1d2b24', 'stroke-width':7, 'stroke-linecap':'round'}, p);
+    E('line', {x1:0, y1:-34, x2:leg, y2:0, stroke:'#2c3a33', 'stroke-width':7, 'stroke-linecap':'round'}, p);
+    E('line', {x1:2, y1:-66, x2:0, y2:-34, stroke:c, 'stroke-width':14, 'stroke-linecap':'round'}, p);
+    E('line', {x1:2, y1:-60, x2:-12 + arm, y2:-44, stroke:'#e9b48f', 'stroke-width':6, 'stroke-linecap':'round'}, p);
+    E('circle', {cx:4, cy:-80, r:9, fill:'#e9b48f'}, p);
+  }
+  function frame(tt, rel){
+    root.innerHTML = '';
+    var rx = vR * tt;
+    var ballX = rel == null ? rx + .5 : rel + (vR - vT) * (tt - 1.0);
+    var camX = cam === 'fan' ? 0 : rx - 9;
+    var off = function(m){ return 60 + (m - camX) * SC; };
+    E('rect', {x:0, y:0, width:640, height:260, fill:'#123328'}, root);
+    E('rect', {x:0, y:200, width:640, height:60, fill:'#2c8752'}, root);
+    for(var m = Math.floor(camX) - 2; m < camX + 30; m++){
+      var X = off(m);
+      E('line', {x1:X, y1:200, x2:X, y2:m % 5 === 0 ? 222 : 210, stroke:'rgba(255,255,255,.55)', 'stroke-width':m % 5 === 0 ? 3 : 1.5}, root);
+      if(m % 5 === 0 && m >= 0){ var t = E('text', {x:X, y:240, 'text-anchor':'middle', 'font-size':12, 'font-weight':700, fill:'rgba(255,255,255,.7)'}, root); t.textContent = m + 'm'; }
+    }
+    if(rel != null){
+      var RX = off(rel);
+      E('line', {x1:RX, y1:30, x2:RX, y2:200, stroke:'#fff', 'stroke-width':2.5, 'stroke-dasharray':'7 6'}, root);
+      var tl = E('text', {x:RX, y:22, 'text-anchor':'middle', 'font-size':13, 'font-weight':800, fill:'#fff'}, root); tl.textContent = '공을 놓은 곳';
+      var BX = off(ballX), d = ballX - rel;
+      E('line', {x1:RX, y1:186, x2:BX, y2:186, stroke:d >= 0 ? '#ffd23f' : '#ff8b75', 'stroke-width':4}, root);
+    }
+    runner(root, off(rx), 200, tt * 14);
+    var by = rel == null ? 150 : 150 - Math.max(0, Math.sin(Math.min(1, (tt - 1.0) / 1.6) * Math.PI) * 30);
+    var bg = E('g', {transform:'translate(' + off(ballX).toFixed(1) + ' ' + by.toFixed(1) + ')'}, root);
+    E('ellipse', {rx:11, ry:7, fill:'#fff', stroke:'#66756c', 'stroke-width':1.5}, bg);
+    E('path', {d:'M-4 -6 Q-6 0 -4 6 M4 -6 Q6 0 4 6', stroke:'#ffd23f', 'stroke-width':2, fill:'none'}, bg);
+    var lab = E('text', {x:12, y:22, 'font-size':13, 'font-weight':800, fill:'#ffd23f'}, root);
+    lab.textContent = cam === 'fan' ? '관중이 보는 화면' : '선수와 함께 달리는 화면';
+  }
+  function upd(){ vR = +$('vRun').value; vT = +$('vThrow').value; $('vRunOut').textContent = vR + ' m/s'; $('vThrowOut').textContent = vT + ' m/s'; eq(); if(!running) frame(0.6, null); }
+  $('vRun').oninput = upd; $('vThrow').oninput = upd;
+  $('camFan').onclick = function(){ cam = 'fan'; this.classList.add('on'); $('camRun').classList.remove('on'); if(!running) frame(.6, null); };
+  $('camRun').onclick = function(){ cam = 'run'; this.classList.add('on'); $('camFan').classList.remove('on'); if(!running) frame(.6, null); };
+  $('relGo').onclick = function(){
+    if(running) return; running = true;
+    var t0 = performance.now(), rel = null, relT = 1.0, end = 2.6;
+    (function f(now){
+      var tt = (now - t0) / 1000 * .9;
+      if(tt >= relT && rel == null) rel = vR * relT + .5;
+      frame(tt, rel);
+      if(tt < end) requestAnimationFrame(f); else running = false;
+    })(t0);
+  };
+  upd();
+})();
+}catch(e){ PE_ERR(e, '상대 운동'); }
+</script>
+</body>
+</html>

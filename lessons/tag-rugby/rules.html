@@ -1,0 +1,1333 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&display=swap">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 32 32%22%3E%3Crect width=%2232%22 height=%2232%22 rx=%228%22 fill=%22%230c2a20%22/%3E%3Cellipse cx=%2216%22 cy=%2216%22 rx=%2211%22 ry=%227%22 fill=%22%23fff%22 transform=%22rotate(-30 16 16)%22/%3E%3Cpath d=%22M11 10q-2 6 1 12M21 10q2 6-1 12%22 stroke=%22%23ffd23f%22 stroke-width=%222%22 fill=%22none%22 transform=%22rotate(-30 16 16)%22/%3E%3C/svg%3E">
+
+<title>규칙 읽기 - 태그럭비</title>
+<style>
+/* ===== PLAYBOOK 공통 디자인 ===== */
+:root{
+  --turf-950:#071c15; --turf-900:#0c2a20; --turf-800:#123a2c; --turf-700:#175038; --turf-600:#1c6646; --turf-500:#2a8055;
+  --paper:#f6f4ec; --card:#ffffff; --ink:#14201a; --muted:#56655c; --line:#e1e5da;
+  --volt:#ffd23f; --volt-deep:#e6b400; --volt-soft:#fff6d1;
+  --blue:#2563d9; --blue-soft:#e7eefc; --red:#df4a2f; --red-soft:#fdebe6;
+  --ok:#15834a; --ok-soft:#e2f3e8; --foul:#d2372c; --foul-soft:#fce9e7;
+  --display:"Black Han Sans","Pretendard",sans-serif;
+  --fs:18px;
+  --shadow:0 14px 34px -16px rgba(7,28,21,.45);
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{
+  font-family:"Pretendard",-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+  color:var(--ink);background:var(--paper);-webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent;
+  word-break:keep-all;overflow-wrap:break-word;
+}
+button{font:inherit;color:inherit;cursor:pointer;touch-action:manipulation}
+button:focus-visible{outline:3px solid var(--volt);outline-offset:2px}
+svg text{font-family:"Pretendard",sans-serif}
+.dsp{font-family:var(--display);font-weight:400;letter-spacing:-.005em}
+
+/* ---- 가로로 넘기는 카드 묶음 ---- */
+.deck{position:fixed;inset:0;display:flex;flex-direction:column;background:var(--paper)}
+.rail{flex:none;display:flex;align-items:center;gap:14px;padding:6px 14px 6px 18px;background:var(--turf-900);color:#fff;min-height:52px}
+.rail .ttl{font-weight:700;font-size:14px;color:rgba(255,255,255,.72);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:34%}
+.rail .segs{flex:1;display:flex;gap:4px;min-width:0}
+.rail .seg{flex:1;min-width:0;height:40px;border:0;background:none;padding:0;position:relative}
+.rail .seg::before{content:"";position:absolute;left:0;right:0;top:16px;height:8px;border-radius:4px;background:rgba(255,255,255,.15);transition:background .3s}
+.rail .seg.quiz::before{background:rgba(255,255,255,.28)}
+.rail .seg.done::before{background:rgba(255,210,63,.45)}
+.rail .seg.on::before{background:var(--volt);box-shadow:0 0 0 3px rgba(255,210,63,.25)}
+.rail .count{font-family:var(--display);font-size:20px;color:var(--volt);min-width:62px;text-align:right;font-variant-numeric:tabular-nums}
+.rail .fsz{display:flex;gap:4px}
+.rail .fsz button{width:44px;height:40px;border-radius:10px;border:0;background:rgba(255,255,255,.1);color:#fff;font-weight:800}
+.rail .fsz button:last-child{font-size:20px}
+.track{flex:1;display:flex;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;scrollbar-width:none;overscroll-behavior-x:contain;min-height:0}
+.track::-webkit-scrollbar{display:none}
+.slide{flex:0 0 100%;width:100%;height:100%;scroll-snap-align:start;scroll-snap-stop:always;overflow-y:auto;overflow-x:hidden;padding:24px 36px 96px;position:relative}
+.ctrl{position:fixed;right:18px;bottom:16px;display:flex;gap:10px;z-index:20}
+.ctrl button{width:58px;height:58px;border-radius:50%;border:0;background:var(--turf-900);color:#fff;box-shadow:var(--shadow);display:grid;place-items:center;transition:transform .15s,opacity .2s}
+.ctrl button:active{transform:scale(.94)}
+.ctrl button.next{background:var(--volt);color:var(--turf-950)}
+.ctrl button:disabled{opacity:.3;pointer-events:none}
+.swipe-hint{position:fixed;left:50%;bottom:30px;transform:translateX(-50%);background:rgba(12,42,32,.88);color:#fff;font-size:14px;font-weight:700;padding:8px 16px;border-radius:999px;pointer-events:none;z-index:15;transition:opacity .5s}
+
+/* ---- 카드 안 배치 ---- */
+.split{display:grid;grid-template-columns:minmax(0,1.22fr) minmax(0,.78fr);gap:36px;align-items:center;min-height:100%;max-width:1320px;margin:0 auto}
+.split:has(> .txt:first-child),.split.text-first{grid-template-columns:minmax(0,.78fr) minmax(0,1.22fr)}
+.split.even{grid-template-columns:1fr 1fr}
+.split.text-first .txt{order:-1}
+.solo{max-width:900px;margin:0 auto}
+.wide{max-width:1240px;margin:0 auto}
+@media (max-width:900px),(orientation:portrait){
+  .split,.split.even,.split:has(> .txt:first-child),.split.text-first{grid-template-columns:1fr;gap:22px;align-items:start;min-height:0}
+  .split.text-first .txt{order:0}
+  .slide{padding:22px 20px 112px}
+  .rail .ttl{display:none}
+}
+.kicker{display:inline-flex;align-items:center;gap:10px;font-weight:800;font-size:13px;letter-spacing:.06em;color:var(--turf-600)}
+.kicker b{font-family:var(--display);font-weight:400;background:var(--turf-900);color:var(--volt);border-radius:7px;padding:3px 9px 2px;font-size:15px;letter-spacing:0}
+h1.big{font-family:var(--display);font-weight:400;font-size:clamp(40px,5.6vw,68px);line-height:1.1;margin:.25em 0 .3em;letter-spacing:-.01em}
+h2{font-family:var(--display);font-weight:400;font-size:clamp(28px,3.3vw,40px);line-height:1.22;margin:.3em 0 .5em}
+h3{font-size:20px;margin:1em 0 .4em}
+p,li{font-size:var(--fs);line-height:1.8}
+p{margin:0 0 .8em}
+.lead{font-size:calc(var(--fs) + 2px);color:var(--muted)}
+.mark{background:linear-gradient(transparent 58%,rgba(255,210,63,.6) 58%);font-weight:700}
+.rule{display:flex;gap:14px;align-items:flex-start;background:var(--volt-soft);border-left:6px solid var(--volt);padding:14px 18px;border-radius:0 14px 14px 0;margin:14px 0}
+.rule .ico{flex:none;font-family:var(--display);font-size:15px;color:var(--turf-950);background:var(--volt);border-radius:6px;padding:2px 8px 1px;margin-top:4px}
+.rule p{margin:0;font-weight:600}
+.note{font-size:14px;color:var(--muted);line-height:1.6;margin-top:10px}
+.pillrow{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}
+.pill{display:inline-flex;align-items:center;gap:6px;min-height:34px;padding:0 14px;border-radius:999px;background:#fff;border:1px solid var(--line);font-weight:700;font-size:15px}
+.call{display:inline-flex;align-items:center;gap:8px;font-weight:800;padding:5px 14px;border-radius:999px;font-size:15px}
+.call.ok{background:var(--ok-soft);color:var(--ok)}
+.call.foul{background:var(--foul-soft);color:var(--foul)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:10px;min-height:52px;padding:0 24px;border-radius:14px;border:0;background:var(--turf-900);color:#fff;font-weight:800;font-size:17px;text-decoration:none;box-shadow:var(--shadow)}
+.btn.volt{background:var(--volt);color:var(--turf-950)}
+.btn.ghost{background:#fff;color:var(--ink);border:2px solid var(--line);box-shadow:none}
+
+/* ---- 그림 판 (잔디) ---- */
+.vis{background:var(--turf-800);border-radius:24px;padding:12px;box-shadow:var(--shadow);position:relative;overflow:hidden}
+.vis svg.board{display:block;width:100%;height:auto;border-radius:14px}
+.vis .bar{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:10px 4px 2px}
+.vis .bar .grow{flex:1}
+.vis .cap{color:#d5e3da;font-size:14px;line-height:1.5}
+.vbtn{min-height:44px;padding:0 16px;border-radius:999px;border:0;background:rgba(255,255,255,.12);color:#fff;font-weight:700;font-size:15px;display:inline-flex;align-items:center;gap:8px}
+.vbtn.on{background:var(--volt);color:var(--turf-950)}
+.vis.paper{background:#fff;border:1px solid var(--line)}
+.model-note{font-size:12.5px;color:rgba(255,255,255,.55);padding:6px 4px 0}
+.vis.paper .model-note{color:var(--muted)}
+
+/* ---- 퀴즈 ---- */
+.quiz{background:var(--card);border:1px solid var(--line);border-radius:22px;padding:22px 24px;box-shadow:0 8px 24px -18px rgba(0,0,0,.35);margin:0 0 18px}
+.quiz .qn{font-family:var(--display);color:var(--turf-600);font-size:16px;display:flex;align-items:center;gap:8px}
+.quiz .qn .src{font-family:"Pretendard";font-size:13px;font-weight:600;color:var(--muted)}
+.quiz .q{font-size:calc(var(--fs) + 1px);font-weight:700;line-height:1.65;margin:6px 0 14px}
+.opts{display:grid;gap:10px}
+.opts.two{grid-template-columns:1fr 1fr}
+.opt{min-height:54px;text-align:left;padding:12px 16px;border-radius:14px;border:2px solid var(--line);background:#fff;font-size:17px;font-weight:600;display:flex;gap:12px;align-items:center;line-height:1.5;transition:border-color .2s,background .2s}
+.opt .k{flex:none;width:30px;height:30px;border-radius:8px;background:#edf1ea;display:grid;place-items:center;font-family:var(--display);font-size:15px}
+.opt:hover{border-color:#c9d3c4}
+.opt.right{border-color:var(--ok);background:var(--ok-soft)}
+.opt.right .k{background:var(--ok);color:#fff}
+.opt.wrong{border-color:var(--foul);background:var(--foul-soft)}
+.opt.wrong .k{background:var(--foul);color:#fff}
+.opt[disabled]{cursor:default}
+.opts.ox{grid-template-columns:1fr 1fr}
+.opts.ox .opt{justify-content:center;font-family:var(--display);font-size:38px;min-height:88px}
+.opts.pics{grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
+.opts.pics .opt{flex-direction:column;justify-content:flex-start;text-align:center;padding:10px;font-size:15px}
+.opts.pics .opt svg{width:100%;height:auto;max-width:150px}
+.fb{margin-top:12px;padding:12px 16px;border-radius:12px;font-size:16px;line-height:1.7;display:none}
+.fb.show{display:block}
+.fb.ok{background:var(--ok-soft)}
+.fb.no{background:var(--foul-soft)}
+.fb b{font-weight:800}
+.sentence{font-size:calc(var(--fs) + 1px);line-height:2.3;font-weight:600}
+.blank{display:inline-flex;align-items:center;justify-content:center;min-width:92px;min-height:44px;border:0;border-bottom:3px solid var(--turf-500);background:#f1f5ef;border-radius:8px 8px 0 0;padding:0 10px;font-weight:800;color:var(--turf-700);vertical-align:middle;margin:0 2px}
+.blank.right{background:var(--ok-soft);border-color:var(--ok);color:var(--ok)}
+.blank.wrong{background:var(--foul-soft);border-color:var(--foul);color:var(--foul)}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.chip{min-height:46px;padding:0 18px;border-radius:999px;border:2px solid var(--line);background:#fff;font-weight:700;font-size:16px}
+.chip.used{opacity:.35}
+.scorebox{background:#0b120f;color:#fff;border-radius:22px;padding:22px 26px;display:flex;align-items:center;gap:22px;flex-wrap:wrap;box-shadow:var(--shadow)}
+.scorebox .digits{font-family:var(--display);font-size:76px;line-height:1;color:var(--volt);font-variant-numeric:tabular-nums}
+.scorebox .digits small{font-size:34px;color:rgba(255,255,255,.5)}
+.scorebox .lbl{font-weight:700;color:rgba(255,255,255,.7);font-size:15px}
+.scorebox .msg{font-size:18px;font-weight:700;margin-top:4px}
+.review{display:grid;gap:8px;margin-top:14px}
+.review button{min-height:48px;text-align:left;border-radius:12px;border:1px solid var(--line);background:#fff;padding:8px 14px;font-weight:600;font-size:15px}
+
+/* ---- 용어 풀이 ---- */
+.term{border:0;background:none;padding:0;font:inherit;color:inherit;font-weight:700;border-bottom:2px dotted var(--turf-500);cursor:help}
+.gloss{position:fixed;z-index:50;max-width:300px;background:var(--turf-950);color:#fff;border-radius:14px;padding:12px 16px;font-size:15px;line-height:1.6;box-shadow:var(--shadow)}
+.gloss b{color:var(--volt);display:block;font-size:14px;margin-bottom:2px}
+
+/* ---- 등장 효과 (내용을 숨기지 않음) ---- */
+@keyframes rise{from{transform:translateY(16px)}to{transform:none}}
+.slide.enter .rise{animation:rise .55s cubic-bezier(.2,.7,.2,1) both}
+.slide.enter .rise.d1{animation-delay:.08s}.slide.enter .rise.d2{animation-delay:.16s}.slide.enter .rise.d3{animation-delay:.24s}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+
+/* ---- 오류 상자 ---- */
+#errbox{position:fixed;left:12px;right:12px;bottom:12px;z-index:99;background:#b3261e;color:#fff;border-radius:12px;padding:12px 16px;font-size:14px;line-height:1.5;display:none;box-shadow:var(--shadow)}
+
+.equip{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:16px 0}
+.equip div{background:#fff;border:1px solid var(--line);border-radius:16px;padding:12px 8px 10px;text-align:center;font-weight:700;font-size:15px}
+.equip svg{display:block;margin:0 auto 6px;width:56px;height:56px}
+.steps{list-style:none;padding:0;margin:14px 0;display:grid;gap:12px}
+.steps li{display:grid;grid-template-columns:auto 1fr;gap:14px;align-items:start;background:#fff;border:1px solid var(--line);border-radius:16px;padding:14px 16px}
+.steps .n{font-family:var(--display);font-size:26px;line-height:1;color:var(--turf-950);background:var(--volt);border-radius:10px;width:42px;height:42px;display:grid;place-items:center}
+.steps .who{font-size:13px;font-weight:800;letter-spacing:.04em}
+.steps .who.d{color:var(--red)} .steps .who.a{color:var(--blue)}
+.steps p{margin:2px 0 0;font-size:calc(var(--fs) - 1px);line-height:1.65}
+.timer{position:absolute;left:24px;top:24px;background:rgba(7,28,21,.88);color:#fff;border-radius:12px;padding:6px 12px;font-weight:800;font-size:15px;font-variant-numeric:tabular-nums;display:flex;gap:10px;align-items:center}
+.timer b{font-family:var(--display);font-weight:400;color:var(--volt);font-size:22px}
+.verdict{position:absolute;left:50%;bottom:78px;transform:translateX(-50%);font-family:var(--display);font-size:22px;padding:8px 18px;border-radius:999px;white-space:nowrap;box-shadow:var(--shadow)}
+.verdict.ok{background:#fff;color:var(--ok)} .verdict.foul{background:var(--foul);color:#fff}
+.duo{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.duo .vis{padding:8px}
+.duo .tagline{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 6px 2px;color:#fff;font-weight:800;font-size:15px}
+@media (orientation:portrait),(max-width:900px){.duo{grid-template-columns:1fr}}
+.tagcount{display:flex;gap:8px;align-items:center;margin:14px 0;flex-wrap:wrap}
+.tagcount i{width:38px;height:38px;border-radius:50%;background:#fff;border:3px solid var(--line);display:grid;place-items:center;font-style:normal;font-family:var(--display);font-size:16px;color:var(--muted)}
+.tagcount i.on{background:var(--volt);border-color:var(--volt-deep);color:var(--turf-950)}
+.tagcount i.last{background:var(--foul);border-color:var(--foul);color:#fff}
+.tagcount span{font-weight:800}
+.ban{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;max-width:1240px;margin:0 auto}
+.ban .card{background:#fff;border:1px solid var(--line);border-radius:18px;overflow:hidden;display:flex;flex-direction:column}
+.ban .card .vis{border-radius:0;box-shadow:none;padding:6px}
+.ban .card svg.board{border-radius:10px}
+.ban .card h3{margin:12px 16px 2px;font-size:18px;display:flex;gap:8px;align-items:center}
+.ban .card p{margin:0 16px 14px;font-size:15px;line-height:1.6;color:var(--muted)}
+@media (orientation:portrait),(max-width:900px){.ban{grid-template-columns:1fr 1fr}}
+@media (max-width:560px){.ban{grid-template-columns:1fr}}
+.sheet{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:16px 0}
+.sheet div{background:#fff;border:1px solid var(--line);border-radius:14px;padding:12px 14px;font-size:16px;line-height:1.55;display:flex;gap:10px}
+.sheet b.k{flex:none;font-family:var(--display);font-weight:400;color:var(--turf-600);font-size:18px;min-width:22px}
+@media (max-width:700px){.sheet{grid-template-columns:1fr}}
+.hero-q{font-family:var(--display);font-size:22px;color:var(--turf-600)}
+</style>
+</head>
+<body>
+<div class="deck" id="deck" data-title="02 규칙 읽기">
+<div class="rail">
+  <div class="ttl"></div>
+  <div class="segs"></div>
+  <div class="fsz"><button type="button" aria-label="글자 작게">가</button><button type="button" aria-label="글자 크게">가</button></div>
+  <div class="count">1 / 1</div>
+</div>
+<div class="track">
+
+
+  <!-- 1. 표지 -->
+  <section class="slide" data-title="표지">
+    <div class="split">
+      <div class="txt">
+        <div class="kicker rise"><b>02</b>규칙 읽기 · 1차시</div>
+        <h1 class="big rise d1">부딪히지 않고<br>어떻게 막을까?</h1>
+        <p class="lead rise d2">태그럭비에서는 몸싸움 대신 허리에 찬 <span class="mark">태그</span>를 떼어 공격을 멈춰요. 경기장에서 지켜야 할 규칙을 그림으로 하나씩 익혀 봐요.</p>
+        <div class="pillrow rise d3"><span class="pill">트라이</span><span class="pill">태그</span><span class="pill">패스 방향</span><span class="pill">녹온</span><span class="pill">공수교대</span><span class="pill">금지 행동</span></div>
+      </div>
+      <div class="vis rise d1">
+        <svg id="bIntro"></svg>
+        <div class="bar"><span class="cap grow">파랑 팀이 공격해요. 태그를 당하면 멈춰서 뒤쪽 친구에게 패스하고, 그 친구가 인골에 공을 내려놓아요.</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 2. 경기장과 준비물 -->
+  <section class="slide" data-title="경기장과 준비물">
+    <div class="split">
+      <div class="vis rise">
+        <svg id="bField"></svg>
+        <div class="model-note">경기장 크기와 인원은 학교 상황에 맞게 정해요. 이 그림은 가로 40m, 세로 25m 예시예요.</div>
+      </div>
+      <div class="txt">
+        <div class="kicker">경기장과 준비물</div>
+        <h2>상대 <button class="term">인골</button>에 공을 내려놓는 경기</h2>
+        <p>두 팀이 경기장 양쪽 끝의 <b>트라이 라인</b>을 하나씩 지켜요. 공을 든 채 상대 쪽 트라이 라인을 넘어 인골에 공을 내려놓으면 점수를 얻어요. 옆쪽 경계선은 <button class="term">터치라인</button>이에요.</p>
+        <div class="equip">
+          <div><svg viewBox="0 0 56 56"><ellipse cx="28" cy="28" rx="22" ry="14" fill="#fff" stroke="#66756c" stroke-width="2" transform="rotate(-25 28 28)"/><path d="M18 18 Q15 28 20 38 M38 18 Q41 28 36 38" stroke="#e6b400" stroke-width="3" fill="none" transform="rotate(-25 28 28)"/></svg>럭비공</div>
+          <div><svg viewBox="0 0 56 56"><rect x="6" y="22" width="44" height="8" rx="4" fill="#1d2b24"/><rect x="8" y="28" width="9" height="20" rx="3" fill="#ffd23f" stroke="#7a5a00" stroke-width="1.5"/><rect x="39" y="28" width="9" height="20" rx="3" fill="#ffd23f" stroke="#7a5a00" stroke-width="1.5"/></svg>벨트 + 태그 2개</div>
+          <div><svg viewBox="0 0 56 56"><path d="M14 46 L28 10 L42 46 Z" fill="#ff8a1f" stroke="#a84d00" stroke-width="2"/><rect x="10" y="44" width="36" height="5" rx="2" fill="#e07010"/></svg>꼬깔콘</div>
+          <div><svg viewBox="0 0 56 56"><path d="M17 10 L24 8 Q28 14 32 8 L39 10 L46 18 L41 23 L39 21 L39 48 L17 48 L17 21 L15 23 L10 18 Z" fill="#2563d9" stroke="#0f2f73" stroke-width="2"/><text x="28" y="38" text-anchor="middle" font-size="13" font-weight="800" fill="#fff">7</text></svg>팀 조끼</div>
+        </div>
+        <p class="note">한 팀은 보통 5~6명이 경기장에 들어가요. 대한럭비협회 안내에서는 4~7명, 경기 시간 5~10분 안에서 학교 상황에 맞게 정해요.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3. 태그 벨트 착용 -->
+  <section class="slide" data-title="태그 벨트 차기">
+    <div class="split text-first">
+      <div class="vis paper rise" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;align-items:end">
+        <div id="figOk"></div>
+        <div style="padding:6px 6px 14px">
+          <div class="call ok">바르게 찼어요</div>
+          <ol style="padding-left:20px;margin:12px 0 0">
+            <li>조끼를 먼저 입어요.</li>
+            <li>벨트를 조끼 <b>위에</b> 허리에 맞게 조여요.</li>
+            <li>태그는 <b>양쪽 골반에 하나씩</b> 달아요.</li>
+          </ol>
+        </div>
+      </div>
+      <div class="txt">
+        <div class="kicker">태그 벨트 차기</div>
+        <h2>태그는 양쪽 골반에<br>하나씩, 모두 2개</h2>
+        <p>태그는 상대가 <b>떼어 갈 수 있어야</b> 해요. 벨트를 조끼 안에 차거나, 태그를 앞뒤에 달거나, 한쪽에 몰아 달면 수비가 태그를 뗄 수 없어서 공정한 경기가 되지 않아요.</p>
+        <div class="rule"><span class="ico">규칙</span><p>경기 전에 짝과 서로 벨트를 확인해요. 태그 2개가 양쪽 골반에 보이면 준비 끝!</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4. 트라이 -->
+  <section class="slide" data-title="트라이">
+    <div class="split">
+      <div class="txt">
+        <div class="kicker">점수 얻기</div>
+        <h2><button class="term">트라이</button>: 인골에 공을 내려놓으면 1점</h2>
+        <p>공을 들고 상대 트라이 라인을 넘어가서, <b>손으로 공을 땅에 눌러 내려놓으면</b> 1점이에요. 태그럭비에는 공을 차서 얻는 점수가 없어요.</p>
+        <div class="rule"><span class="ico">안전</span><p>몸을 날리는 다이빙이나 미끄러지는 슬라이딩으로 트라이하면 안 돼요. 서서 공을 내려놓아요.</p></div>
+        <p>트라이가 나오면 점수를 내준 팀이 경기장 가운데에서 <button class="term">프리패스</button>로 다시 시작해요.</p>
+        <p class="note">참고: 15명이 하는 정규 럭비에서는 트라이가 5점이에요.</p>
+      </div>
+      <div class="vis rise">
+        <svg id="bTry"></svg>
+        <div class="bar"><span class="cap grow">인골(노란빛 구역)에 들어가 공을 내려놓는 순간 득점!</span><button class="vbtn" data-replay="try">다시 보기</button></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 5. 태그 -->
+  <section class="slide" data-title="태그">
+    <div class="split">
+      <div class="vis rise">
+        <svg id="bTag"></svg>
+        <div class="timer" id="tagTimer">태그 후 <b>0.0초</b></div>
+        <div class="bar"><button class="vbtn on" id="tagMarks">선 보이기</button><span class="cap grow">흰 점은 태그 뒤 걸음, 노란 선은 수비가 물러나야 하는 3m 선이에요.</span></div>
+      </div>
+      <div class="txt">
+        <div class="kicker">태그가 되면</div>
+        <h2>태그! 멈추고, 패스하고, 물러나기</h2>
+        <ol class="steps">
+          <li><span class="n">1</span><div><div class="who d">수비</div><p>공을 가진 선수의 태그를 하나 떼고, 머리 위로 들며 <b>"태그!"</b>라고 외쳐요. 태그는 공을 가진 선수만 뗄 수 있어요.</p></div></li>
+          <li><span class="n">2</span><div><div class="who a">공격</div><p>태그를 당하면 <b>3걸음 안에 멈추고, 3초 안에</b> 옆이나 뒤에 있는 친구에게 패스해요. 아웃이 아니에요.</p></div></li>
+          <li><span class="n">3</span><div><div class="who d">수비</div><p>태그한 뒤 <b>3m 뒤로 물러나야</b> 해요. 물러나지 않고 경기에 끼어들면 <button class="term">오프사이드</button>예요. 패스가 끝나면 태그를 돌려줘요.</p></div></li>
+        </ol>
+      </div>
+    </div>
+  </section>
+
+  <!-- 6. 퀴즈 1 -->
+  <section class="slide is-quiz" data-title="퀴즈 1">
+    <div class="solo">
+      <div class="kicker">중간 점검</div>
+      <h2>여기까지 확인해요</h2>
+      <div class="quiz" data-q="q1"></div>
+      <div class="quiz" data-q="q2"></div>
+      <div class="quiz" data-q="q3"></div>
+    </div>
+  </section>
+
+  <!-- 7. 패스 방향 -->
+  <section class="slide" data-title="패스 방향">
+    <div class="split">
+      <div class="vis rise">
+        <svg id="bPass" style="touch-action:none"></svg>
+        <div class="verdict ok" id="passVerdict">옆·뒤 패스: 정상</div>
+        <div class="bar"><span class="cap grow">10번 친구를 손가락으로 끌어 옮겨 보세요. 빨간 구역에 있는 친구에게 패스하면 반칙이에요.</span><button class="vbtn on" id="passGo">패스!</button></div>
+      </div>
+      <div class="txt">
+        <div class="kicker">패스 방향</div>
+        <h2>패스는 옆이나 뒤로만</h2>
+        <p>럭비의 '앞'은 <b>상대 인골 쪽</b>이에요. 공을 가진 선수보다 상대 인골에 더 가까이 있는 친구에게 패스하면 <b>앞으로 패스(포워드 패스)</b> 반칙이에요.</p>
+        <div class="rule"><span class="ico">판정</span><p>앞으로 패스 → 상대 팀 공(프리패스)</p></div>
+        <p>공을 앞으로 던질 수 없으니, 공을 든 선수는 혼자 뛰지 않고 뒤에서 따라오는 친구와 함께 달려야 해요.</p>
+        <p class="note">달리면서 뒤로 던졌는데 공이 앞으로 가는 것처럼 보일 때가 있어요. 그 이유는 <button class="term" data-t="5번 과학 이야기">05 경기장 밖 과학</button>에서 알아봐요.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 8. 녹온 -->
+  <section class="slide" data-title="녹온">
+    <div class="split text-first">
+      <div class="duo rise">
+        <div class="vis"><svg id="bKnockF"></svg><div class="tagline">앞으로 놓침<span class="call foul">녹온 · 반칙</span></div></div>
+        <div class="vis"><svg id="bKnockB"></svg><div class="tagline">뒤로 놓침<span class="call ok">경기 계속</span></div></div>
+      </div>
+      <div class="txt">
+        <div class="kicker">공을 놓쳤을 때</div>
+        <h2><button class="term">녹온</button>: 앞으로 떨어뜨리면 반칙</h2>
+        <p>패스를 받다가, 또는 공을 들고 가다가 공을 <b>앞(상대 인골 쪽)으로</b> 떨어뜨리면 녹온이에요. 상대 팀 공이 돼요.</p>
+        <p>공이 <b>옆이나 뒤로</b> 떨어지면 반칙이 아니에요. 얼른 주워서 경기를 계속하면 돼요(<button class="term">플레이온</button>).</p>
+        <div class="rule"><span class="ico">판정</span><p>앞으로 놓침 → 상대 팀 공 / 옆·뒤로 놓침 → 경기 계속</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 9. 공수교대와 프리패스 -->
+  <section class="slide" data-title="공수교대">
+    <div class="split">
+      <div class="vis rise">
+        <svg id="bFree"></svg>
+        <div class="bar"><span class="cap grow">프리패스: 공을 든 선수가 그 자리에서 동료에게 패스하며 다시 시작해요. 수비는 5m 떨어져 있다가 패스한 뒤에 움직여요.</span></div>
+      </div>
+      <div class="txt">
+        <div class="kicker">공격권이 넘어갈 때</div>
+        <h2><button class="term">공수교대</button>와 프리패스</h2>
+        <p>공격 팀은 태그를 당해도 계속 공격할 수 있지만, 기회는 정해져 있어요.</p>
+        <div class="tagcount" aria-label="태그 횟수 예시"><i class="on">1</i><i class="on">2</i><i class="on">3</i><i class="on">4</i><i class="last">5</i><span>5번째 태그 → 상대 공</span></div>
+        <p>이럴 때 상대 팀 공이 돼요.</p>
+        <ul style="margin:0 0 10px;padding-left:22px">
+          <li>다섯 번째 태그를 당했을 때</li>
+          <li>앞으로 패스, 녹온을 했을 때</li>
+          <li>공을 든 선수나 공이 터치라인 밖으로 나갔을 때</li>
+          <li>금지 행동(반칙)을 했을 때: 반칙한 곳에서 상대 프리패스</li>
+        </ul>
+        <p class="note">태그 횟수(3번, 5번, 6번)와 물러나는 거리(3m, 5m, 7m)는 학교와 대회마다 달라요. 이 자료는 태그 5번, 태그 후 3m, 프리패스 5m로 정했어요. 선생님이 정한 규칙이 있으면 그 규칙을 따라요.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 10. 금지 행동 -->
+  <section class="slide" data-title="금지 행동">
+    <div class="wide">
+      <div class="kicker">반칙 → 상대 프리패스</div>
+      <h2>이것만은 하지 않아요</h2>
+      <div class="ban">
+        <div class="card"><div class="vis"><svg id="ban1"></svg></div><h3><span class="call foul">반칙</span>몸 부딪히기</h3><p>태그럭비는 비접촉 경기예요. 밀거나 막아서거나 부딪히면 모두 반칙이에요.</p></div>
+        <div class="card"><div class="vis"><svg id="ban2"></svg></div><h3><span class="call foul">반칙</span>손으로 밀기</h3><p>공을 든 선수가 손이나 팔로 수비를 밀어내면 안 돼요(<button class="term">핸드오프</button>).</p></div>
+        <div class="card"><div class="vis"><svg id="ban3"></svg></div><h3><span class="call foul">반칙</span>태그 가리기</h3><p>자기 태그를 손으로 잡거나 가리고 달리면 수비가 뗄 수 없어요.</p></div>
+        <div class="card"><div class="vis"><svg id="ban4"></svg></div><h3><span class="call foul">반칙</span>옷 잡기</h3><p>수비는 태그만 떼요. 옷이나 몸을 잡으면 반칙이에요.</p></div>
+        <div class="card"><div class="vis"><svg id="ban5"></svg></div><h3><span class="call foul">반칙</span>다이빙·슬라이딩</h3><p>몸을 날리거나 미끄러지면 다칠 수 있어요. 트라이도, 공 줍기도 서서 해요.</p></div>
+        <div class="card"><div class="vis"><svg id="ban6"></svg></div><h3><span class="call foul">반칙</span>공 차기</h3><p>태그럭비에서는 공을 발로 차지 않아요. 손으로 들고 달리고 패스해요.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 11. 퀴즈 2 -->
+  <section class="slide is-quiz" data-title="퀴즈 2">
+    <div class="solo">
+      <div class="kicker">마지막 점검</div>
+      <h2>심판처럼 판단해 봐요</h2>
+      <div class="quiz" data-q="q4"></div>
+      <div class="quiz" data-q="q5"></div>
+      <div class="quiz" data-q="q6"></div>
+      <div class="quiz" data-q="q7"></div>
+    </div>
+  </section>
+
+  <!-- 12. 결과 -->
+  <section class="slide" data-title="결과">
+    <div class="solo">
+      <div class="kicker">결과</div>
+      <h2>오늘의 규칙 한 장</h2>
+      <div id="score"></div>
+      <div class="sheet">
+        <div><b class="k">1</b><span>상대 인골에 손으로 공을 내려놓으면 트라이 1점</span></div>
+        <div><b class="k">2</b><span>태그는 양쪽 골반에 하나씩. 공 가진 선수의 태그만 떼요</span></div>
+        <div><b class="k">3</b><span>태그를 당하면 3걸음 안에 멈추고 3초 안에 패스</span></div>
+        <div><b class="k">4</b><span>태그한 수비는 3m 물러나고, 패스가 끝나면 태그를 돌려줘요</span></div>
+        <div><b class="k">5</b><span>패스는 옆이나 뒤로만. 앞으로 패스는 반칙</span></div>
+        <div><b class="k">6</b><span>공을 앞으로 놓치면 녹온, 옆·뒤로 놓치면 경기 계속</span></div>
+        <div><b class="k">7</b><span>5번째 태그, 반칙, 터치라인 밖 → 상대 프리패스</span></div>
+        <div><b class="k">8</b><span>접촉, 손으로 밀기, 태그 가리기, 옷 잡기, 다이빙, 공 차기 금지</span></div>
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:8px">
+        <button class="btn volt" data-nav="playground">03 규칙 놀이터에서 직접 뛰어 보기 →</button>
+      </div>
+    </div>
+  </section>
+
+</div>
+<div class="ctrl">
+  <button type="button" class="prev" aria-label="이전 카드"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button>
+  <button type="button" class="next" aria-label="다음 카드"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg></button>
+</div>
+<div class="swipe-hint">옆으로 밀거나 오른쪽 아래 버튼을 눌러 넘겨요</div>
+
+</div>
+
+<script>
+/* ===== PLAYBOOK 공통 스크립트: 오류 상자, 이동, 카드 넘김, 퀴즈, 용어 풀이 ===== */
+(function(){
+  var shown = [];
+  window.PE_ERR = function(e, where){
+    try{
+      var box = document.getElementById('errbox');
+      if(!box){ box = document.createElement('div'); box.id = 'errbox'; document.body.appendChild(box); }
+      var msg = (where ? '[' + where + '] ' : '') + (e && e.message ? e.message : String(e));
+      if(shown.indexOf(msg) > -1) return;
+      shown.push(msg);
+      box.style.display = 'block';
+      box.innerHTML = '<b>화면 일부가 제대로 열리지 않았어요.</b> 새로고침해 보고, 계속되면 선생님께 알려 주세요.<br><small>' + shown.join('<br>').replace(/</g,'&lt;') + '</small>';
+    }catch(_){}
+  };
+  window.addEventListener('error', function(ev){ PE_ERR(ev.error || ev.message, '페이지'); });
+})();
+
+window.PE = window.PE || {};
+
+/* 탭 껍데기로 이동 요청 */
+PE.nav = function(target){
+  try{ if(window.parent && window.parent !== window) window.parent.postMessage({type:'pe-nav', target:target}, '*'); }catch(e){}
+};
+document.addEventListener('click', function(ev){
+  var a = ev.target.closest && ev.target.closest('[data-nav]');
+  if(a){ ev.preventDefault(); PE.nav(a.getAttribute('data-nav')); }
+});
+
+PE.reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/* ---- 카드 넘김 ---- */
+PE.deck = function(root){
+  var track = root.querySelector('.track');
+  var slides = Array.prototype.slice.call(track.children);
+  var segs = root.querySelector('.segs');
+  var count = root.querySelector('.count');
+  var prev = root.querySelector('.ctrl .prev'), next = root.querySelector('.ctrl .next');
+  var idx = -1, seen = {}, listeners = [];
+  var ttl = root.querySelector('.rail .ttl'); if(ttl) ttl.textContent = root.dataset.title || '';
+  slides.forEach(function(s, i){
+    var b = document.createElement('button');
+    b.className = 'seg' + (s.classList.contains('is-quiz') ? ' quiz' : '');
+    b.setAttribute('aria-label', (i+1) + '번째 카드' + (s.dataset.title ? ': ' + s.dataset.title : ''));
+    b.onclick = function(){ go(i); };
+    segs.appendChild(b);
+  });
+  var segEls = segs.children;
+  function go(i, smooth){
+    i = Math.max(0, Math.min(slides.length - 1, i));
+    track.scrollTo({left: i * track.clientWidth, behavior: (smooth === false || PE.reduce) ? 'auto' : 'smooth'});
+  }
+  function update(){
+    var i = Math.round(track.scrollLeft / Math.max(1, track.clientWidth));
+    if(i === idx) return;
+    idx = i; seen[i] = true;
+    slides.forEach(function(s, k){ s.classList.toggle('enter', k === i); s.toggleAttribute('inert', false); });
+    for(var k = 0; k < segEls.length; k++){
+      segEls[k].classList.toggle('on', k === i);
+      segEls[k].classList.toggle('done', !!seen[k] && k !== i);
+    }
+    count.textContent = (i+1) + ' / ' + slides.length;
+    prev.disabled = i === 0; next.disabled = i === slides.length - 1;
+    listeners.forEach(function(fn){ try{ fn(i, slides[i]); }catch(e){ PE_ERR(e, '카드 넘김'); } });
+  }
+  var raf = 0;
+  track.addEventListener('scroll', function(){ cancelAnimationFrame(raf); raf = requestAnimationFrame(update); }, {passive:true});
+  prev.onclick = function(){ go(idx - 1); };
+  next.onclick = function(){ go(idx + 1); };
+  window.addEventListener('resize', function(){ var k = idx; idx = -1; go(k, false); setTimeout(update, 60); });
+  document.addEventListener('keydown', function(e){
+    if(/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)) return;
+    if(e.key === 'ArrowRight' || e.key === 'PageDown'){ go(idx + 1); e.preventDefault(); }
+    if(e.key === 'ArrowLeft' || e.key === 'PageUp'){ go(idx - 1); e.preventDefault(); }
+  });
+  var fsz = root.querySelectorAll('.fsz button');
+  var sizes = [16, 18, 20, 22], si = 1;
+  try{ si = +(localStorage.getItem('pe-fs') || 1); }catch(e){}
+  function applyFs(){ document.documentElement.style.setProperty('--fs', sizes[si] + 'px'); try{ localStorage.setItem('pe-fs', si); }catch(e){} }
+  if(fsz.length === 2){
+    fsz[0].onclick = function(){ si = Math.max(0, si - 1); applyFs(); };
+    fsz[1].onclick = function(){ si = Math.min(sizes.length - 1, si + 1); applyFs(); };
+  }
+  applyFs();
+  var hint = root.querySelector('.swipe-hint');
+  if(hint){ setTimeout(function(){ hint.style.opacity = 0; }, 3800); }
+  setTimeout(update, 30);
+  return {
+    go: go,
+    slides: slides,
+    get idx(){ return idx; },
+    onChange: function(fn){ listeners.push(fn); },
+    indexOf: function(el){ var s = el.closest('.slide'); return slides.indexOf(s); }
+  };
+};
+
+/* ---- 퀴즈 ----
+   QUIZ = { id: {type:'mc'|'ox'|'pics'|'chips', q, opts, a, ex, src} }
+   <div class="quiz" data-q="id"></div> 자리에 그린다. 첫 번째 답만 점수에 넣는다. */
+PE.quiz = function(QUIZ, opt){
+  opt = opt || {};
+  var state = {}; // id -> {first:true/false}
+  var order = [];
+  var nums = {};
+  var holders = document.querySelectorAll('.quiz[data-q]');
+  Array.prototype.forEach.call(holders, function(h, n){
+    var id = h.getAttribute('data-q'), d = QUIZ[id];
+    if(!d){ h.textContent = '문제 데이터 없음: ' + id; return; }
+    order.push(id); nums[id] = order.length;
+    var head = '<div class="qn">문제 ' + order.length + (d.src ? ' <span class="src">' + d.src + '</span>' : '') + '</div>';
+    var q = '<div class="q">' + d.q + '</div>';
+    h.innerHTML = head + q;
+    var fb = document.createElement('div'); fb.className = 'fb';
+    function done(ok){
+      if(!(id in state)) state[id] = ok;
+      fb.className = 'fb show ' + (ok ? 'ok' : 'no');
+      fb.innerHTML = (ok ? '<b>정답이에요.</b> ' : '<b>다시 생각해 봐요.</b> ') + (d.ex || '');
+      if(opt.onAnswer) opt.onAnswer(id, ok, state);
+    }
+    if(d.type === 'chips'){
+      var parts = d.q.split(/\[\[(\d+)\]\]/);
+      var sent = document.createElement('div'); sent.className = 'sentence';
+      var blanks = [];
+      h.querySelector('.q').remove();
+      parts.forEach(function(p, i){
+        if(i % 2 === 0){ sent.appendChild(document.createTextNode(p)); return; }
+        var b = document.createElement('button'); b.className = 'blank'; b.textContent = ' ';
+        b.setAttribute('aria-label', '빈칸'); b._val = null;
+        b.onclick = function(){ if(b._val == null || b.classList.contains('right')) return; b._chip.classList.remove('used'); b._val = null; b.textContent = ' '; b.classList.remove('wrong'); };
+        blanks.push(b); sent.appendChild(b);
+      });
+      h.appendChild(sent);
+      var chips = document.createElement('div'); chips.className = 'chips';
+      d.chips.forEach(function(c){
+        var cb = document.createElement('button'); cb.className = 'chip'; cb.textContent = c;
+        cb.onclick = function(){
+          if(cb.classList.contains('used')) return;
+          var empty = blanks.filter(function(b){ return b._val == null; })[0];
+          if(!empty) return;
+          empty._val = c; empty._chip = cb; empty.textContent = c; cb.classList.add('used');
+          if(blanks.every(function(b){ return b._val != null; })){
+            var ok = blanks.every(function(b, i){ return b._val === d.a[i]; });
+            blanks.forEach(function(b, i){ b.classList.toggle('right', b._val === d.a[i]); b.classList.toggle('wrong', b._val !== d.a[i]); });
+            done(ok);
+          }
+        };
+        chips.appendChild(cb);
+      });
+      h.appendChild(chips);
+    } else {
+      var box = document.createElement('div');
+      var opts = d.type === 'ox' ? ['O', 'X'] : d.opts;
+      box.className = 'opts' + (d.type === 'ox' ? ' ox' : '') + (d.type === 'pics' ? ' pics' : '') + (d.two ? ' two' : '');
+      opts.forEach(function(o, i){
+        var b = document.createElement('button'); b.className = 'opt';
+        b.innerHTML = (d.type === 'ox' ? '' : '<span class="k">' + (i+1) + '</span>') + '<span>' + o + '</span>';
+        b.onclick = function(){
+          var ans = d.type === 'ox' ? (d.a ? 0 : 1) : d.a;
+          var ok = i === ans;
+          b.classList.add(ok ? 'right' : 'wrong');
+          if(ok){ Array.prototype.forEach.call(box.children, function(x){ x.disabled = true; }); }
+          done(ok);
+        };
+        box.appendChild(b);
+      });
+      h.appendChild(box);
+    }
+    h.appendChild(fb);
+  });
+  return {
+    order: order,
+    state: state,
+    nums: nums,
+    score: function(){ var s = 0; order.forEach(function(id){ if(state[id] === true) s++; }); return s; },
+    answered: function(){ return order.filter(function(id){ return id in state; }).length; }
+  };
+};
+
+/* 결과 칸 그리기 */
+PE.renderScore = function(el, quiz, deck, msgs){
+  var n = quiz.order.length, s = quiz.score(), a = quiz.answered();
+  var msg = a < n ? '아직 ' + (n - a) + '문제를 풀지 않았어요.' : (s === n ? msgs[0] : s >= n * 0.6 ? msgs[1] : msgs[2]);
+  var wrong = quiz.order.filter(function(id){ return quiz.state[id] === false; });
+  var html = '<div class="scorebox"><div><div class="lbl">맞힌 문제</div><div class="digits">' + s + '<small> / ' + n + '</small></div></div><div style="flex:1;min-width:200px"><div class="msg">' + msg + '</div></div></div>';
+  if(wrong.length){
+    html += '<div class="review">' + wrong.map(function(id){
+      var h = document.querySelector('.quiz[data-q="' + id + '"]');
+      var label = '틀린 문제 ' + quiz.nums[id] + ' 다시 보기';
+      return '<button data-go="' + deck.indexOf(h) + '">' + label + ' →</button>';
+    }).join('') + '</div>';
+  }
+  el.innerHTML = html;
+  Array.prototype.forEach.call(el.querySelectorAll('[data-go]'), function(b){ b.onclick = function(){ deck.go(+b.dataset.go); }; });
+};
+
+/* ---- 용어 풀이 ---- */
+PE.glossary = function(G){
+  var pop = null;
+  function close(){ if(pop){ pop.remove(); pop = null; } }
+  document.addEventListener('click', function(ev){
+    var t = ev.target.closest && ev.target.closest('.term');
+    close();
+    if(!t) return;
+    var key = t.dataset.t || t.textContent.trim();
+    if(!G[key]) return;
+    pop = document.createElement('div'); pop.className = 'gloss';
+    pop.innerHTML = '<b>' + key + '</b>' + G[key];
+    document.body.appendChild(pop);
+    var r = t.getBoundingClientRect(), pw = pop.offsetWidth, ph = pop.offsetHeight;
+    var x = Math.min(window.innerWidth - pw - 10, Math.max(10, r.left + r.width / 2 - pw / 2));
+    var y = r.bottom + 8; if(y + ph > window.innerHeight - 10) y = r.top - ph - 8;
+    pop.style.left = x + 'px'; pop.style.top = y + 'px';
+    ev.stopPropagation();
+  });
+  document.addEventListener('scroll', close, true);
+};
+
+</script>
+<script>
+/* ===== 작전판: 위에서 내려다본 태그럭비 경기장, 선수, 공, 장면 재생 =====
+   좌표는 m 단위. x: 왼쪽 트라이 라인 0 → 오른쪽 트라이 라인 L (파랑 팀 공격 방향 +x)
+   y: 위쪽 터치라인 0 → 아래쪽 터치라인 W. 인골은 양 끝 IG m. */
+(function(){
+var NS = 'http://www.w3.org/2000/svg';
+function E(tag, attrs, parent){
+  var e = document.createElementNS(NS, tag);
+  if(attrs) for(var k in attrs) e.setAttribute(k, attrs[k]);
+  if(parent) parent.appendChild(e);
+  return e;
+}
+var uid = 0;
+function lerp(a, b, u){ return a + (b - a) * u; }
+function clamp(v, a, b){ return Math.max(a, Math.min(b, v)); }
+
+var TEAM = {
+  blue: {c1:'#6ea2ff', c2:'#1a4fb8', edge:'#0f2f73', arm:'#1d3f86'},
+  red:  {c1:'#ff8a6b', c2:'#b0301d', edge:'#6e170b', arm:'#8e2414'}
+};
+
+function Board(svg, o){
+  o = o || {};
+  this.svg = svg; this.L = o.len != null ? o.len : 40; this.W = o.wid != null ? o.wid : 25; this.IG = o.ig != null ? o.ig : 5;
+  var v = o.view || {x:-this.IG - 0.6, y:-0.6, w:this.L + 2*this.IG + 1.2, h:this.W + 1.2};
+  this.view = v;
+  svg.setAttribute('viewBox', v.x + ' ' + v.y + ' ' + v.w + ' ' + v.h);
+  svg.setAttribute('preserveAspectRatio', o.par || 'xMidYMid meet');
+  svg.classList.add('board');
+  var id = this.id = 'pb' + (++uid);
+  var d = E('defs', null, svg);
+  function rg(name, c1, c2, cx, cy){
+    var g = E('radialGradient', {id:id + name, cx:cx || '.36', cy:cy || '.3', r:'.78'}, d);
+    E('stop', {offset:'0', 'stop-color':c1}, g); E('stop', {offset:'1', 'stop-color':c2}, g);
+  }
+  rg('blue', TEAM.blue.c1, TEAM.blue.c2); rg('red', TEAM.red.c1, TEAM.red.c2);
+  rg('ball', '#ffffff', '#c5cec8', '.4', '.3');
+  var vg = E('radialGradient', {id:id + 'vig', cx:'.5', cy:'.5', r:'.75'}, d);
+  E('stop', {offset:'.55', 'stop-color':'#000', 'stop-opacity':'0'}, vg); E('stop', {offset:'1', 'stop-color':'#000', 'stop-opacity':'.28'}, vg);
+  var sh = E('linearGradient', {id:id + 'sheen', x1:'0', y1:'0', x2:'0', y2:'1'}, d);
+  E('stop', {offset:'0', 'stop-color':'#fff', 'stop-opacity':'.07'}, sh); E('stop', {offset:'1', 'stop-color':'#fff', 'stop-opacity':'0'}, sh);
+  this.gTurf = E('g', null, svg);
+  this.gMarks = E('g', null, svg);
+  this.gActors = E('g', null, svg);
+  this.gBall = E('g', null, svg);
+  this.gFx = E('g', null, svg);
+  this.actors = {};
+  this.drawField(o);
+}
+Board.prototype.drawField = function(o){
+  var L = this.L, W = this.W, IG = this.IG, g = this.gTurf, id = this.id, pad = 8;
+  E('rect', {x:-IG - pad, y:-pad, width:L + 2*IG + 2*pad, height:W + 2*pad, fill:'#1b6340'}, g);
+  var n = Math.ceil((L + 2*IG) / 2.5);
+  for(var i = 0; i < n; i++){
+    E('rect', {x:-IG + i*2.5, y:0, width:Math.min(2.5, L + IG - (-IG + i*2.5)), height:W, fill:i % 2 ? '#2c8752' : '#33935b'}, g);
+  }
+  E('rect', {x:L, y:0, width:IG, height:W, fill:'rgba(255,210,63,.13)'}, g);
+  E('rect', {x:-IG, y:0, width:IG, height:W, fill:'rgba(255,255,255,.05)'}, g);
+  E('rect', {x:-IG, y:0, width:L + 2*IG, height:W, fill:'url(#' + id + 'sheen)'}, g);
+  var ln = {stroke:'#f3f6ee', 'stroke-width':.14, fill:'none', 'stroke-linecap':'round', opacity:.92};
+  E('rect', Object.assign({x:-IG, y:0, width:L + 2*IG, height:W}, ln), g);
+  E('line', Object.assign({x1:0, y1:0, x2:0, y2:W}, ln, {'stroke-width':.26}), g);
+  E('line', Object.assign({x1:L, y1:0, x2:L, y2:W}, ln, {'stroke-width':.26}), g);
+  E('line', Object.assign({x1:L/2, y1:0, x2:L/2, y2:W, 'stroke-dasharray':'.7 .5'}, ln), g);
+  if(o.labels !== false){
+    var t1 = E('text', {x:L + IG/2, y:W/2, 'text-anchor':'middle', 'dominant-baseline':'middle', 'font-size':1.25, fill:'rgba(255,255,255,.55)', 'font-family':'Black Han Sans, Pretendard', transform:'rotate(90 ' + (L + IG/2) + ' ' + W/2 + ')', 'letter-spacing':'.4'}, g);
+    t1.textContent = '상대 인골';
+    var t2 = E('text', {x:-IG/2, y:W/2, 'text-anchor':'middle', 'dominant-baseline':'middle', 'font-size':1.25, fill:'rgba(255,255,255,.35)', 'font-family':'Black Han Sans, Pretendard', transform:'rotate(-90 ' + (-IG/2) + ' ' + W/2 + ')', 'letter-spacing':'.4'}, g);
+    t2.textContent = '우리 인골';
+  }
+  [[-IG,0],[-IG,W],[0,0],[0,W],[L/2,0],[L/2,W],[L,0],[L,W],[L+IG,0],[L+IG,W]].forEach(function(p){
+    E('path', {d:'M' + (p[0]-.38) + ' ' + (p[1]+.3) + ' L' + p[0] + ' ' + (p[1]-.42) + ' L' + (p[0]+.38) + ' ' + (p[1]+.3) + ' Z', fill:'#ff8a1f', stroke:'#a84d00', 'stroke-width':.06}, g);
+  });
+  E('rect', {x:-IG - pad, y:-pad, width:L + 2*IG + 2*pad, height:W + 2*pad, fill:'url(#' + id + 'vig)', 'pointer-events':'none'}, g);
+};
+Board.prototype.player = function(id, team, num, o){ var a = new Actor(this, id, team, num, o || {}); this.actors[id] = a; return a; };
+Board.prototype.ball = function(){ return this._ball || (this._ball = new Ball(this)); };
+Board.prototype.toLocal = function(ev){
+  var pt = this.svg.createSVGPoint(); pt.x = ev.clientX; pt.y = ev.clientY;
+  var p = pt.matrixTransform(this.svg.getScreenCTM().inverse()); return {x:p.x, y:p.y};
+};
+Board.prototype.clearMarks = function(){ this.gMarks.replaceChildren(); };
+Board.prototype.E = E;
+
+/* ---- 선수 ---- */
+function Actor(b, id, team, num, o){
+  this.b = b; this.id = id; this.team = team; this.x = 0; this.y = 0; this.ang = team === 'red' ? 180 : 0;
+  var t = TEAM[team], g = this.g = E('g', {'class':'actor'}, b.gActors);
+  this.ringEl = E('circle', {r:1.45, fill:'none', stroke:'#ffd23f', 'stroke-width':.18, 'stroke-dasharray':'.55 .32', opacity:0}, g);
+  E('ellipse', {cx:.24, cy:.34, rx:1.0, ry:.9, fill:'rgba(0,0,0,.26)'}, g);
+  this.arms = [0,1].map(function(){ return E('line', {x1:0, y1:0, x2:0, y2:0, stroke:t.arm, 'stroke-width':.34, 'stroke-linecap':'round', opacity:0}, g); });
+  this.rot = E('g', null, g);
+  this.tagEls = [-1, 1].map(function(s){ return E('rect', {x:-.42, y:s * .82 - .2 + (s > 0 ? .06 : -.06), width:.62, height:.4, rx:.12, fill:'#ffd23f', stroke:'#7a5a00', 'stroke-width':.06}, this.rot); }, this);
+  E('circle', {r:.82, fill:'url(#' + b.id + team + ')', stroke:t.edge, 'stroke-width':.09}, this.rot);
+  E('path', {d:'M.86 -.36 L1.24 0 L.86 .36 Z', fill:t.edge}, this.rot);
+  this.numEl = E('text', {x:0, y:.31, 'text-anchor':'middle', 'font-size':.82, 'font-weight':800, fill:'#fff'}, g);
+  this.numEl.textContent = num != null ? num : '';
+  this.raised = E('rect', {x:-.32, y:-2.05, width:.64, height:.38, rx:.1, fill:'#ffd23f', stroke:'#7a5a00', 'stroke-width':.06, opacity:0}, g);
+  this.tags = [true, true];
+  this.bub = null;
+  if(o.label){
+    var lb = E('text', {x:0, y:-1.35, 'text-anchor':'middle', 'font-size':.72, 'font-weight':800, fill:'#fff', stroke:'rgba(0,0,0,.55)', 'stroke-width':.18, 'paint-order':'stroke'}, g);
+    lb.textContent = o.label; this.labelEl = lb;
+  }
+  this.face(this.ang);
+}
+Actor.prototype.pos = function(x, y){
+  this.x = x; this.y = y; this.g.setAttribute('transform', 'translate(' + x.toFixed(3) + ' ' + y.toFixed(3) + ')');
+  if(this.bub) this.bub.setAttribute('transform', 'translate(' + x.toFixed(3) + ' ' + (y - 2.2).toFixed(3) + ')');
+};
+Actor.prototype.face = function(a){ this.ang = a; this.rot.setAttribute('transform', 'rotate(' + a.toFixed(1) + ')' + (this.diving ? ' scale(1.5 .74)' : '')); };
+Actor.prototype.setDive = function(on){ if(this.diving !== on){ this.diving = on; this.face(this.ang); } };
+Actor.prototype.setTags = function(l, r){
+  this.tags = [l, r];
+  this.tagEls[0].style.display = l ? '' : 'none'; this.tagEls[1].style.display = r ? '' : 'none';
+};
+Actor.prototype.tagWorld = function(side){
+  var a = this.ang * Math.PI / 180, ly = side ? .9 : -.9, lx = -.1;
+  return {x:this.x + lx * Math.cos(a) - ly * Math.sin(a), y:this.y + lx * Math.sin(a) + ly * Math.cos(a)};
+};
+Actor.prototype.arm = function(side, tx, ty){
+  var ln = this.arms[side];
+  if(tx == null){ ln.setAttribute('opacity', 0); return; }
+  var dx = tx - this.x, dy = ty - this.y, d = Math.hypot(dx, dy) || 1, reach = Math.min(d, 2.0);
+  ln.setAttribute('x1', (dx/d * .55).toFixed(3)); ln.setAttribute('y1', (dy/d * .55).toFixed(3));
+  ln.setAttribute('x2', (dx/d * reach).toFixed(3)); ln.setAttribute('y2', (dy/d * reach).toFixed(3));
+  ln.setAttribute('opacity', 1);
+};
+Actor.prototype.ring = function(on, color){
+  this.ringEl.setAttribute('opacity', on ? 1 : 0);
+  if(color) this.ringEl.setAttribute('stroke', color);
+};
+Actor.prototype.raise = function(on){ this.raised.setAttribute('opacity', on ? 1 : 0); };
+Actor.prototype.say = function(text, tone){
+  if(!text){ if(this.bub) this.bub.style.display = 'none'; return; }
+  if(!this.bub){
+    this.bub = E('g', {'pointer-events':'none'}, this.b.gFx);
+    this.bubR = E('rect', {y:-.95, height:1.5, rx:.5, fill:'#fff', stroke:'rgba(0,0,0,.25)', 'stroke-width':.05}, this.bub);
+    this.bubP = E('path', {d:'M-.3 .5 L0 1.05 L.3 .5 Z', fill:'#fff'}, this.bub);
+    this.bubT = E('text', {x:0, y:.1, 'text-anchor':'middle', 'dominant-baseline':'middle', 'font-size':.9, 'font-family':'Black Han Sans, Pretendard', fill:'#14201a'}, this.bub);
+  }
+  this.bub.style.display = '';
+  if(this.bubT.textContent !== text){
+    this.bubT.textContent = text;
+    var w = Math.max(2.4, text.length * .92 + .9);
+    this.bubR.setAttribute('x', -w/2); this.bubR.setAttribute('width', w);
+  }
+  this.bubR.setAttribute('fill', tone === 'foul' ? '#ffe3df' : tone === 'volt' ? '#ffd23f' : '#fff');
+  this.bubP.setAttribute('fill', tone === 'foul' ? '#ffe3df' : tone === 'volt' ? '#ffd23f' : '#fff');
+  this.pos(this.x, this.y);
+};
+
+/* ---- 공 ---- */
+function Ball(b){
+  var g = this.g = E('g', {'pointer-events':'none'}, b.gBall);
+  this.sh = E('ellipse', {rx:.46, ry:.3, fill:'rgba(0,0,0,.3)'}, g);
+  this.body = E('g', null, g);
+  E('ellipse', {rx:.5, ry:.32, fill:'url(#' + b.id + 'ball)', stroke:'#65736b', 'stroke-width':.05}, this.body);
+  E('path', {d:'M-.2 -.3 Q-.27 0 -.2 .3 M.2 -.3 Q.27 0 .2 .3', stroke:'#ffd23f', 'stroke-width':.09, fill:'none'}, this.body);
+  E('path', {d:'M-.12 0 H.12 M-.08 -.06 V.06 M0 -.06 V.06 M.08 -.06 V.06', stroke:'#7b8a82', 'stroke-width':.035}, this.body);
+}
+Ball.prototype.set = function(x, y, rot, h){
+  h = h || 0; rot = rot || 0;
+  this.x = x; this.y = y;
+  this.sh.setAttribute('cx', (x + .18 + h*.5).toFixed(3)); this.sh.setAttribute('cy', (y + .26 + h*.65).toFixed(3));
+  this.sh.setAttribute('opacity', (1 - Math.min(.6, h*.35)).toFixed(2));
+  this.body.setAttribute('transform', 'translate(' + x.toFixed(3) + ' ' + (y - h).toFixed(3) + ') rotate(' + rot.toFixed(1) + ') scale(' + (1 + h*.22).toFixed(3) + ')');
+};
+Ball.prototype.show = function(on){ this.g.style.display = on ? '' : 'none'; };
+
+/* ---- 장면 재생 ----
+   scn = { dur, view?, actors:[{id,team,num,keys:[[t,x,y],...], tags:[1,1], label}],
+           ball:[{on:id,t0,t1} | {from:id,to:id,t0,t1} | {from:id,xy:[x,y],t0,t1,drop:true} | {xy:[x,y],t0,t1}],
+           events:[{t,type:'tag',who,side,by} | {t,type:'say',who,text,dur,tone} | {t,type:'raise',who,dur}
+                   | {t,type:'arm',who,side,to:id|'tag0'|'tag1'|[x,y],until} | {t,type:'ring',who,until,color} | {t,type:'tagback',who}],
+           marks:[{type:'passline',who,at} | {type:'offside',at,who,dist} | {type:'steps',who,t0,t1} | {type:'ring',who,at,color}
+                  | {type:'arrow',from:[x,y],to:[x,y],color,label} | {type:'text',x,y,text,color} | {type:'ballpath',t0,t1}] } */
+function Scene(board, scn, o){
+  o = o || {};
+  this.b = board; this.s = scn; this.t = 0; this.speed = 1; this.playing = false;
+  this.loop = !!o.loop; this.marksOn = !!o.marks; this.hold = o.hold != null ? o.hold : 1.2;
+  this.onEnd = o.onEnd || null; this.onTick = o.onTick || null;
+  var self = this;
+  this.A = {};
+  scn.actors.forEach(function(a){
+    var p = board.player(a.id, a.team, a.num, {label:a.label});
+    self.A[a.id] = p;
+  });
+  this.ball = scn.ball ? board.ball() : null;
+  this._mk = '';
+  this.render(0);
+}
+Scene.prototype.def = function(id){ for(var i = 0; i < this.s.actors.length; i++) if(this.s.actors[i].id === id) return this.s.actors[i]; };
+Scene.prototype.posAt = function(id, t){
+  var k = this.def(id).keys;
+  if(t <= k[0][0]) return {x:k[0][1], y:k[0][2]};
+  for(var i = 0; i < k.length - 1; i++){
+    if(t <= k[i+1][0]){
+      var u = (t - k[i][0]) / Math.max(1e-6, k[i+1][0] - k[i][0]);
+      return {x:lerp(k[i][1], k[i+1][1], u), y:lerp(k[i][2], k[i+1][2], u)};
+    }
+  }
+  var l = k[k.length - 1]; return {x:l[1], y:l[2]};
+};
+Scene.prototype.ballSeg = function(t){
+  var bs = this.s.ball; if(!bs) return null;
+  for(var i = 0; i < bs.length; i++) if(t >= bs[i].t0 && t <= bs[i].t1) return bs[i];
+  return t < bs[0].t0 ? bs[0] : bs[bs.length - 1];
+};
+Scene.prototype.holderAt = function(t){ var s = this.ballSeg(t); return s && s.on ? s.on : null; };
+Scene.prototype.faceAt = function(id, t){
+  var a = this.posAt(id, t - .08), c = this.posAt(id, t + .08), dx = c.x - a.x, dy = c.y - a.y;
+  if(Math.hypot(dx, dy) > .05) return Math.atan2(dy, dx) * 180 / Math.PI;
+  var d = this.def(id), me = this.posAt(id, t), bp = this.ballPos(t);
+  if(bp && this.holderAt(t) !== id && Math.hypot(bp.x - me.x, bp.y - me.y) > .5) return Math.atan2(bp.y - me.y, bp.x - me.x) * 180 / Math.PI;
+  return d.face != null ? d.face : (d.team === 'red' ? 180 : 0);
+};
+Scene.prototype.carry = function(id, t){
+  var p = this.posAt(id, t), a = this._faceNoBall(id, t) * Math.PI / 180;
+  return {x:p.x + Math.cos(a) * .55 + Math.cos(a + Math.PI/2) * .55, y:p.y + Math.sin(a) * .55 + Math.sin(a + Math.PI/2) * .55, rot:this._faceNoBall(id, t) + 90};
+};
+Scene.prototype._faceNoBall = function(id, t){
+  var a = this.posAt(id, t - .08), c = this.posAt(id, t + .08), dx = c.x - a.x, dy = c.y - a.y;
+  if(Math.hypot(dx, dy) > .05) return Math.atan2(dy, dx) * 180 / Math.PI;
+  var d = this.def(id); return d.face != null ? d.face : (d.team === 'red' ? 180 : 0);
+};
+Scene.prototype.ballPos = function(t){
+  var s = this.ballSeg(t); if(!s) return null;
+  if(s.on){ var c = this.carry(s.on, t); return {x:c.x, y:c.y, rot:c.rot, h:0}; }
+  if(!s.from && !s.xy0){ return {x:s.xy[0], y:s.xy[1], rot:s.rot || 20, h:0}; }
+  var u = clamp((t - s.t0) / Math.max(1e-6, s.t1 - s.t0), 0, 1);
+  var p0 = s.from ? this.carry(s.from, s.t0) : {x:s.xy0[0], y:s.xy0[1]};
+  var p1 = s.to ? this.carry(s.to, s.t1) : {x:s.xy[0], y:s.xy[1]};
+  var x = lerp(p0.x, p1.x, u), y = lerp(p0.y, p1.y, u);
+  var dir = Math.atan2(p1.y - p0.y, p1.x - p0.x) * 180 / Math.PI;
+  if(s.place){ return {x:x, y:y, rot:dir, h:.7 * (1 - u)}; }
+  if(s.kick){ return {x:x, y:y, rot:dir + u * 720, h:2.2 * Math.sin(Math.PI * u)}; }
+  if(s.drop){
+    var h = u < .55 ? 1.1 * (1 - Math.pow(u/.55, 2)) * (1 - u) : .35 * Math.sin(Math.PI * (u - .55) / .45);
+    return {x:x, y:y, rot:dir + u * 620, h:Math.max(0, h)};
+  }
+  return {x:x, y:y, rot:dir, h:1.3 * Math.sin(Math.PI * u)};
+};
+Scene.prototype.render = function(t){
+  var s = this.s, self = this, ev = s.events || [];
+  this.t = t;
+  s.actors.forEach(function(d){
+    var a = self.A[d.id], p = self.posAt(d.id, t);
+    a.pos(p.x, p.y); a.face(self.faceAt(d.id, t));
+    var tg = d.tags ? [!!d.tags[0], !!d.tags[1]] : [true, true];
+    var bubble = null, tone = null, raised = false, ring = null, dive = false;
+    var arms = [null, null];
+    ev.forEach(function(e){
+      if(e.t > t) return;
+      if(e.who !== d.id) return;
+      if(e.type === 'tag') tg[e.side] = false;
+      if(e.type === 'tagback') tg = [true, true];
+      if(e.type === 'dive' && t < (e.until != null ? e.until : 1e9)) dive = true;
+      if(e.type === 'say' && t < e.t + (e.dur || 1.4)){ bubble = e.text; tone = e.tone; }
+      if(e.type === 'raise' && t < e.t + (e.dur || 1.4)) raised = true;
+      if(e.type === 'ring' && t < (e.until != null ? e.until : 1e9)) ring = e.color || '#ffd23f';
+      if(e.type === 'arm'){ arms[e.side || 0] = (e.until == null || t < e.until) ? e : null; }
+    });
+    a.setDive(dive); a.face(self.faceAt(d.id, t));
+    a.setTags(tg[0], tg[1]); a.say(bubble, tone); a.raise(raised); a.ring(!!ring, ring);
+    [0,1].forEach(function(side){
+      var e = arms[side];
+      if(!e){ a.arm(side, null); return; }
+      var tgt;
+      if(typeof e.to === 'string' && /^tag[01]$/.test(e.to)){ tgt = a.tagWorld(+e.to[3]); }
+      else if(typeof e.to === 'string'){ tgt = self.posAt(e.to, t); }
+      else tgt = {x:e.to[0], y:e.to[1]};
+      a.arm(side, tgt.x, tgt.y);
+    });
+  });
+  if(this.ball){ var bp = this.ballPos(t); this.ball.set(bp.x, bp.y, bp.rot, bp.h); }
+  this.drawMarks(t);
+  if(this.onTick) this.onTick(t);
+};
+Scene.prototype.drawMarks = function(t){
+  var on = this.marksOn ? (this.s.marks || []).filter(function(m){ var at = m.at != null ? m.at : (m.t0 != null ? m.t0 : 0); return t >= at; }) : [];
+  var key = on.length + ':' + on.map(function(m){ return m.type; }).join(',');
+  if(key === this._mk) return;
+  this._mk = key;
+  var b = this.b, g = b.gMarks, self = this, L = b.L, W = b.W, IG = b.IG, TOP = Math.max(1.6, b.view.y + 1.6), BOT = Math.min(W - 1.2, b.view.y + b.view.h - 1.2);
+  g.replaceChildren();
+  on.forEach(function(m){
+    if(m.type === 'passline'){
+      var p = self.ballPos(m.at), x = p.x;
+      E('rect', {x:x, y:0, width:L + IG - x, height:W, fill:'rgba(223,74,47,.26)'}, g);
+      E('rect', {x:-IG, y:0, width:x + IG, height:W, fill:'rgba(255,255,255,.08)'}, g);
+      E('line', {x1:x, y1:0, x2:x, y2:W, stroke:'#fff', 'stroke-width':.2, 'stroke-dasharray':'.6 .35'}, g);
+      label(x + .5, m.ly != null ? m.ly : TOP, '앞 (상대 인골 쪽) →', '#ffe1da', 'start');
+      label(x - .5, m.ly != null ? m.ly : TOP, '← 뒤', '#ffffff', 'end');
+    }
+    if(m.type === 'offside'){
+      var bp = self.ballPos(m.at), lx = bp.x + (m.dist || 3);
+      E('rect', {x:bp.x, y:0, width:lx - bp.x, height:W, fill:'rgba(223,74,47,.22)'}, g);
+      E('line', {x1:lx, y1:0, x2:lx, y2:W, stroke:'#ffd23f', 'stroke-width':.22, 'stroke-dasharray':'.7 .4'}, g);
+      E('line', {x1:bp.x, y1:0, x2:bp.x, y2:W, stroke:'rgba(255,255,255,.6)', 'stroke-width':.12, 'stroke-dasharray':'.3 .3'}, g);
+      label((bp.x + lx) / 2, m.ly != null ? m.ly : BOT, (m.dist || 3) + 'm', '#ffd23f', 'middle');
+      label(lx + .4, m.ly2 != null ? m.ly2 : TOP, '수비는 이 선 뒤로', '#ffd23f', 'start');
+    }
+    if(m.type === 'steps'){
+      var last = self.posAt(m.who, m.t0), acc = 0, n = 0;
+      for(var tt = m.t0; tt <= m.t1 + 1e-6; tt += .02){
+        var p2 = self.posAt(m.who, tt); acc += Math.hypot(p2.x - last.x, p2.y - last.y); last = p2;
+        if(acc >= .8){ acc = 0; n++;
+          E('circle', {cx:p2.x, cy:p2.y + (n % 2 ? .35 : -.35), r:.26, fill:n > 3 ? '#ff6b52' : '#ffffff', stroke:'rgba(0,0,0,.35)', 'stroke-width':.05}, g);
+        }
+      }
+      var pe = self.posAt(m.who, m.t1);
+      label(pe.x, pe.y + 2.3, n + '걸음', n > 3 ? '#ffb4a6' : '#ffffff', 'middle');
+    }
+    if(m.type === 'ring'){
+      var pr = m.who ? self.posAt(m.who, m.at) : {x:m.x, y:m.y};
+      E('circle', {cx:pr.x, cy:pr.y, r:m.r || 1.9, fill:'none', stroke:m.color || '#ff6b52', 'stroke-width':.24}, g);
+    }
+    if(m.type === 'arrow') arrow(m.from, m.to, m.color || '#ffd23f', m.label);
+    if(m.type === 'text') label(m.x, m.y, m.text, m.color || '#fff', m.anchor || 'middle', m.size);
+    if(m.type === 'ballpath'){
+      var pts = [];
+      for(var t2 = m.t0; t2 <= m.t1 + 1e-6; t2 += .05){ var q = self.ballPos(t2); pts.push(q.x.toFixed(2) + ',' + q.y.toFixed(2)); }
+      E('polyline', {points:pts.join(' '), fill:'none', stroke:m.color || '#ffd23f', 'stroke-width':.18, 'stroke-dasharray':'.35 .25'}, g);
+    }
+  });
+  function label(x, y, text, color, anchor, size){
+    var tx = E('text', {x:x, y:y, 'text-anchor':anchor || 'middle', 'dominant-baseline':'middle', 'font-size':size || .95, 'font-family':'Black Han Sans, Pretendard', fill:color, stroke:'rgba(0,0,0,.55)', 'stroke-width':.22, 'paint-order':'stroke'}, g);
+    tx.textContent = text;
+  }
+  function arrow(a, c, color, text){
+    var dx = c[0] - a[0], dy = c[1] - a[1], d = Math.hypot(dx, dy) || 1, ux = dx/d, uy = dy/d;
+    E('line', {x1:a[0], y1:a[1], x2:c[0] - ux*.5, y2:c[1] - uy*.5, stroke:color, 'stroke-width':.22, 'stroke-linecap':'round'}, g);
+    E('path', {d:'M' + c[0] + ' ' + c[1] + ' L' + (c[0] - ux*.8 - uy*.45) + ' ' + (c[1] - uy*.8 + ux*.45) + ' L' + (c[0] - ux*.8 + uy*.45) + ' ' + (c[1] - uy*.8 - ux*.45) + ' Z', fill:color}, g);
+    if(text) label((a[0] + c[0]) / 2, (a[1] + c[1]) / 2 - .8, text, color, 'middle');
+  }
+};
+Scene.prototype.play = function(speed){
+  var self = this;
+  if(speed != null) this.speed = speed;
+  if(this.t >= this.s.dur - 1e-3) this.t = 0;
+  this.playing = true;
+  var last = performance.now(), wait = 0;
+  cancelAnimationFrame(this._raf);
+  function step(now){
+    if(!self.playing) return;
+    var dt = Math.min(.05, (now - last) / 1000); last = now;
+    if(wait > 0){ wait -= dt; if(wait <= 0){ self.render(0); } self._raf = requestAnimationFrame(step); return; }
+    var t = self.t + dt * self.speed;
+    if(t >= self.s.dur){
+      self.render(self.s.dur);
+      if(self.loop){ wait = self.hold; self.t = 0; self._raf = requestAnimationFrame(step); return; }
+      self.playing = false; if(self.onEnd) self.onEnd(); return;
+    }
+    self.render(t);
+    self._raf = requestAnimationFrame(step);
+  }
+  this._raf = requestAnimationFrame(step);
+};
+Scene.prototype.pause = function(){ this.playing = false; cancelAnimationFrame(this._raf); };
+Scene.prototype.seek = function(t){ this.render(clamp(t, 0, this.s.dur)); };
+Scene.prototype.setMarks = function(on){ this.marksOn = on; this._mk = ''; this.render(this.t); };
+
+window.PB = {Board:Board, Scene:Scene, E:E, lerp:lerp, clamp:clamp, TEAM:TEAM};
+
+/* 화면에 보일 때만 반복 재생하는 작은 장면 */
+PB.loopWhenVisible = function(scene, el){
+  var vis = false;
+  function check(){
+    var r = el.getBoundingClientRect();
+    var v = r.width > 0 && r.right > 4 && r.left < window.innerWidth - 4 && r.bottom > 0 && r.top < window.innerHeight;
+    if(v && !vis){ vis = true; if(!PE.reduce) scene.play(); else scene.seek(scene.s.dur); }
+    if(!v && vis){ vis = false; scene.pause(); }
+  }
+  setInterval(check, 400); check();
+};
+})();
+
+</script>
+
+<script>
+/* ===== 선생님이 고치기 쉬운 데이터 ===== */
+var GLOSSARY = {
+  '인골': '트라이 라인 뒤쪽 구역. 상대 인골에 공을 내려놓으면 득점해요.',
+  '터치라인': '경기장 옆쪽 경계선. 공이나 공을 든 선수가 밖으로 나가면 상대 공이 돼요.',
+  '트라이': '상대 인골에 손으로 공을 땅에 눌러 내려놓는 것. 태그럭비에서는 1점이에요.',
+  '프리패스': '공을 가진 선수가 그 자리에서 동료에게 패스하며 경기를 다시 시작하는 방법. 수비는 떨어져 있어야 해요.',
+  '오프사이드': '있으면 안 되는 위치에서 경기에 끼어드는 반칙. 태그 뒤 3m 물러나지 않고 패스를 막으면 오프사이드예요.',
+  '녹온': '공을 앞(상대 인골 쪽)으로 떨어뜨리는 것. 상대 팀 공이 돼요.',
+  '플레이온': '반칙이 아니니 멈추지 말고 경기를 계속하라는 뜻이에요.',
+  '공수교대': '공격 팀과 수비 팀이 서로 바뀌는 것이에요.',
+  '핸드오프': '공을 든 선수가 손이나 팔로 수비를 밀어내는 것. 태그럭비에서는 반칙이에요.',
+  '5번 과학 이야기': '수업 마지막 페이지 「05 경기장 밖 과학」에서 달리면서 던진 공의 움직임을 다뤄요.'
+};
+
+function fig(v){
+  /* 앞에서 본 사람 그림: ok(바르게), under(조끼 안 벨트), fb(앞뒤), one(한쪽에 2개) */
+  var tags = {
+    ok:   '<rect x="21" y="86" width="11" height="26" rx="3" fill="#ffd23f" stroke="#7a5a00" stroke-width="1.6"/><rect x="88" y="86" width="11" height="26" rx="3" fill="#ffd23f" stroke="#7a5a00" stroke-width="1.6"/>',
+    under:'<rect x="24" y="104" width="9" height="10" rx="2" fill="#ffd23f" stroke="#7a5a00" stroke-width="1.6"/><rect x="87" y="104" width="9" height="10" rx="2" fill="#ffd23f" stroke="#7a5a00" stroke-width="1.6"/>',
+    fb:   '<rect x="54.5" y="86" width="11" height="26" rx="3" fill="#ffd23f" stroke="#7a5a00" stroke-width="1.6"/>',
+    one:  '<rect x="17" y="86" width="11" height="26" rx="3" fill="#ffd23f" stroke="#7a5a00" stroke-width="1.6"/><rect x="28" y="88" width="11" height="26" rx="3" fill="#ffd23f" stroke="#7a5a00" stroke-width="1.6"/>'
+  }[v];
+  var belt = v === 'under' ? '' : '<rect x="26" y="80" width="68" height="9" rx="4" fill="#1d2b24"/>';
+  var vestLen = v === 'under' ? 104 : 84;
+  return '<svg viewBox="0 0 120 190" role="img" aria-label="태그 벨트 착용 그림">' +
+    '<ellipse cx="60" cy="184" rx="34" ry="5" fill="rgba(0,0,0,.12)"/>' +
+    '<path d="M44 112 L40 180 M76 112 L80 180" stroke="#2c3a33" stroke-width="15" stroke-linecap="round"/>' +
+    '<path d="M32 46 L16 98 M88 46 L104 98" stroke="#e9b48f" stroke-width="12" stroke-linecap="round"/>' +
+    '<path d="M32 40 Q60 30 88 40 L92 ' + vestLen + ' L28 ' + vestLen + ' Z" fill="#2563d9" stroke="#0f2f73" stroke-width="2.4"/>' +
+    '<path d="M50 34 Q60 46 70 34" fill="none" stroke="#0f2f73" stroke-width="2.4"/>' +
+    '<text x="60" y="70" text-anchor="middle" font-size="18" font-weight="800" fill="#fff">7</text>' +
+    '<rect x="30" y="' + (vestLen - 2) + '" width="60" height="22" rx="4" fill="#2c3a33" opacity="' + (v === 'under' ? .0 : 1) + '"/>' +
+    belt + tags +
+    '<circle cx="60" cy="20" r="15" fill="#e9b48f" stroke="#a9775a" stroke-width="2"/>' +
+    '</svg>';
+}
+
+var QUIZ = {
+  q1: {type:'pics', src:'영상 2 · 착용', q:'태그 벨트를 바르게 찬 친구는 누구일까요?',
+       opts:[fig('one') + '1', fig('under') + '2', fig('ok') + '3', fig('fb') + '4'], a:2,
+       ex:'조끼를 먼저 입고 그 위에 벨트를 차요. 태그는 양쪽 골반에 하나씩, 모두 2개예요. 1번은 한쪽에 몰아 달았고, 2번은 벨트가 조끼에 가려졌고, 4번은 태그를 가운데(앞뒤)에 달았어요.'},
+  q2: {type:'ox', q:'태그를 당하면 그 선수는 아웃이라서 경기장 밖으로 나가야 한다.', a:false,
+       ex:'태그를 당해도 아웃이 아니에요. 멈춰서 패스하고, 태그를 돌려받아 벨트에 다시 붙이면 계속 경기해요.'},
+  q3: {type:'chips', q:'태그를 당하면 [[0]] 안에 멈추고, [[1]] 안에 [[2]]이나 뒤에 있는 친구에게 패스해요.',
+       chips:['10걸음', '3초', '앞', '3걸음', '옆', '10초'], a:['3걸음', '3초', '옆'],
+       ex:'3걸음 안에 멈추고 3초 안에 옆이나 뒤로 패스해요. 계속 달리거나 공을 오래 들고 있으면 상대 프리패스예요.'},
+  q4: {type:'mc', q:'다음 중 <b>반칙인</b> 패스는 무엇일까요?',
+       opts:['나와 나란히 옆에서 달리는 친구에게 패스', '내 뒤쪽에서 따라오는 친구에게 패스', '나보다 상대 인골에 더 가까이 있는 친구에게 패스', '태그를 당한 뒤 2초 만에 뒤쪽 친구에게 패스'], a:2,
+       ex:'상대 인골 쪽이 \'앞\'이에요. 나보다 앞에 있는 친구에게 패스하면 앞으로 패스 반칙이에요.'},
+  q5: {type:'ox', src:'영상 3 · 녹온', q:'공을 잡다가 뒤로 떨어뜨리면 녹온이라서 상대 팀 공이 된다.', a:false,
+       ex:'녹온은 공을 앞으로 떨어뜨렸을 때예요. 옆이나 뒤로 떨어뜨리면 주워서 경기를 계속해요.'},
+  q6: {type:'mc', q:'상대 팀 공(공수교대)이 <b>되지 않는</b> 경우는?',
+       opts:['다섯 번째 태그를 당했다', '공을 앞으로 놓쳤다', '공을 든 채 터치라인 밖으로 나갔다', '태그를 당하고 2걸음 만에 멈춰 옆 친구에게 패스했다'], a:3,
+       ex:'3걸음 안에 멈추고 3초 안에 옆으로 패스했으니 규칙을 잘 지킨 거예요. 공격이 계속돼요.'},
+  q7: {type:'mc', q:'수비가 <b>해도 되는</b> 행동은?',
+       opts:['공 가진 선수의 옷을 잡고 태그 떼기', '태그를 뗀 뒤 3m 뒤로 물러나기', '몸으로 막아서서 밀어내기', '떨어진 공에 몸을 날려 잡기'], a:1,
+       ex:'태그를 뗀 수비는 3m 물러나야 해요. 옷 잡기, 몸으로 밀기, 다이빙은 모두 반칙이에요.'}
+};
+</script>
+
+<script>
+try{
+  var deck = PE.deck(document.getElementById('deck'));
+  PE.glossary(GLOSSARY);
+  var quiz = PE.quiz(QUIZ, {onAnswer:function(){ PE.renderScore(document.getElementById('score'), quiz, deck, ['모두 맞혔어요. 이제 규칙 놀이터에서 직접 뛰어 봐요!', '잘했어요. 틀린 문제를 한 번 더 보고 가요.', '틀린 문제를 다시 보고, 그림을 한 번 더 살펴봐요.']); }});
+  PE.renderScore(document.getElementById('score'), quiz, deck, ['모두 맞혔어요. 이제 규칙 놀이터에서 직접 뛰어 봐요!', '잘했어요. 틀린 문제를 한 번 더 보고 가요.', '틀린 문제를 다시 보고, 그림을 한 번 더 살펴봐요.']);
+  document.getElementById('figOk').innerHTML = fig('ok');
+}catch(e){ PE_ERR(e, '읽기·퀴즈'); }
+</script>
+
+<script>
+/* ===== 장면 그림 ===== */
+try{
+  var SC = {};
+  function mk(id, view, scn, o){
+    var b = new PB.Board(document.getElementById(id), {view:view});
+    var s = new PB.Scene(b, scn, o || {loop:true});
+    return {b:b, s:s};
+  }
+
+  /* 1. 표지: 태그 → 패스 → 트라이 */
+  SC.intro = mk('bIntro', {x:8, y:2, w:40, h:21}, {
+    dur:6.6,
+    actors:[
+      {id:'b1', team:'blue', num:7, keys:[[0,14,12],[1.6,21,12],[1.9,21.7,12],[6.6,21.7,12]]},
+      {id:'b2', team:'blue', num:10, keys:[[0,10,16.5],[2.1,18.5,16.5],[2.6,20.5,16.6],[4.7,41.2,17.4],[6.6,41.2,17.4]]},
+      {id:'b3', team:'blue', num:4, keys:[[0,9,7],[3,19,7.5],[6.6,27,8]]},
+      {id:'r1', team:'red', num:2, keys:[[0,28,11.5],[1.6,22.7,11.6],[2.5,25.4,11.2],[6.6,25.4,11.2]]},
+      {id:'r2', team:'red', num:5, keys:[[0,30,19.5],[2.6,30.5,19],[4.5,36.5,18.5],[6.6,37,18.2]]},
+      {id:'r3', team:'red', num:8, keys:[[0,31,6],[6.6,29,7]]}
+    ],
+    ball:[{on:'b1', t0:0, t1:2.1}, {from:'b1', to:'b2', t0:2.1, t1:2.55}, {on:'b2', t0:2.55, t1:4.75}, {from:'b2', xy:[42.3,18], t0:4.75, t1:5.05, place:true}, {xy:[42.3,18], t0:5.05, t1:6.6}],
+    events:[
+      {t:1.6, type:'tag', who:'b1', side:1}, {t:1.6, type:'say', who:'r1', text:'태그!', dur:1.4}, {t:1.6, type:'raise', who:'r1', dur:1.4},
+      {t:3.4, type:'tagback', who:'b1'},
+      {t:5.0, type:'say', who:'b2', text:'트라이!', tone:'volt', dur:1.6}
+    ]
+  });
+  PB.loopWhenVisible(SC.intro.s, document.getElementById('bIntro'));
+
+  /* 2. 경기장 */
+  (function(){
+    var b = new PB.Board(document.getElementById('bField'), {});
+    var g = b.gMarks, E = PB.E;
+    function lab(x, y, t, anchor, col){ var e = E('text', {x:x, y:y, 'text-anchor':anchor || 'middle', 'dominant-baseline':'middle', 'font-size':1.15, 'font-family':'Black Han Sans, Pretendard', fill:col || '#fff', stroke:'rgba(0,0,0,.5)', 'stroke-width':.24, 'paint-order':'stroke'}, g); e.textContent = t; }
+    function arr(x1, y1, x2, y2){ E('line', {x1:x1, y1:y1, x2:x2, y2:y2, stroke:'#ffd23f', 'stroke-width':.16}, g); E('circle', {cx:x2, cy:y2, r:.32, fill:'#ffd23f'}, g); }
+    lab(40, -0.2 + 2.2, '트라이 라인', 'end', '#ffd23f'); arr(37.6, 3.0, 40, 5);
+    lab(0.6, 22.6, '트라이 라인', 'start', '#ffd23f'); arr(2.8, 21.8, 0, 20);
+    lab(20, 3.2, '하프라인', 'middle');
+    lab(12, 23.7, '터치라인', 'middle'); arr(12, 23, 12, 25);
+    lab(30, 13.8, '공격 방향 →', 'middle', '#ffd23f');
+    var p = b.player('b', 'blue', 7); p.pos(25, 12.4);
+    var r = b.player('r', 'red', 2); r.pos(33, 10.4);
+    var bl = b.ball(); bl.set(25.6, 13, 90, 0);
+  })();
+
+  /* 4. 트라이 */
+  SC.tr = mk('bTry', {x:22, y:4, w:26, h:17}, {
+    dur:3.8,
+    actors:[
+      {id:'b1', team:'blue', num:9, keys:[[0,25,12.5],[1.9,40.8,12.8],[2.2,41.8,12.9],[3.8,41.8,12.9]]},
+      {id:'b2', team:'blue', num:3, keys:[[0,22,17],[3.8,33,17]]},
+      {id:'r1', team:'red', num:6, keys:[[0,31,6.5],[2.3,38.6,10.2],[3.8,39,10.4]]}
+    ],
+    ball:[{on:'b1', t0:0, t1:2.2}, {from:'b1', xy:[42.6,13.6], t0:2.2, t1:2.5, place:true}, {xy:[42.6,13.6], t0:2.5, t1:3.8}],
+    events:[{t:2.45, type:'say', who:'b1', text:'트라이! 1점', tone:'volt', dur:1.6}]
+  });
+  PB.loopWhenVisible(SC.tr.s, document.getElementById('bTry'));
+
+  /* 5. 태그 */
+  var timerEl = document.getElementById('tagTimer');
+  SC.tag = mk('bTag', {x:6, y:3, w:30, h:18}, {
+    dur:4,
+    actors:[
+      {id:'b1', team:'blue', num:7, keys:[[0,10,11],[1.4,17,11],[1.75,18.3,11],[4,18.3,11]]},
+      {id:'b2', team:'blue', num:10, keys:[[0,7,15.5],[2.2,15.5,15.5],[2.7,17,15.5],[4,19.5,15.5]]},
+      {id:'r1', team:'red', num:2, keys:[[0,24,10],[1.4,18.95,10.3],[2.4,21.9,10.2],[4,21.9,10.2]]},
+      {id:'r2', team:'red', num:5, keys:[[0,27,15],[1.5,22.6,14.6],[4,22.6,14.6]]}
+    ],
+    ball:[{on:'b1', t0:0, t1:2.2}, {from:'b1', to:'b2', t0:2.2, t1:2.6}, {on:'b2', t0:2.6, t1:4}],
+    events:[
+      {t:1.4, type:'tag', who:'b1', side:1}, {t:1.4, type:'say', who:'r1', text:'태그!', dur:1.4}, {t:1.4, type:'raise', who:'r1', dur:1.4},
+      {t:2.1, type:'say', who:'b1', text:'패스!', dur:.8}
+    ],
+    marks:[{type:'steps', who:'b1', t0:1.4, t1:1.75}, {type:'offside', at:1.5, dist:3, ly:16.8, ly2:4.6}]
+  }, {loop:true, marks:true, onTick:function(t){
+    if(t < 1.4){ timerEl.innerHTML = '태그 전'; return; }
+    var s = Math.min(t, 2.2) - 1.4;
+    timerEl.innerHTML = '태그 후 <b>' + s.toFixed(1) + '초</b>' + (t >= 2.2 ? ' 패스 완료' : '');
+  }});
+  PB.loopWhenVisible(SC.tag.s, document.getElementById('bTag'));
+  var tm = document.getElementById('tagMarks');
+  tm.onclick = function(){ var on = !tm.classList.contains('on'); tm.classList.toggle('on', on); SC.tag.s.setMarks(on); };
+
+  /* 8. 녹온 */
+  SC.kf = mk('bKnockF', {x:8, y:6, w:20, h:12}, {
+    dur:3.2,
+    actors:[
+      {id:'b1', team:'blue', num:7, keys:[[0,13,9],[1.0,17,9],[3.2,18.5,9]]},
+      {id:'b2', team:'blue', num:10, keys:[[0,10,13.5],[1.45,15.1,13.5],[2.0,16.3,13.5],[3.2,16.3,13.5]]}
+    ],
+    ball:[{on:'b1', t0:0, t1:1.0}, {from:'b1', to:'b2', t0:1.0, t1:1.45}, {from:'b2', xy:[19.6,14.2], t0:1.5, t1:2.2, drop:true}, {xy:[19.6,14.2], t0:2.2, t1:3.2}],
+    events:[{t:1.6, type:'say', who:'b2', text:'앗!', tone:'foul', dur:1.4}],
+    marks:[{type:'arrow', at:2.2, from:[16.4,15.6], to:[19.4,15.6], color:'#ff8b75', label:'앞으로'}]
+  }, {loop:true, marks:true});
+  SC.kb = mk('bKnockB', {x:8, y:6, w:20, h:12}, {
+    dur:3.6,
+    actors:[
+      {id:'b1', team:'blue', num:7, keys:[[0,13,9],[1.0,17,9],[3.6,18.5,9]]},
+      {id:'b2', team:'blue', num:10, keys:[[0,10,13.5],[1.45,15.1,13.5],[1.9,15.4,13.5],[2.45,13,14.2],[3.6,17,14]]}
+    ],
+    ball:[{on:'b1', t0:0, t1:1.0}, {from:'b1', to:'b2', t0:1.0, t1:1.45}, {from:'b2', xy:[12.4,14.6], t0:1.5, t1:2.1, drop:true}, {xy:[12.4,14.6], t0:2.1, t1:2.45}, {on:'b2', t0:2.45, t1:3.6}],
+    events:[{t:2.5, type:'say', who:'b2', text:'주워서 계속!', dur:1.1}],
+    marks:[{type:'arrow', at:2.1, from:[15,16], to:[12.6,16], color:'#ffffff', label:'뒤로'}]
+  }, {loop:true, marks:true});
+  PB.loopWhenVisible(SC.kf.s, document.getElementById('bKnockF'));
+  PB.loopWhenVisible(SC.kb.s, document.getElementById('bKnockB'));
+
+  /* 9. 프리패스 */
+  SC.fp = mk('bFree', {x:6, y:3, w:30, h:19}, {
+    dur:3.6,
+    actors:[
+      {id:'b1', team:'blue', num:7, keys:[[0,16,12],[3.6,16,12]]},
+      {id:'b2', team:'blue', num:10, keys:[[0,11,16],[1.2,14.6,16.2],[3.6,21,16.5]]},
+      {id:'b3', team:'blue', num:4, keys:[[0,12,7.5],[3.6,17,7.5]]},
+      {id:'r1', team:'red', num:2, keys:[[0,21.3,9],[1.3,21.3,9],[3.6,19,10]]},
+      {id:'r2', team:'red', num:5, keys:[[0,21.3,13],[1.3,21.3,13],[3.6,19.5,15]]},
+      {id:'r3', team:'red', num:8, keys:[[0,21.3,17],[1.3,21.3,17],[3.6,22,16.7]]}
+    ],
+    ball:[{on:'b1', t0:0, t1:1.2}, {from:'b1', to:'b2', t0:1.2, t1:1.6}, {on:'b2', t0:1.6, t1:3.6}],
+    events:[{t:.2, type:'say', who:'b1', text:'프리패스!', dur:1}],
+    marks:[{type:'offside', at:0, dist:5, ly:20.5, ly2:4.4}, {type:'ring', who:'b1', at:0, color:'#ffd23f', r:1.6}]
+  }, {loop:true, marks:true});
+  PB.loopWhenVisible(SC.fp.s, document.getElementById('bFree'));
+
+  /* 10. 금지 행동 (멈춘 장면) */
+  var V = {x:10, y:6.5, w:13, h:8};
+  function still(id, actors, ball, events, marks){
+    var b = new PB.Board(document.getElementById(id), {view:V, labels:false});
+    var s = new PB.Scene(b, {dur:1, actors:actors, ball:ball, events:events || [], marks:marks || []}, {marks:true});
+    s.seek(1);
+  }
+  function A(id, team, num, x, y, face){ return {id:id, team:team, num:num, face:face, keys:[[0,x,y]]}; }
+  still('ban1', [A('b1','blue',7,15.3,10.5,0), A('r1','red',2,16.7,10.3,180)], [{on:'b1', t0:0, t1:1}],
+        [{t:0, type:'say', who:'r1', text:'쿵!', tone:'foul'}], [{type:'ring', x:16, y:10.4, at:0, r:2.3}]);
+  still('ban2', [A('b1','blue',7,15,10.6,0), A('r1','red',2,17.4,10,180)], [{on:'b1', t0:0, t1:1}],
+        [{t:0, type:'arm', who:'b1', side:0, to:'r1'}, {t:0, type:'say', who:'r1', text:'밀었어!', tone:'foul'}], [{type:'ring', x:16.3, y:10.2, at:0, r:1.4}]);
+  still('ban3', [A('b1','blue',7,15.6,10.6,0), A('r1','red',2,18,9.4,160)], [{on:'b1', t0:0, t1:1}],
+        [{t:0, type:'arm', who:'b1', side:1, to:'tag0'}, {t:0, type:'arm', who:'r1', side:0, to:'b1'}], [{type:'ring', x:15.5, y:9.7, at:0, r:.9}]);
+  still('ban4', [A('b1','blue',7,15.4,10.8,0), A('r1','red',2,16.9,9.3,200)], [{on:'b1', t0:0, t1:1}],
+        [{t:0, type:'arm', who:'r1', side:0, to:'b1'}, {t:0, type:'arm', who:'r1', side:1, to:'b1'}, {t:0, type:'say', who:'b1', text:'옷 잡지 마!', tone:'foul'}], [{type:'ring', x:16, y:10.1, at:0, r:1.5}]);
+  (function(){
+    var b = new PB.Board(document.getElementById('ban5'), {view:{x:33, y:6.5, w:13, h:8}, labels:false});
+    var g = b.gMarks, E = PB.E;
+    for(var i = 0; i < 4; i++) E('line', {x1:35.2 + i*.25, y1:9.6 + i*.55, x2:39.2, y2:9.9 + i*.55, stroke:'rgba(255,255,255,.55)', 'stroke-width':.12, 'stroke-linecap':'round'}, g);
+    var p = b.player('b1', 'blue', 7); p.pos(41.2, 10.7); p.face(0);
+    p.g.querySelector('g').setAttribute('transform', 'rotate(0) scale(1.45 .78)');
+    p.say('슬라이딩!', 'foul');
+    b.ball().set(42.5, 10.9, 90, 0);
+  })();
+  still('ban6', [A('b1','blue',7,14.2,10.6,0), A('r1','red',2,19.5,9.5,180)], [{xy0:[15,10.8], xy:[20.5,11.4], t0:0, t1:2, kick:true}],
+        [{t:0, type:'say', who:'b1', text:'뻥!', tone:'foul'}], [{type:'arrow', at:0, from:[15.4,12.4], to:[19.6,12.4], color:'#ff8b75', label:'발로 차기'}]);
+  /* 공이 날아가는 중간 모습으로 */
+}catch(e){ PE_ERR(e, '장면 그림'); }
+</script>
+
+<script>
+/* 7. 패스 방향: 끌어 옮기기 */
+try{
+  (function(){
+    var svg = document.getElementById('bPass');
+    var b = new PB.Board(svg, {view:{x:4, y:2, w:30, h:21}});
+    var E = PB.E, g = b.gMarks;
+    var P = b.player('p', 'blue', 7); P.pos(18, 12); P.face(0);
+    var R = b.player('r', 'blue', 10, {label:'끌어 보세요'}); R.pos(14.5, 18);
+    var D1 = b.player('d1', 'red', 2); D1.pos(25, 10); D1.face(180);
+    var D2 = b.player('d2', 'red', 5); D2.pos(27, 17); D2.face(180);
+    var ball = b.ball();
+    var bx = 18.55;
+    var zoneF = E('rect', {x:bx, y:0, width:b.L + b.IG - bx, height:b.W, fill:'rgba(223,74,47,.26)'}, g);
+    E('line', {x1:bx, y1:0, x2:bx, y2:b.W, stroke:'#fff', 'stroke-width':.2, 'stroke-dasharray':'.6 .35'}, g);
+    var t1 = E('text', {x:bx + .6, y:4.2, 'font-size':1.05, 'font-family':'Black Han Sans, Pretendard', fill:'#ffe1da', stroke:'rgba(0,0,0,.5)', 'stroke-width':.22, 'paint-order':'stroke'}, g); t1.textContent = '앞 (상대 인골 쪽) →';
+    var t2 = E('text', {x:bx - .6, y:4.2, 'text-anchor':'end', 'font-size':1.05, 'font-family':'Black Han Sans, Pretendard', fill:'#fff', stroke:'rgba(0,0,0,.5)', 'stroke-width':.22, 'paint-order':'stroke'}, g); t2.textContent = '← 옆·뒤';
+    var line = E('line', {stroke:'#ffd23f', 'stroke-width':.16, 'stroke-dasharray':'.4 .3'}, g);
+    var verdict = document.getElementById('passVerdict');
+    function ballHome(){ ball.set(bx, 12.55, 90, 0); }
+    function update(){
+      line.setAttribute('x1', bx); line.setAttribute('y1', 12.55); line.setAttribute('x2', R.x); line.setAttribute('y2', R.y);
+      var fwd = R.x > bx + .15;
+      verdict.className = 'verdict ' + (fwd ? 'foul' : 'ok');
+      verdict.textContent = fwd ? '앞으로 패스: 반칙' : (Math.abs(R.x - bx) < 1.2 ? '옆 패스: 정상' : '뒤로 패스: 정상');
+      line.setAttribute('stroke', fwd ? '#ff8b75' : '#ffd23f');
+    }
+    ballHome(); update();
+    var drag = false;
+    R.g.style.cursor = 'grab';
+    svg.addEventListener('pointerdown', function(ev){
+      var p = b.toLocal(ev);
+      if(Math.hypot(p.x - R.x, p.y - R.y) < 2.6){ drag = true; svg.setPointerCapture(ev.pointerId); if(R.labelEl) R.labelEl.style.display = 'none'; }
+    });
+    svg.addEventListener('pointermove', function(ev){
+      if(!drag) return;
+      var p = b.toLocal(ev);
+      R.pos(PB.clamp(p.x, 5.5, 32.5), PB.clamp(p.y, 3.5, 21.5)); R.face(Math.atan2(12 - R.y, 18 - R.x) * 180 / Math.PI);
+      ballHome(); update();
+    });
+    svg.addEventListener('pointerup', function(){ drag = false; });
+    svg.addEventListener('pointercancel', function(){ drag = false; });
+    var busy = false;
+    document.getElementById('passGo').onclick = function(){
+      if(busy) return; busy = true;
+      var x0 = bx, y0 = 12.55, x1 = R.x, y1 = R.y, t0 = performance.now(), dur = 520;
+      var dir = Math.atan2(y1 - y0, x1 - x0) * 180 / Math.PI;
+      (function f(now){
+        var u = Math.min(1, (now - t0) / dur);
+        ball.set(PB.lerp(x0, x1, u), PB.lerp(y0, y1, u), dir, 1.3 * Math.sin(Math.PI * u));
+        if(u < 1) requestAnimationFrame(f);
+        else {
+          var fwd = x1 > bx + .15;
+          R.say(fwd ? '반칙! 상대 공' : '패스 성공', fwd ? 'foul' : 'volt');
+          setTimeout(function(){ R.say(null); ballHome(); busy = false; }, 1300);
+        }
+      })(t0);
+    };
+  })();
+}catch(e){ PE_ERR(e, '패스 방향'); }
+</script>
+<script>
+try{
+  Array.prototype.forEach.call(document.querySelectorAll('[data-replay]'), function(btn){
+    btn.onclick = function(){ var s = SC[{try:'tr'}[btn.dataset.replay]]; if(s){ s.s.t = 0; s.s.play(); } };
+  });
+}catch(e){ PE_ERR(e, '다시 보기'); }
+</script>
+</body>
+</html>

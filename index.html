@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>PLAYBOOK - 성안중 체육 수업</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&display=swap">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 32 32%22%3E%3Crect width=%2232%22 height=%2232%22 rx=%228%22 fill=%22%230c2a20%22/%3E%3Cellipse cx=%2216%22 cy=%2216%22 rx=%2211%22 ry=%227%22 fill=%22%23fff%22 transform=%22rotate(-30 16 16)%22/%3E%3C/svg%3E">
+<style>
+:root{--turf-950:#071c15;--turf-900:#0c2a20;--volt:#ffd23f;--paper:#f6f4ec;--ink:#14201a;--muted:#56655c;--line:#e1e5da;--display:"Black Han Sans","Pretendard",sans-serif}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{font-family:"Pretendard",-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;background:var(--paper);color:var(--ink);word-break:keep-all;-webkit-font-smoothing:antialiased}
+.hero{position:relative;overflow:hidden;background:var(--turf-950);color:#fff;padding:56px 24px 64px}
+.hero::before{content:"";position:absolute;inset:0;background:repeating-linear-gradient(90deg,#123d2c 0 80px,#0f3526 80px 160px);opacity:.75}
+.hero::after{content:"";position:absolute;inset:0;background:radial-gradient(90% 120% at 30% 0%,transparent 30%,rgba(7,28,21,.9) 80%)}
+.hero .in{position:relative;z-index:1;max-width:1100px;margin:0 auto}
+.hero .line{position:absolute;z-index:1;top:0;bottom:0;width:4px;background:rgba(255,255,255,.5)}
+.kick{display:inline-flex;gap:8px;align-items:center;font-weight:800;font-size:14px;letter-spacing:.1em;color:var(--volt)}
+h1{font-family:var(--display);font-weight:400;font-size:clamp(56px,10vw,120px);line-height:.95;margin:.15em 0 .2em;letter-spacing:.01em}
+h1 span{color:var(--volt)}
+.hero p{font-size:19px;line-height:1.7;color:rgba(255,255,255,.8);max-width:620px;margin:0}
+main{max-width:1100px;margin:0 auto;padding:36px 24px 60px}
+h2{font-size:14px;letter-spacing:.1em;color:var(--muted);margin:0 0 14px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:18px}
+.card{display:flex;flex-direction:column;text-decoration:none;color:inherit;background:#fff;border:1px solid var(--line);border-radius:22px;overflow:hidden;box-shadow:0 14px 30px -22px rgba(7,28,21,.5);transition:transform .2s}
+.card:hover{transform:translateY(-3px)}
+.card svg{display:block;width:100%;height:auto;background:#1b6340}
+.card .b{padding:18px 20px 20px}
+.card .meta{font-size:13px;font-weight:800;color:#1c6646;letter-spacing:.04em}
+.card h3{font-family:var(--display);font-weight:400;font-size:30px;margin:6px 0 6px}
+.card p{margin:0 0 14px;color:var(--muted);line-height:1.6;font-size:15.5px}
+.card .parts{display:flex;flex-wrap:wrap;gap:6px}
+.card .parts span{font-size:12.5px;font-weight:800;padding:4px 10px;border-radius:999px;background:#f0f3ec}
+.card .go{margin-top:16px;display:inline-flex;align-items:center;justify-content:center;min-height:50px;border-radius:14px;background:var(--volt);color:var(--turf-950);font-weight:800;font-size:16px}
+</style>
+</head>
+<body>
+<section class="hero">
+  <div class="line" style="left:12%"></div>
+  <div class="in">
+    <div class="kick">성안중 체육 수업</div>
+    <h1>PLAY<span>BOOK</span></h1>
+    <p>읽고, 영상으로 보고, 직접 뛰어 보고, 심판이 되어 판정하는 체육 수업 자료예요. 종목을 골라 들어가세요.</p>
+  </div>
+</section>
+<main>
+  <h2>종목</h2>
+  <div class="grid">
+    <a class="card" href="lessons/tag-rugby/">
+      <svg viewBox="0 0 400 180" aria-hidden="true">
+        <g>
+          <rect width="400" height="180" fill="#2c8752"/>
+          <rect x="0" width="40" height="180" fill="#33935b"/><rect x="80" width="40" height="180" fill="#33935b"/><rect x="160" width="40" height="180" fill="#33935b"/><rect x="240" width="40" height="180" fill="#33935b"/><rect x="320" width="40" height="180" fill="#33935b"/>
+          <rect x="350" width="50" height="180" fill="rgba(255,210,63,.18)"/>
+          <line x1="350" y1="0" x2="350" y2="180" stroke="#f3f6ee" stroke-width="4"/>
+          <path d="M70 120 C 140 140, 170 60, 240 70 S 320 110, 372 92" fill="none" stroke="rgba(255,255,255,.8)" stroke-width="3" stroke-dasharray="2 9" stroke-linecap="round"/>
+          <circle cx="110" cy="122" r="15" fill="#2563d9" stroke="#0f2f73" stroke-width="3"/><rect x="100" y="136" width="9" height="7" rx="2" fill="#ffd23f"/><rect x="112" y="101" width="9" height="7" rx="2" fill="#ffd23f"/>
+          <circle cx="250" cy="72" r="15" fill="#df4a2f" stroke="#6e170b" stroke-width="3"/>
+          <rect x="262" y="40" width="12" height="9" rx="2" fill="#ffd23f" stroke="#7a5a00" stroke-width="1.5"/>
+          <ellipse cx="372" cy="92" rx="14" ry="9" fill="#fff" stroke="#66756c" stroke-width="2" transform="rotate(-20 372 92)"/>
+        </g>
+      </svg>
+      <div class="b">
+        <div class="meta">중2 · 영역형 스포츠 · 2차시</div>
+        <h3>태그럭비</h3>
+        <p>몸싸움 대신 허리의 태그를 떼어 공격을 막는 럭비. 규칙을 그림과 놀이로 익혀요.</p>
+        <div class="parts"><span>영상 퀴즈</span><span>규칙 읽기</span><span>규칙 놀이터</span><span>내가 심판</span><span>경기장 밖 과학</span></div>
+        <span class="go">수업 들어가기 →</span>
+      </div>
+    </a>
+  </div>
+</main>
+</body>
+</html>
