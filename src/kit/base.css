@@ -4,7 +4,7 @@
   --paper:#f6f4ec; --card:#ffffff; --ink:#14201a; --muted:#56655c; --line:#e1e5da;
   --volt:#ffd23f; --volt-deep:#e6b400; --volt-soft:#fff6d1;
   --blue:#2563d9; --blue-soft:#e7eefc; --red:#df4a2f; --red-soft:#fdebe6;
-  --ok:#15834a; --ok-soft:#e2f3e8; --foul:#d2372c; --foul-soft:#fce9e7;
+  --ok:#11703e; --ok-soft:#e2f3e8; --foul:#b9281f; --foul-soft:#fce9e7;
   --display:"Black Han Sans","Pretendard",sans-serif;
   --fs:18px;
   --shadow:0 14px 34px -16px rgba(7,28,21,.45);
@@ -134,6 +134,7 @@ p{margin:0 0 .8em}
 
 /* ---- 용어 풀이 ---- */
 .term{border:0;background:none;padding:0;font:inherit;color:inherit;font-weight:700;border-bottom:2px dotted var(--turf-500);cursor:help}
+h1 .term,h2 .term{font-weight:400}
 .gloss{position:fixed;z-index:50;max-width:300px;background:var(--turf-950);color:#fff;border-radius:14px;padding:12px 16px;font-size:15px;line-height:1.6;box-shadow:var(--shadow)}
 .gloss b{color:var(--volt);display:block;font-size:14px;margin-bottom:2px}
 

@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<!--@@KIT:head.html@@-->
+<title>티볼 - PLAYBOOK</title>
+<style>
+/*@@KIT:base.css@@*/
+html,body{overflow:hidden;background:var(--turf-950);color:#fff}
+.shell{position:fixed;inset:0;display:flex;flex-direction:column}
+header{flex:none;display:flex;align-items:center;gap:12px;padding:6px 12px 6px 14px;min-height:56px;background:var(--turf-900);border-bottom:1px solid rgba(255,255,255,.06);z-index:3}
+.brand{display:flex;align-items:center;gap:10px;min-width:0;flex:1;text-decoration:none;color:#fff}
+.logo{flex:none;width:38px;height:38px;border-radius:11px;background:var(--volt);display:grid;place-items:center}
+.brand .t{font-family:var(--display);font-size:20px;line-height:1.1;white-space:nowrap}
+.brand small{display:block;font-family:Pretendard;font-size:12px;font-weight:700;color:rgba(255,255,255,.6)}
+.home{min-height:44px;padding:0 14px;border-radius:12px;border:0;background:rgba(255,255,255,.08);color:#fff;font-weight:800;font-size:14px;display:flex;align-items:center;gap:8px}
+.home.on{background:var(--volt);color:var(--turf-950)}
+.stage{flex:1;position:relative;min-height:0}
+.stage iframe{position:absolute;inset:0;width:100%;height:100%;border:0;background:var(--paper);visibility:hidden}
+.stage iframe.on{visibility:visible}
+.spin{position:absolute;left:50%;top:50%;width:40px;height:40px;margin:-20px;border-radius:50%;border:4px solid rgba(255,255,255,.15);border-top-color:var(--volt);animation:sp .8s linear infinite;display:none}
+.spin.on{display:block}
+@keyframes sp{to{transform:rotate(360deg)}}
+nav.board{flex:none;display:flex;align-items:stretch;gap:2px;background:#060b09;padding:6px;overflow-x:auto;scrollbar-width:none;z-index:3}
+nav.board::-webkit-scrollbar{display:none}
+.half{display:flex;align-items:stretch;gap:4px;flex:1;min-width:0}
+.half .hl{display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:11px;line-height:1.35;font-weight:800;color:rgba(255,255,255,.5);padding:0 6px;text-align:center;white-space:nowrap}
+.half .hl b{font-family:var(--display);font-weight:400;font-size:15px;color:#fff}
+.tab{flex:1;min-width:120px;min-height:54px;border:0;border-radius:12px;background:#101a15;color:rgba(255,255,255,.75);display:flex;align-items:center;gap:10px;padding:6px 12px;text-align:left;transition:background .2s,color .2s}
+.tab .n{font-family:var(--display);font-size:24px;color:var(--volt);line-height:1;font-variant-numeric:tabular-nums}
+.tab .l{font-weight:800;font-size:15px;line-height:1.25}
+.tab .l small{display:block;font-weight:600;font-size:11.5px;color:rgba(255,255,255,.45)}
+.tab[aria-selected="true"]{background:var(--volt);color:var(--turf-950)}
+.tab[aria-selected="true"] .n{color:var(--turf-950)}
+.tab[aria-selected="true"] .l small{color:rgba(7,28,21,.6)}
+.tab .seen{width:8px;height:8px;border-radius:50%;background:#3fcf7f;margin-left:auto;flex:none;visibility:hidden}
+.tab.seen .seen{visibility:visible}
+.gap{width:10px;flex:none}
+
+/* 경기 계획 (첫 화면) */
+.hub{position:absolute;inset:0;overflow-y:auto;background:radial-gradient(120% 90% at 50% 0%,#14402f 0%,var(--turf-950) 70%);padding:18px 26px 22px;display:none}
+.hub.on{display:block}
+.hub-top{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;max-width:1240px;margin:0 auto 14px}
+.hub h1{font-family:var(--display);font-weight:400;font-size:clamp(34px,4.4vw,54px);margin:0;line-height:1.08}
+.hub h1 em{font-style:normal;color:var(--volt)}
+.hub .sub{color:rgba(255,255,255,.7);font-size:16px;margin:8px 0 0;line-height:1.6;max-width:640px}
+.chips{display:flex;gap:8px;flex-wrap:wrap}
+.chips span{font-size:13px;font-weight:800;padding:6px 12px;border-radius:999px;background:rgba(255,255,255,.08);color:rgba(255,255,255,.85)}
+.pitchwrap{position:relative;width:min(100%,1240px,(100vh - 420px) * 2);margin:0 auto;aspect-ratio:1000/500}
+.pitchwrap svg{position:absolute;inset:0;width:100%;height:100%;border-radius:22px;box-shadow:0 30px 60px -30px #000}
+.st{position:absolute;transform:translate(-50%,-29px);display:flex;flex-direction:column;align-items:center;gap:8px;border:0;background:none;padding:0;color:#fff;text-align:center}
+.st .dot{flex:none;width:58px;height:58px;border-radius:50%;background:var(--volt);color:var(--turf-950);font-family:var(--display);font-size:24px;display:grid;place-items:center;box-shadow:0 0 0 6px rgba(255,210,63,.25),0 10px 20px -6px rgba(0,0,0,.5);transition:transform .2s}
+.st:hover .dot,.st:focus-visible .dot{transform:scale(1.08)}
+.st .card{background:rgba(7,28,21,.88);border:1px solid rgba(255,255,255,.12);border-radius:14px;padding:8px 12px;backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);width:176px}
+.st .card b{display:block;font-size:16px;font-weight:800}
+.st .card span{display:block;font-size:12.5px;color:rgba(255,255,255,.65);line-height:1.4;margin-top:2px}
+.st.seen .dot{background:#3fcf7f}
+.st.up{flex-direction:column-reverse;transform:translate(-50%,calc(-100% + 29px))}
+.st.right{flex-direction:row;text-align:left;transform:translate(-29px,-50%)}
+.st.left{flex-direction:row-reverse;text-align:right;transform:translate(calc(-100% + 29px),-50%)}
+.st.right .card,.st.left .card{width:170px}
+.hub-list{display:none;max-width:700px;margin:16px auto 0;gap:10px}
+.hub-list button{display:flex;align-items:center;gap:14px;text-align:left;min-height:72px;border-radius:16px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.05);color:#fff;padding:10px 14px}
+.hub-list .dot{flex:none;width:48px;height:48px;border-radius:50%;background:var(--volt);color:var(--turf-950);font-family:var(--display);font-size:20px;display:grid;place-items:center}
+.hub-list b{display:block;font-size:17px}
+.hub-list span{display:block;font-size:13.5px;color:rgba(255,255,255,.65);margin-top:2px}
+.hub-list .h{font-size:12px;font-weight:800;letter-spacing:.1em;color:rgba(255,255,255,.45);margin:10px 4px 0;border:0;background:none;min-height:0;padding:0}
+.start{margin-top:14px;display:flex;justify-content:center}
+@media (orientation:portrait),(max-width:900px){
+  .st .card{display:none}
+  .st,.st.up,.st.left,.st.right{transform:translate(-50%,-50%)}
+  .st .dot{width:48px;height:48px;font-size:20px}
+  .hub-list{display:grid}
+  .hub{padding:18px 16px 24px}
+  .tab{min-width:0;flex-direction:column;align-items:flex-start;gap:2px;padding:6px 8px}
+  .tab .l{font-size:13px}
+  .tab .l small{display:none}
+  .tab .seen{display:none}
+  .half .hl{display:none}
+  .brand small{display:none}
+  .gap{width:4px}
+}
+</style>
+</head>
+<body>
+<div class="shell">
+  <header>
+    <a class="brand" href="../../">
+      <span class="logo"><svg width="26" height="26" viewBox="0 0 32 32"><rect x="14.6" y="17" width="2.8" height="11" rx="1" fill="#0c2a20"/><path d="M10 28h12" stroke="#0c2a20" stroke-width="2.4" stroke-linecap="round"/><circle cx="16" cy="11.5" r="6.2" fill="#fff" stroke="#0c2a20" stroke-width="1.6"/><path d="M12.4 7.4q2.4 4.1 0 8.2M19.6 7.4q-2.4 4.1 0 8.2" stroke="#df4a2f" stroke-width="1.3" fill="none"/></svg></span>
+      <span class="t">티볼 <small>중2 체육 · 필드형 스포츠 · 2차시</small></span>
+    </a>
+    <button class="home on" id="homeBtn" aria-label="경기 계획 보기"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M12 5v14M3 10h3v4H3M21 10h-3v4h3"/></svg>경기 계획</button>
+  </header>
+  <div class="stage" id="stage">
+    <div class="hub on" id="hub">
+      <div class="hub-top">
+        <div>
+          <h1>오늘의 경기 계획<br><em>치고, 달리고, 막아라</em></h1>
+          <p class="sub">티볼은 투수 없이 배팅 티 위의 공을 쳐서 베이스를 도는 야구형 경기예요. 영상으로 보고, 규칙을 읽고, 수비 판단을 직접 해 보고, 심판이 되어 아웃과 세이프를 가려 봐요.</p>
+        </div>
+        <div class="chips"><span>전반 1차시 · 01~03</span><span>후반 2차시 · 04~05</span></div>
+      </div>
+      <div class="pitchwrap" id="pitchwrap"><svg id="hubSvg" aria-hidden="true"></svg></div>
+      <div class="hub-list" id="hubList"></div>
+      <div class="start"><button class="btn volt" id="startBtn">01 영상으로 보기부터 시작 →</button></div>
+    </div>
+    <div class="spin" id="spin"></div>
+  </div>
+  <nav class="board" id="nav" role="tablist" aria-label="수업 구간"></nav>
+</div>
+
+<script>
+/*@@KIT:kit.js@@*/
+</script>
+<script>
+/*@@KIT:field.js@@*/
+</script>
+<script>
+var PAGES = [
+  {id:'video', n:'01', label:'영상으로 보기', desc:'규칙·타격·포구 영상을 보다가 멈추면 퀴즈', half:1, src:'video.html', at:'H', side:'right'},
+  {id:'rules', n:'02', label:'규칙 읽기', desc:'그림으로 익히는 경기장·페어·아웃·주루', half:1, src:'rules.html', at:'1', side:'right'},
+  {id:'playground', n:'03', label:'규칙 놀이터', desc:'어디로 던질까 판단하고, 직접 쳐 보기', half:1, src:'playground.html', at:'2', side:'up'},
+  {id:'referee', n:'04', label:'내가 심판', desc:'장면을 보고 아웃·세이프·파울 판정', half:2, src:'referee.html', at:'3', side:'left'},
+  {id:'science', n:'05', label:'경기장 밖 과학', desc:'공을 멀리 보내는 힘과 각도', half:2, src:'science.html', at:[27, -29], side:'up'}
+];
+var HV = {x:-44, y:-38.5, w:88, h:44};
+</script>
+<script>
+try{
+(function(){
+  var stage = document.getElementById('stage'), hub = document.getElementById('hub'), nav = document.getElementById('nav'), spin = document.getElementById('spin');
+  var frames = {}, seen = {}, current = 'home';
+  try{ seen = JSON.parse(localStorage.getItem('pe-tee-seen') || '{}'); }catch(e){}
+  /* 아래 전광판 */
+  var html = '', lastHalf = 0;
+  PAGES.forEach(function(p){
+    if(p.half !== lastHalf){
+      if(lastHalf) html += '</div><div class="gap"></div>';
+      html += '<div class="half"><span class="hl"><b>' + (p.half === 1 ? '전반' : '후반') + '</b>' + p.half + '차시</span>';
+      lastHalf = p.half;
+    }
+    html += '<button class="tab" role="tab" data-id="' + p.id + '" aria-selected="false"><span class="n">' + p.n + '</span><span class="l">' + p.label + '<small>' + p.desc + '</small></span><span class="seen"></span></button>';
+  });
+  nav.innerHTML = html + '</div>';
+  /* 경기장 지도 */
+  var svg = document.getElementById('hubSvg');
+  var field = new FD.Field(svg, {view:HV, labels:false, size:1.3, fence:34}), E = FD.E;
+  function P(a){ return Array.isArray(a) ? a : field.B[a]; }
+  var pts = PAGES.map(function(p){ return P(p.at); });
+  var path = 'M' + pts[0][0] + ' ' + pts[0][1];
+  for(var k = 1; k < 4; k++) path += ' L' + pts[k][0] + ' ' + pts[k][1];
+  path += ' M' + pts[2][0] + ' ' + pts[2][1] + ' Q 18 -34, ' + pts[4][0] + ' ' + pts[4][1];
+  E('path', {d:path, fill:'none', stroke:'rgba(255,255,255,.8)', 'stroke-width':.35, 'stroke-dasharray':'.2 1.1', 'stroke-linecap':'round'}, field.gMarks);
+  ['C','1B','2B','3B','1SS','2SS','LF','1CF','2CF','RF'].forEach(function(k){ var q = FD.POS[k]; var m = /F/.test(k) ? .78 : 1; if(k !== 'C') field.player('h' + k, 'red', k, {glove:true, scale:.9}).pos(q.x * m, q.y * m); });
+  field.player('hBat', 'blue', '7', {scale:.9}).pos(-1.4, .4);
+  var hb = field.ball(); hb.set(0, .6, .7);
+  var wrap = document.getElementById('pitchwrap'), list = document.getElementById('hubList'), lh = '';
+  PAGES.forEach(function(p, i){
+    var b = document.createElement('button');
+    b.className = 'st' + (p.side ? ' ' + p.side : ''); b.dataset.id = p.id;
+    var q = P(p.at); b.style.left = ((q[0] - HV.x) / HV.w * 100) + '%'; b.style.top = ((q[1] - HV.y) / HV.h * 100) + '%';
+    b.innerHTML = '<span class="dot">' + p.n + '</span><span class="card"><b>' + p.label + '</b><span>' + p.desc + '</span></span>';
+    b.setAttribute('aria-label', p.n + ' ' + p.label);
+    wrap.appendChild(b);
+    if(i === 0 || PAGES[i-1].half !== p.half) lh += '<div class="h">' + (p.half === 1 ? '전반 · 1차시' : '후반 · 2차시') + '</div>';
+    lh += '<button data-id="' + p.id + '"><span class="dot">' + p.n + '</span><span><b>' + p.label + '</b><span>' + p.desc + '</span></span></button>';
+  });
+  list.innerHTML = lh;
+
+  function mark(){
+    Array.prototype.forEach.call(document.querySelectorAll('[data-id]'), function(el){
+      var id = el.dataset.id;
+      if(el.classList.contains('tab')){ el.setAttribute('aria-selected', id === current ? 'true' : 'false'); el.classList.toggle('seen', !!seen[id]); }
+      if(el.classList.contains('st')) el.classList.toggle('seen', !!seen[id]);
+    });
+    document.getElementById('homeBtn').classList.toggle('on', current === 'home');
+  }
+  function show(id){
+    var p = PAGES.filter(function(x){ return x.id === id; })[0];
+    if(!p) id = 'home';
+    current = id;
+    hub.classList.toggle('on', id === 'home');
+    for(var k in frames) frames[k].classList.toggle('on', k === id);
+    if(p){
+      if(!frames[id]){
+        var f = document.createElement('iframe');
+        f.src = p.src; f.title = p.label; f.setAttribute('allow', 'autoplay; encrypted-media; picture-in-picture; fullscreen'); f.setAttribute('allowfullscreen', '');
+        spin.classList.add('on');
+        f.onload = function(){ spin.classList.remove('on'); };
+        stage.appendChild(f); frames[id] = f;
+        requestAnimationFrame(function(){ f.classList.add('on'); });
+      }
+      seen[id] = true; try{ localStorage.setItem('pe-tee-seen', JSON.stringify(seen)); }catch(e){}
+    }
+    if(location.hash.slice(1) !== id){ try{ history.replaceState(null, '', '#' + id); }catch(e){ location.hash = id; } }
+    mark();
+    var tab = nav.querySelector('[data-id="' + id + '"]'); if(tab && tab.scrollIntoView) tab.scrollIntoView({block:'nearest', inline:'nearest'});
+  }
+  document.addEventListener('click', function(ev){
+    var t = ev.target.closest('[data-id]');
+    if(t && !t.closest('iframe')){ show(t.dataset.id); }
+  });
+  document.getElementById('homeBtn').onclick = function(){ show('home'); };
+  document.getElementById('startBtn').onclick = function(){ show('video'); };
+  window.addEventListener('message', function(ev){
+    var d = ev.data; if(d && d.type === 'pe-nav' && d.target) show(d.target);
+  });
+  show(location.hash.slice(1) || 'home');
+})();
+}catch(e){ PE_ERR(e, '수업 첫 화면'); }
+</script>
+</body>
+</html>

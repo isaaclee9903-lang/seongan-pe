@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<!--@@KIT:head.html@@-->
+<title>규칙 놀이터 - 티볼</title>
+<style>
+/*@@KIT:base.css@@*/
+html,body{overflow:hidden;background:var(--turf-950);color:#fff}
+.page{position:fixed;inset:0;display:flex;flex-direction:column}
+.top{flex:none;display:flex;align-items:stretch;min-height:60px;background:#0b120f;border-bottom:1px solid rgba(255,255,255,.06)}
+.top .ttl{flex:1;display:flex;align-items:center;padding:0 18px;font-weight:700;font-size:14px;color:rgba(255,255,255,.72);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.stat{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:4px 18px;border-left:1px solid rgba(255,255,255,.08);min-width:92px}
+.stat small{font-size:11px;font-weight:800;color:rgba(255,255,255,.55)}
+.stat b{font-family:var(--display);font-weight:400;font-size:24px;color:var(--volt);line-height:1.1;font-variant-numeric:tabular-nums;white-space:nowrap}
+.main{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:16px;padding:14px 16px}
+.left{min-width:0;min-height:0;display:flex;flex-direction:column;gap:10px}
+.modes{display:flex;gap:8px;flex-wrap:wrap}
+.modes button{min-height:48px;padding:0 18px;border-radius:14px;border:0;background:rgba(255,255,255,.08);color:#fff;font-weight:800;font-size:16px;display:flex;align-items:center;gap:10px}
+.modes button b{font-family:var(--display);font-weight:400;color:var(--volt)}
+.modes button.on{background:var(--volt);color:var(--turf-950)} .modes button.on b{color:var(--turf-950)}
+.stagebox{position:relative;flex:1;min-height:0;display:flex;align-items:center;justify-content:center}
+.stagebox .vis{width:100%;max-height:100%}
+.stagebox svg.board{max-height:calc(100vh - 230px)}
+.whistle{position:absolute;left:50%;top:18px;transform:translateX(-50%);font-family:var(--display);font-size:22px;padding:8px 20px;border-radius:999px;white-space:nowrap;box-shadow:var(--shadow);pointer-events:none;transition:opacity .2s;max-width:94%;overflow:hidden;text-overflow:ellipsis;z-index:3}
+.whistle.ok{background:#fff;color:var(--ok)} .whistle.foul{background:var(--foul);color:#fff} .whistle.info{background:rgba(7,28,21,.9);color:#fff;font-family:Pretendard;font-weight:800;font-size:16px}
+.whistle.hide{opacity:0}
+.basebtns{position:absolute;inset:0;pointer-events:none;z-index:2}
+.basebtns button{position:absolute;transform:translate(-50%,-50%);pointer-events:auto;min-width:64px;min-height:52px;border-radius:999px;border:3px solid var(--volt);background:rgba(7,28,21,.88);color:#fff;font-family:var(--display);font-size:19px;padding:0 14px;box-shadow:0 0 0 6px rgba(255,210,63,.25);animation:pulse 1.2s ease-in-out infinite}
+@keyframes pulse{50%{box-shadow:0 0 0 12px rgba(255,210,63,.08)}}
+.basebtns.off{display:none}
+.side{min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:10px}
+.box{background:rgba(255,255,255,.05);border-radius:16px;padding:14px 16px}
+.box h3{font-size:13px;color:rgba(255,255,255,.55);margin:0 0 8px;font-weight:800}
+.now{font-size:17px;font-weight:800;line-height:1.6}
+.now em{font-style:normal;color:var(--volt)}
+.why{font-size:14.5px;line-height:1.6;color:rgba(255,255,255,.78);margin-top:6px}
+.why b{color:var(--volt)}
+.mis{list-style:none;padding:0;margin:0;display:grid;gap:8px}
+.mis li{display:flex;align-items:center;gap:10px;font-size:15px;line-height:1.35}
+.mis i{flex:none;width:26px;height:26px;border-radius:50%;border:2px solid rgba(255,255,255,.3)}
+.mis li.done i{background:#3fcf7f;border-color:#3fcf7f}
+.mis span{flex:1}
+.mis b{font-family:var(--display);font-weight:400;color:var(--volt)}
+.opts2{display:flex;gap:8px;flex-wrap:wrap}
+.ctl{display:grid;gap:10px}
+.ctl label{display:grid;grid-template-columns:70px 1fr 66px;gap:10px;align-items:center;font-weight:800;font-size:14px}
+.ctl output{font-family:var(--display);color:var(--volt);font-size:18px;text-align:right}
+.ctl .hint{font-size:12.5px;color:rgba(255,255,255,.55);margin:-6px 0 0 80px;line-height:1.4}
+input[type=range]{width:100%;height:44px;accent-color:var(--volt)}
+.hitbtn{min-height:60px;border-radius:16px;border:0;background:var(--volt);color:var(--turf-950);font-family:var(--display);font-size:24px}
+.hitbtn:disabled{opacity:.5}
+.remember{margin:0;padding-left:20px}
+.remember li{font-size:15px;line-height:1.6}
+.overlay{position:absolute;inset:0;background:rgba(7,28,21,.72);display:flex;align-items:center;justify-content:center;padding:16px;z-index:5;border-radius:24px}
+.overlay.off{display:none}
+.intro{background:#fff;color:var(--ink);border-radius:24px;padding:24px 26px;max-width:620px;box-shadow:var(--shadow)}
+.intro h2{margin:.2em 0 .4em}
+.intro .cols{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:12px 0 16px}
+.intro .cols div{background:#f1f4ee;border-radius:14px;padding:10px 12px;font-size:14.5px;line-height:1.55}
+.intro .cols b{display:block;font-family:var(--display);font-weight:400;font-size:18px;color:var(--turf-600);margin-bottom:2px}
+.readout{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.readout div{background:rgba(0,0,0,.25);border-radius:12px;padding:8px 10px}
+.readout small{display:block;font-size:11.5px;font-weight:800;color:rgba(255,255,255,.55)}
+.readout b{font-family:var(--display);font-weight:400;font-size:22px;color:#fff}
+@media (max-width:900px),(orientation:portrait){
+  html,body{overflow:auto}
+  .page{position:static;min-height:100%}
+  .main{grid-template-columns:1fr}
+  .stagebox svg.board{max-height:none}
+  .stat{min-width:0;padding:4px 10px}
+  .top .ttl{display:none}
+  .intro .cols{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="top">
+    <div class="ttl">03 규칙 놀이터 · 수비 판단과 타격</div>
+    <div class="stat"><small>만든 아웃</small><b id="stOut">0</b></div>
+    <div class="stat"><small>맞힘</small><b id="stOk">0</b></div>
+    <div class="stat"><small>다시 생각</small><b id="stMiss">0</b></div>
+  </div>
+  <div class="main">
+    <div class="left">
+      <div class="modes" role="tablist">
+        <button class="on" data-mode="a" role="tab"><b>A</b>어디로 던질까</button>
+        <button data-mode="b" role="tab"><b>B</b>직접 쳐 보기</button>
+      </div>
+      <div class="stagebox">
+        <div class="vis" id="visA">
+          <svg id="cA"></svg>
+          <div class="basebtns off" id="bbA"></div>
+          <div class="whistle info" id="wA">시작하기를 눌러요</div>
+          <div class="model-note">판단을 익히기 위한 모형이에요. 주자는 초속 6 m, 송구는 초속 17 m쯤으로 계산해요.</div>
+          <div class="overlay" id="introA"><div class="intro">
+            <div class="kicker"><b>A</b>어디로 던질까</div>
+            <h2 class="dsp" style="font-weight:400">공을 잡았다! 어느 베이스로?</h2>
+            <div class="cols">
+              <div><b>1. 살펴보기</b>주자가 어느 베이스에 있는지 봐요.</div>
+              <div><b>2. 포스 찾기</b>꼭 가야 하는 주자가 누구인지 생각해요.</div>
+              <div><b>3. 던지기</b>노란 베이스 버튼 중 하나를 눌러요.</div>
+            </div>
+            <p style="font-size:16px;margin:0 0 14px">공을 받은 수비가 베이스를 밟기만 하면 되는 곳(포스)으로 던져야 아웃을 만들기 쉬워요. 홈도 포스아웃이에요.</p>
+            <button class="btn volt" id="goA">시작하기</button>
+          </div></div>
+        </div>
+        <div class="vis" id="visB" style="display:none">
+          <svg id="cB"></svg>
+          <div class="whistle info" id="wB">각도·방향·세기를 정하고 치기 버튼을 눌러요</div>
+          <div class="model-note">공기 저항을 받는 가벼운 공으로 계산한 모형이에요. 실제 공은 회전과 바람에 따라 달라져요.</div>
+        </div>
+      </div>
+    </div>
+    <aside class="side">
+      <div class="box">
+        <h3>지금 할 일</h3>
+        <div class="now" id="now"></div>
+        <div class="why" id="why"></div>
+      </div>
+      <div class="box" id="setA">
+        <div class="opts2"><button class="vbtn on" id="nextA">새 상황</button><button class="vbtn" id="replayA">다시 보기</button></div>
+      </div>
+      <div class="box" id="setB" style="display:none">
+        <h3>타격 정하기</h3>
+        <div class="ctl">
+          <label>각도<input type="range" id="rgA" min="-10" max="60" step="1" value="20"><output id="oA">20°</output></label>
+          <div class="hint">0°보다 작으면 땅으로 깎아 치기</div>
+          <label>방향<input type="range" id="rgD" min="-50" max="50" step="1" value="10"><output id="oD">오른 10°</output></label>
+          <div class="hint">가운데가 0°, 45°를 넘으면 파울라인 밖</div>
+          <label>세기<input type="range" id="rgV" min="10" max="34" step="1" value="24"><output id="oV">24 m/s</output></label>
+          <button class="hitbtn" id="hit">치기!</button>
+          <div class="readout">
+            <div><small>날아간 거리</small><b id="rDist">-</b></div>
+            <div><small>공중에 있던 시간</small><b id="rTime">-</b></div>
+          </div>
+        </div>
+      </div>
+      <div class="box">
+        <h3>미션</h3>
+        <ul class="mis" id="mis"></ul>
+      </div>
+      <div class="box">
+        <h3>기억할 규칙</h3>
+        <ol class="remember" id="remember"></ol>
+      </div>
+      <button class="btn volt" data-nav="referee">04 내가 심판으로 →</button>
+    </aside>
+  </div>
+</div>
+
+<script>
+/*@@KIT:kit.js@@*/
+</script>
+<script>
+/*@@KIT:field.js@@*/
+</script>
+
+<script>
+/* ===== 공통 ===== */
+var D = 18.29, R = D * Math.SQRT1_2;
+var BASE = {1:[R, -R], 2:[0, -2*R], 3:[-R, -R], H:[0, 0]};
+var BAT = [-1.3, .5], VA = {x:-28, y:-41.5, w:56, h:47.5};
+var RUN = 6, THROW = 17, RELEASE = .35;
+var MISSION_A = [
+  {id:'force3', text:'포스아웃 만들기', need:3},
+  {id:'lead2', text:'가장 앞선 주자 잡기', need:2},
+  {id:'home1', text:'홈 포스아웃', need:1}
+];
+var MISSION_B = [
+  {id:'gap3', text:'수비 사이 빈 곳에 떨어뜨리기', need:3},
+  {id:'far1', text:'40 m 넘게 보내기', need:1},
+  {id:'oppo1', text:'3루 쪽(왼쪽) 안타', need:1}
+];
+var REMEMBER = {
+  a:['타자가 치면 1루는 언제나 포스예요.', '뒤에서 밀고 오는 주자가 있어야 포스예요.', '포스면 공을 가진 수비가 베이스만 밟아도 아웃.', '홈은 언제나 포스아웃이에요(충돌 방지).'],
+  b:['파울라인(±45°) 안쪽이 페어예요.', '너무 높게 뜨면 수비가 달려가 잡을 시간이 생겨요.', '땅볼은 내야수가 잡기 쉽지만, 수비 사이로 가면 안타예요.', '친 뒤 배트는 서클 안에 내려놓고 달려요.']
+};
+var stat = {out:0, ok:0, miss:0}, prog = {};
+function $(id){ return document.getElementById(id); }
+function paintStat(){ $('stOut').textContent = stat.out; $('stOk').textContent = stat.ok; $('stMiss').textContent = stat.miss; }
+function dist(a, b){ return Math.hypot(a[0] - b[0], a[1] - b[1]); }
+var mode = 'a';
+function paintMissions(){
+  var list = mode === 'a' ? MISSION_A : MISSION_B;
+  $('mis').innerHTML = list.map(function(m){ var n = Math.min(m.need, prog[m.id] || 0); return '<li class="' + (n >= m.need ? 'done' : '') + '"><i></i><span>' + m.text + '</span><b>' + n + '/' + m.need + '</b></li>'; }).join('');
+  $('remember').innerHTML = REMEMBER[mode].map(function(t){ return '<li>' + t + '</li>'; }).join('');
+}
+function bump(id){ prog[id] = (prog[id] || 0) + 1; }
+function whistle(el, text, tone){ el.className = 'whistle ' + tone; el.textContent = text; }
+</script>
+
+<script>
+/* ===== A. 어디로 던질까 ===== */
+try{
+(function(){
+  var svg = $('cA'), field = null, scene = null, sit = null, tp = 0, waiting = false;
+  var HITS = [
+    {who:'1SS', to:[-6.4, -18.6]}, {who:'2SS', to:[2.4, -13.6]}, {who:'2B', to:[6.4, -19.2]},
+    {who:'3B', to:[-12.0, -12.4]}, {who:'1B', to:[12.0, -11.6]}, {who:'2SS', to:[-1.4, -17.4]}, {who:'1SS', to:[-9.4, -20.6]}
+  ];
+  var COVER = {1:'1B', 2:'2SS', 3:'3B', H:'C'};
+  function newSit(){
+    var occ = [Math.random() < .55, Math.random() < .45, Math.random() < .35];
+    if(!occ[0] && !occ[1] && !occ[2]) occ[Math.floor(Math.random() * 3)] = true;
+    var h = HITS[Math.floor(Math.random() * HITS.length)];
+    return {occ:occ, hit:h};
+  }
+  /* 주자: 누가 어디서 어디로, 포스인가 */
+  function runners(s){
+    var o = s.occ, list = [{id:'bat', from:'B', to:'1', forced:true, start:BAT}];
+    var f1 = true, f2 = f1 && o[0], f3 = f2 && o[1];
+    if(o[0]) list.push({id:'r1', from:'1', to:'2', forced:true});
+    if(o[1]) list.push({id:'r2', from:'2', to:'3', forced:f2});
+    if(o[2]) list.push({id:'r3', from:'3', to:'H', forced:f3});
+    list.forEach(function(rr){
+      var a = rr.start || BASE[rr.from], b = BASE[rr.to];
+      rr.a = a; rr.b = b; rr.arrive = .6 + dist(a, b) / RUN;
+      if(!rr.forced) rr.arrive = null;
+    });
+    return list;
+  }
+  function ballArrive(s){ return .62 + dist([0, .6], s.hit.to) / 16; }
+  function build(choice){
+    var s = sit, rs = runners(s), hit = s.hit, tf = ballArrive(s);
+    tp = tf + .35;
+    var fp = FD.POS[hit.who], fielderAt = [hit.to[0] + (fp.x > hit.to[0] ? .5 : -.5), hit.to[1] - .6];
+    var actors = [], ball = [], events = [{t:.45, type:'swing', who:'bat', dur:.3}], marks = [], dur = tp + .2;
+    var result = null;
+    /* 수비 */
+    Object.keys(FD.POS).forEach(function(k){
+      var p = FD.POS[k], keys = [[0, p.x, p.y]];
+      if(k === hit.who) keys = [[0, p.x, p.y], [.55, p.x, p.y], [tf, fielderAt[0], fielderAt[1]]];
+      actors.push({id:'f' + k, team:'red', label:k, glove:true, keys:keys});
+    });
+    ball.push({t0:.62, t1:tf, from:'tee', to:hit.to, kind:'ground', bounces:3, peak:1.2});
+    if(choice){
+      var cov = COVER[choice], bp = BASE[choice], self = cov === hit.who;
+      var target = rs.filter(function(x){ return x.to === choice; })[0];
+      var tArr;
+      if(self){ tArr = tp + dist(fielderAt, bp) / RUN; }
+      else { tArr = tp + RELEASE + dist(fielderAt, bp) / THROW; }
+      var outRunner = target && target.forced && tArr < target.arrive - .05 ? target : null;
+      result = {choice:choice, target:target, outRunner:outRunner, tArr:tArr};
+      dur = Math.max(tArr, (rs.map(function(x){ return x.arrive || 0; }).sort(function(a, b){ return b - a; })[0] || 0)) + 1.6;
+      ball.push({t0:tf, t1:tp + (self ? 0 : RELEASE), on:'f' + hit.who});
+      if(self){
+        actors.forEach(function(a){ if(a.id === 'f' + hit.who) a.keys.push([tArr, bp[0] + .3, bp[1] - .9]); });
+        ball.push({t0:tp, t1:tArr, on:'f' + hit.who});
+      } else {
+        var cp = FD.POS[cov], cpos = choice === 'H' ? [.8, -.3] : [bp[0] + (choice === '1' ? .3 : choice === '3' ? -.3 : .9), bp[1] - .9];
+        actors.forEach(function(a){ if(a.id === 'f' + cov){ a.keys = [[0, cp.x, cp.y], [.7, cp.x, cp.y], [Math.max(1.3, tArr - .3), cpos[0], cpos[1]]]; } });
+        ball.push({t0:tp + RELEASE, t1:tArr, from:'f' + hit.who, to:'f' + cov, kind:'throw'});
+      }
+      ball.push({t0:tArr, t1:dur, on:self ? 'f' + hit.who : 'f' + cov});
+      events.push({t:tArr, type:'base', base:choice, color:outRunner ? '#ff6b52' : '#ffd23f'});
+      if(outRunner){
+        events.push({t:tArr + .02, type:'call', text:choice === 'H' ? '홈 포스아웃' : '포스아웃', tone:'foul', x:bp[0] + (choice === '1' ? -3 : choice === '3' ? 3 : 0), y:bp[1] - 5.2, dur:3});
+      } else {
+        events.push({t:tArr + .02, type:'call', text:target ? (target.forced ? '세이프' : '포스 아님') : '아무도 없음', tone:'ok', x:bp[0] + (choice === '1' ? -3 : choice === '3' ? 3 : 0), y:bp[1] - 5.2, dur:3});
+      }
+    }
+    /* 공격: 타자와 주자 */
+    rs.forEach(function(rr){
+      var label = rr.id === 'bat' ? '타자' : '주자';
+      var keys;
+      if(!rr.forced){ var a = rr.a; keys = [[0, a[0] + .3, a[1] - .3]]; }
+      else {
+        var stop = rr.arrive, end = rr.b;
+        if(result && result.outRunner === rr){ stop = result.tArr; var u = (stop - .6) / (rr.arrive - .6); end = [rr.a[0] + (rr.b[0] - rr.a[0]) * u, rr.a[1] + (rr.b[1] - rr.a[1]) * u]; }
+        keys = [[0, rr.a[0] + (rr.id === 'bat' ? 0 : .3), rr.a[1] - (rr.id === 'bat' ? 0 : .3)], [.6, rr.a[0] + (rr.id === 'bat' ? 0 : .3), rr.a[1] - (rr.id === 'bat' ? 0 : .3)], [stop, end[0], end[1]]];
+        if(!choice && stop > tp + .2){
+          /* 판단을 기다리는 동안은 tp에서 멈춰 보이도록 그대로 둔다 */
+        }
+      }
+      actors.push({id:rr.id, team:'blue', label:label, keys:keys});
+      if(rr.id !== 'bat' && !rr.forced) events.push({t:.7, type:'say', who:rr.id, text:'제자리', dur:1.6});
+    });
+    if(!choice) marks = [];
+    else marks = [{type:'force', bases:rs.filter(function(x){ return x.forced; }).map(function(x){ return x.to; }), at:0}];
+    if(scene) scene.destroy();
+    svg.replaceChildren();
+    field = new FD.Field(svg, {view:VA, labels:false});
+    scene = new FD.Scene(field, {dur:dur, actors:actors, ball:ball, events:events, marks:marks}, {marks:!!choice});
+    return {rs:rs, result:result};
+  }
+  function placeButtons(rs){
+    var bb = $('bbA'); bb.innerHTML = '';
+    var r = svg.getBoundingClientRect(), host = svg.parentNode.getBoundingClientRect();
+    var vb = field.view, sc = Math.min(r.width / vb.w, r.height / vb.h), ox = r.left - host.left + (r.width - vb.w * sc) / 2, oy = r.top - host.top + (r.height - vb.h * sc) / 2;
+    [['1', '1루', 1.2, 3.4], ['2', '2루', 0, 3.6], ['3', '3루', -1.2, 3.4], ['H', '홈', 5.4, -.8]].forEach(function(a){
+      var p = BASE[a[0]], b = document.createElement('button');
+      b.textContent = a[1]; b.dataset.base = a[0];
+      b.style.left = (ox + (p[0] + a[2] - vb.x) * sc) + 'px'; b.style.top = (oy + (p[1] + a[3] - vb.y) * sc) + 'px';
+      b.onclick = function(){ choose(a[0]); };
+      bb.appendChild(b);
+    });
+    bb.classList.remove('off');
+  }
+  function start(){
+    sit = newSit(); waiting = false;
+    $('bbA').classList.add('off');
+    var b = build(null);
+    whistle($('wA'), '타격!', 'info');
+    var occTxt = ['1루', '2루', '3루'].filter(function(_, i){ return sit.occ[i]; }).join('·');
+    $('now').innerHTML = '주자: <em>' + occTxt + '</em>. 공이 <em>' + FD.POS[sit.hit.who].name + '</em>에게 가요.';
+    $('why').textContent = '공을 잡는 순간 멈춰요. 그때 던질 베이스를 고르세요.';
+    scene.onTick = function(t){
+      if(t >= tp && !waiting){
+        waiting = true; scene.pause(); scene.seek(tp);
+        whistle($('wA'), '잡았다! 어디로 던질까?', 'info');
+        placeButtons(b.rs);
+      }
+    };
+    scene.play(1);
+  }
+  function choose(base){
+    $('bbA').classList.add('off');
+    var b = build(base), res = b.result, rs = b.rs;
+    var possible = rs.filter(function(x){
+      if(!x.forced) return false;
+      var cov = COVER[x.to], self = cov === sit.hit.who, fpos = FD.POS[sit.hit.who];
+      var fa = [sit.hit.to[0] + (fpos.x > sit.hit.to[0] ? .5 : -.5), sit.hit.to[1] - .6];
+      var ta = self ? tp + dist(fa, BASE[x.to]) / RUN : tp + RELEASE + dist(fa, BASE[x.to]) / THROW;
+      return ta < x.arrive - .05;
+    });
+    var order = {'1':1, '2':2, '3':3, 'H':4};
+    var lead = possible.sort(function(a, c){ return order[c.to] - order[a.to]; })[0];
+    var NAME = {'1':'1루', '2':'2루', '3':'3루', 'H':'홈'};
+    if(res.outRunner){
+      stat.ok++; stat.out++; bump('force3');
+      if(lead && lead.to === base){ bump('lead2'); }
+      if(base === 'H') bump('home1');
+      whistle($('wA'), NAME[base] + ' 포스아웃!', 'ok');
+      $('now').innerHTML = '<em>정답!</em> ' + NAME[base] + '는 포스였고 공이 주자보다 먼저 도착했어요.';
+      $('why').innerHTML = lead && lead.to !== base ? '더 앞선 주자도 잡을 수 있었어요: <b>' + NAME[lead.to] + '</b>. 앞선 주자를 잡으면 점수를 막기 쉬워요.' : '가장 앞선 주자를 잡았어요. 점수를 막는 최고의 선택이에요.';
+    } else {
+      stat.miss++;
+      var why;
+      if(!res.target) why = NAME[base] + '로 달려오는 주자가 없어요.';
+      else if(!res.target.forced) why = NAME[base] + '로 꼭 가야 하는 주자가 없었어요(포스 아님). 주자가 베이스에 머물러 있으니 아웃을 만들 수 없어요.';
+      else why = NAME[base] + '는 포스였지만 주자가 공보다 먼저 도착했어요. 거리가 너무 멀었어요.';
+      whistle($('wA'), '아웃을 못 만들었어요', 'foul');
+      $('now').innerHTML = '<em>다시 생각!</em> ' + why;
+      $('why').innerHTML = possible.length ? '아웃을 만들 수 있었던 곳: <b>' + possible.map(function(x){ return NAME[x.to]; }).join(', ') + '</b>' : '이번 공은 어디로 던져도 늦었어요. 이런 땅볼은 안타가 돼요.';
+    }
+    paintStat(); paintMissions();
+    scene.onTick = null; scene.seek(tp); scene.play(1);
+    lastChoice = base;
+  }
+  var lastChoice = null;
+  $('goA').onclick = function(){ $('introA').classList.add('off'); start(); };
+  $('nextA').onclick = function(){ if($('introA').classList.contains('off')) start(); };
+  $('replayA').onclick = function(){ if(scene && lastChoice){ scene.seek(0); scene.play(1); } else if(scene && !waiting){ scene.seek(0); scene.play(1); } };
+  window.addEventListener('resize', function(){ if(waiting && !$('bbA').classList.contains('off')) placeButtons(); });
+  /* 처음 그림 */
+  field = new FD.Field(svg, {view:VA, labels:false});
+  Object.keys(FD.POS).forEach(function(k){ var p = FD.POS[k]; field.player('i' + k, 'red', k, {glove:true}).pos(p.x, p.y); });
+  window.PG_A = {start:start, choose:choose};
+})();
+}catch(e){ PE_ERR(e, '어디로 던질까'); }
+</script>
+
+<script>
+/* ===== B. 직접 쳐 보기 ===== */
+try{
+(function(){
+  var svg = $('cB'), VB = {x:-44, y:-56, w:88, h:62};
+  var field = new FD.Field(svg, {view:VB, labels:true, size:1.5, foulLabels:true});
+  var E = FD.E, ball = field.ball(), fx = {};
+  Object.keys(FD.POS).forEach(function(k){ var p = FD.POS[k]; fx[k] = field.player('b' + k, 'red', k, {glove:true, scale:1}); fx[k].pos(p.x, p.y); });
+  var batter = field.player('bBat', 'blue', '7', {scale:1}); batter.pos(BAT[0], BAT[1]);
+  ball.set(0, .6, .7);
+  var marks = E('g', null, field.gMarks), busy = false, hits = 0;
+  /* 거리 눈금 */
+  [20, 30, 40].forEach(function(rr){
+    var a = rr * Math.SQRT1_2;
+    E('path', {d:'M' + (-a) + ' ' + (-a) + ' A' + rr + ' ' + rr + ' 0 0 1 ' + a + ' ' + (-a), fill:'none', stroke:'rgba(255,255,255,.35)', 'stroke-width':.2, 'stroke-dasharray':'.6 .6'}, field.gZone);
+    var la = 18 * Math.PI / 180; field.label(rr * Math.sin(la), -rr * Math.cos(la) - .9, rr + ' m', 'rgba(255,255,255,.75)', 'middle', .9, field.gZone);
+  });
+  /* 공기 저항이 있는 비행: 공 89~95 g, 둘레 약 29 cm(지름 9.3 cm) */
+  var G = 9.8, K = .5 * 1.2 * .45 * Math.PI * Math.pow(.0465, 2) / .092;
+  function fly(v, angDeg){
+    var a = angDeg * Math.PI / 180, vx = v * Math.cos(a), vz = v * Math.sin(a), x = 0, z = .7, t = 0, dt = .01, pts = [[0, 0, .7]];
+    while(t < 8){
+      var sp = Math.hypot(vx, vz);
+      vx -= K * sp * vx * dt; vz -= (G + K * sp * vz) * dt;
+      x += vx * dt; z += vz * dt; t += dt;
+      if(z <= 0){ z = 0; pts.push([t, x, 0]); break; }
+      if(Math.round(t / dt) % 3 === 0) pts.push([t, x, z]);
+    }
+    return {pts:pts, T:t, X:x, vx:vx};
+  }
+  function out(id){ return $(id); }
+  function fmtDir(d){ return d === 0 ? '가운데' : (d < 0 ? '왼 ' : '오른 ') + Math.abs(d) + '°'; }
+  ['rgA', 'rgD', 'rgV'].forEach(function(id){ $(id).addEventListener('input', paint); });
+  function paint(){
+    $('oA').textContent = $('rgA').value + '°'; $('oD').textContent = fmtDir(+$('rgD').value); $('oV').textContent = $('rgV').value + ' m/s';
+    marks.replaceChildren();
+    var d = +$('rgD').value * Math.PI / 180, L = 9;
+    field.arrow([0, 0], [Math.sin(d) * L, -Math.cos(d) * L], Math.abs(+$('rgD').value) > 45 ? '#ff6b52' : '#ffd23f', null, marks, '.5 .4');
+  }
+  function hit(){
+    if(busy) return; busy = true; $('hit').disabled = true;
+    var ang = +$('rgA').value, dir = +$('rgD').value, v = +$('rgV').value;
+    var dr = dir * Math.PI / 180, ux = Math.sin(dr), uy = -Math.cos(dr);
+    var path, T, X, ground = ang < 6;
+    if(ground){
+      /* 땅볼: 낮게 튀며 굴러가다 마찰로 멈춤 */
+      var v0 = v * Math.cos(Math.max(0, ang) * Math.PI / 180) * .75, decel = 4.2; T = v0 / decel; X = v0 * T - .5 * decel * T * T;
+      path = []; for(var q = 0; q <= T + 1e-6; q += .03){ var s = v0 * q - .5 * decel * q * q, hh = Math.max(0, .9 * Math.abs(Math.sin(q * 5)) * Math.exp(-q * 1.5)); path.push([q, s, hh]); }
+    } else { var f = fly(v, ang); path = f.pts; T = f.T; X = f.X; }
+    var land = [ux * X, uy * X], fair = field.isFair(land[0], land[1], .05) && !field.inCircle(land[0], land[1]);
+    /* 가장 가까운 수비와 잡을 수 있는지 */
+    var best = null;
+    Object.keys(FD.POS).forEach(function(k){
+      var p = FD.POS[k], dd;
+      if(ground){
+        /* 땅볼은 굴러가는 길에서 가장 가까운 점 */
+        var tproj = Math.max(0, Math.min(X, p.x * ux + p.y * uy)); dd = Math.hypot(p.x - ux * tproj, p.y - uy * tproj);
+        var reach = 1.2 + RUN * .6 * Math.min(T, tproj / Math.max(.1, X) * T);
+        if(dd < reach && (!best || dd < best.d)) best = {k:k, d:dd, at:[ux * tproj, uy * tproj], tCatch:Math.min(T, tproj / Math.max(.1, X) * T + .1)};
+      } else {
+        dd = Math.hypot(p.x - land[0], p.y - land[1]);
+        var can = 1.5 + RUN * Math.max(0, T - .5);
+        if(dd < can && (!best || dd < best.d)) best = {k:k, d:dd, at:land, tCatch:T};
+      }
+    });
+    var outcome;
+    if(!fair) outcome = 'foul';
+    else if(ground) outcome = best ? 'grounder' : 'hit';
+    else outcome = best ? 'flyout' : 'hit';
+    $('rDist').textContent = X.toFixed(1) + ' m'; $('rTime').textContent = ground ? '-' : T.toFixed(2) + ' 초';
+    /* 애니메이션 */
+    var t0 = performance.now(), swingDur = .3, catcher = best ? fx[best.k] : null, cStart = catcher ? [catcher.x, catcher.y] : null;
+    var trail = [];
+    function step(now){
+      var t = (now - t0) / 1000;
+      batter.swing(Math.min(1, t / swingDur), 0);
+      var tb = t - swingDur * .6;
+      if(tb < 0){ requestAnimationFrame(step); return; }
+      var stopT = (outcome === 'flyout' || outcome === 'grounder') ? best.tCatch : T;
+      var tt = Math.min(tb, stopT), p = path[0];
+      for(var i = 1; i < path.length; i++){ if(path[i][0] >= tt){ var a = path[i-1], c = path[i], u = (tt - a[0]) / Math.max(1e-6, c[0] - a[0]); p = [tt, a[1] + (c[1] - a[1]) * u, a[2] + (c[2] - a[2]) * u]; break; } p = path[i]; }
+      var bx = ux * p[1], by = uy * p[1];
+      ball.set(bx, by, p[2]); trail.push([bx, by]); ball.setTrail(trail);
+      if(catcher){ var k = Math.min(1, tb / Math.max(.3, best.tCatch)); catcher.pos(cStart[0] + (best.at[0] - cStart[0]) * k + .5, cStart[1] + (best.at[1] - cStart[1]) * k - .5); }
+      if(tb < stopT + .05){ requestAnimationFrame(step); return; }
+      finish(outcome, land, X, dir);
+    }
+    requestAnimationFrame(step);
+  }
+  function finish(outcome, land, X, dir){
+    var w = $('wB');
+    E('circle', {cx:land[0], cy:land[1], r:1.6, fill:'none', stroke:outcome === 'hit' ? '#3fcf7f' : outcome === 'foul' ? '#ff6b52' : '#ffd23f', 'stroke-width':.35}, marks);
+    if(outcome === 'foul'){ whistle(w, '파울', 'foul'); $('now').innerHTML = '<em>파울!</em> 공이 파울라인 밖에 떨어졌어요.'; $('why').textContent = '방향을 45°보다 안쪽으로 돌려 보세요. 2스트라이크 뒤의 파울은 아웃이에요.'; }
+    else if(outcome === 'flyout'){ whistle(w, '플라이 아웃', 'foul'); $('now').innerHTML = '<em>잡혔어요.</em> 공중에 오래 떠 있어 수비가 달려와 잡았어요.'; $('why').textContent = '각도를 낮추거나 방향을 바꿔 수비 사이로 보내 보세요.'; }
+    else if(outcome === 'grounder'){ whistle(w, '내야 땅볼', 'info'); $('now').innerHTML = '<em>내야 땅볼.</em> 수비가 굴러오는 공을 막았어요.'; $('why').textContent = '수비가 잡아 1루로 던지면 아웃되기 쉬워요. 수비와 수비 사이를 노려 보세요.'; }
+    else {
+      whistle(w, '안타!', 'ok'); bump('gap3'); if(X >= 40) bump('far1'); if(dir < -5) bump('oppo1');
+      $('now').innerHTML = '<em>안타!</em> 수비가 닿지 못하는 빈 곳에 떨어졌어요(' + X.toFixed(1) + ' m).';
+      $('why').textContent = X >= 40 ? '외야수 뒤로 넘어갔어요. 2루까지도 노려 볼 만해요.' : '빈 곳을 찾는 것이 멀리 치는 것만큼 중요해요.';
+    }
+    paintMissions();
+    setTimeout(function(){
+      Object.keys(FD.POS).forEach(function(k){ var p = FD.POS[k]; fx[k].pos(p.x, p.y); });
+      batter.swing(null); ball.set(0, .6, .7); ball.setTrail([]); busy = false; $('hit').disabled = false; paint();
+    }, 2200);
+  }
+  $('hit').onclick = hit;
+  paint();
+  window.PG_B = {hit:hit, fly:fly};
+})();
+}catch(e){ PE_ERR(e, '직접 쳐 보기'); }
+</script>
+
+<script>
+try{
+  Array.prototype.forEach.call(document.querySelectorAll('[data-mode]'), function(b){
+    b.onclick = function(){
+      mode = b.dataset.mode;
+      Array.prototype.forEach.call(document.querySelectorAll('[data-mode]'), function(x){ x.classList.toggle('on', x === b); });
+      $('visA').style.display = mode === 'a' ? '' : 'none'; $('visB').style.display = mode === 'b' ? '' : 'none';
+      $('setA').style.display = mode === 'a' ? '' : 'none'; $('setB').style.display = mode === 'b' ? '' : 'none';
+      if(mode === 'b'){ $('now').innerHTML = '각도·방향·세기를 정하고 <em>치기!</em>를 눌러요.'; $('why').textContent = '수비가 없는 빈 곳을 노려 보세요.'; }
+      else { $('now').innerHTML = '시작하기를 누르면 타자가 공을 쳐요.'; $('why').textContent = ''; }
+      paintMissions();
+    };
+  });
+  $('now').innerHTML = '시작하기를 누르면 타자가 공을 쳐요.';
+  paintStat(); paintMissions();
+}catch(e){ PE_ERR(e, '놀이터'); }
+</script>
+</body>
+</html>

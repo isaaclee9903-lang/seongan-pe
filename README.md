@@ -8,6 +8,7 @@ https://isaaclee9903-lang.github.io/seongan-pe/
 |---|---|---|
 | 태그럭비 (2차시) | 중2 · 스포츠-전략형-영역형 | `lessons/tag-rugby/` |
 | 배드민턴 (2차시) | 중2 · 스포츠-전략형-네트형 | `lessons/badminton/` |
+| 티볼 (2차시) | 중2 · 스포츠-전략형-필드형 | `lessons/teeball/` |
 
 ## 수업 한 개의 구성 (태그럭비 기준)
 첫 화면은 경기장 지도이고, 아래쪽 전광판에서 구간을 고릅니다. 각 페이지는 가로로 넘기는 카드 또는 한 화면 활동입니다.
@@ -29,10 +30,20 @@ https://isaaclee9903-lang.github.io/seongan-pe/
 | 04 내가 심판 | `referee.html` | 장면 12개(위에서 본 인·아웃 4 + 옆에서 본 네트·서브·몸 맞음 등 8), 정상/폴트 종류/렛 판정 |
 | 05 코트 밖 과학 | `science.html` | 셔틀 구조, 뒤집히는 이유, 스매시 기록과 단위, 급감속 실험, 기온과 비거리, 속도 시험, 라켓 줄 탄성, 규칙의 역사 |
 
+## 티볼 구성
+| 구간 | 파일 | 내용 |
+|---|---|---|
+| 01 영상으로 보기 | `video.html` | 경기장·타자 아웃·주자 아웃·포구·타격 영상 5편, 멈춤 퀴즈 15문항 |
+| 02 규칙 읽기 | `rules.html` | 카드 13장: 야구와 다른 점, 경기장과 수비 10명(18.29/23/20 m), 눌러서 페어·파울 판정, 볼카운트 전광판, 루반칙, 포스아웃, 태그아웃(1 m), 홈 포스아웃, 뜬공과 태그업, 전원 타격제·잔루 + 퀴즈 7문항 |
+| 03 규칙 놀이터 | `playground.html` | A 어디로 던질까(주자 상황을 보고 베이스 고르기, 포스·송구 시간 계산), B 직접 쳐 보기(각도·방향·세기 → 페어/파울, 안타/플라이 아웃) |
+| 04 내가 심판 | `referee.html` | 장면 13개: 세이프·페어 / 포스·태그·플라이·스트라이크 아웃, 루반칙, 슬라이딩, 주로 이탈, 파울 |
+| 05 경기장 밖 과학 | `science.html` | 티볼의 역사, 크고 가벼운 공과 공기 저항, 말랑한 공(힘과 시간), 발사 각도 실험, 1루까지의 경주(속력), 스위트 스폿 |
+
 ## 만들기
 ```
 python tools/build.py tag-rugby        # src/ → lessons/ (단독 HTML)
 python tools/build.py badminton
+python tools/build.py teeball
 python -m http.server 8790             # 미리보기
 python tools/qa.py rules               # 가로·세로 화면 모음 사진 (tools/_qa/)
 python tools/qa.py rules --lesson badminton

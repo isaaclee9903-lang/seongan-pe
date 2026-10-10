@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<!--@@KIT:head.html@@-->
+<title>경기장 밖 과학 - 티볼</title>
+<style>
+/*@@KIT:base.css@@*/
+.big-num{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:16px 0}
+.big-num div{background:var(--turf-950);color:#fff;border-radius:18px;padding:16px 18px}
+.big-num b{display:block;font-family:var(--display);font-weight:400;font-size:clamp(36px,4.6vw,56px);line-height:1;color:var(--volt);font-variant-numeric:tabular-nums}
+.big-num b small{font-size:.42em;color:rgba(255,255,255,.7);margin-left:4px}
+.big-num span{display:block;font-size:14px;color:rgba(255,255,255,.7);margin-top:6px;line-height:1.5}
+.ctl{display:grid;gap:6px;padding:8px 4px 0}
+.ctl label{display:grid;grid-template-columns:76px 1fr 92px;gap:10px;align-items:center;color:#fff;font-weight:800;font-size:14px}
+.ctl output{font-family:var(--display);color:var(--volt);font-size:18px;text-align:right;white-space:nowrap}
+input[type=range]{width:100%;height:40px;accent-color:var(--volt)}
+.readout{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:8px}
+.readout div{background:rgba(0,0,0,.25);border-radius:12px;padding:8px 10px;color:#fff;font-size:12.5px;font-weight:700}
+.readout b{display:block;font-family:var(--display);font-weight:400;font-size:22px;color:var(--volt);font-variant-numeric:tabular-nums}
+.readout b.w{color:#fff}
+.tl{list-style:none;padding:0;margin:14px 0;position:relative}
+.tl::before{content:"";position:absolute;left:101px;top:6px;bottom:6px;width:3px;background:var(--line)}
+.tl li{display:grid;grid-template-columns:84px 1fr;gap:34px;align-items:start;margin:0 0 10px;position:relative}
+.tl li::before{content:"";position:absolute;left:95px;top:8px;width:15px;height:15px;border-radius:50%;background:var(--volt);border:3px solid var(--turf-900)}
+.tl .y{font-family:var(--display);font-size:18px;color:var(--turf-600);text-align:right}
+.tl p{margin:0;font-size:calc(var(--fs) - 1px);line-height:1.55}
+.tl li.kr::before{background:var(--blue)}
+.cmpball{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:14px 0}
+.cmpball div{background:#fff;border:1px solid var(--line);border-radius:18px;padding:14px 16px;text-align:center}
+.cmpball svg{display:block;margin:0 auto 6px}
+.cmpball b{display:block;font-family:var(--display);font-weight:400;font-size:20px}
+.cmpball span{display:block;font-size:15px;color:var(--muted);line-height:1.6}
+.race{display:grid;gap:10px;margin-top:6px}
+.race .lane{position:relative;height:46px;border-radius:12px;background:rgba(255,255,255,.08);overflow:hidden}
+.race .lane .lb{position:absolute;left:52px;top:50%;transform:translateY(-50%);font-weight:800;font-size:14px;color:rgba(255,255,255,.8);z-index:1}
+.race .lane i{position:absolute;top:7px;width:32px;height:32px;border-radius:50%;left:0;transition:none}
+.race .lane .goal{position:absolute;right:16px;top:4px;bottom:4px;width:4px;background:#fff;border-radius:2px}
+.race .lane i.run{background:var(--blue);box-shadow:0 0 0 3px rgba(37,99,217,.3)}
+.race .lane i.ball{background:#fff;box-shadow:0 0 0 3px rgba(255,255,255,.25)}
+.verdictbar{margin-top:10px;font-family:var(--display);font-size:22px;color:var(--volt);min-height:32px}
+.bat{position:relative;margin:10px 0 4px}
+.bat svg{width:100%;height:auto;display:block}
+.bat button{position:absolute;transform:translate(-50%,-50%);width:48px;height:48px;border-radius:50%;border:3px solid #fff;background:rgba(7,28,21,.65);color:#fff;font-family:var(--display);font-size:18px}
+.bat button.on{background:var(--volt);color:var(--turf-950);border-color:var(--volt)}
+.meter{display:grid;grid-template-columns:110px 1fr;gap:10px;align-items:center;color:#fff;font-weight:800;font-size:14px;margin-top:8px}
+.meter .t{height:18px;border-radius:9px;background:rgba(255,255,255,.12);overflow:hidden}
+.meter .t i{display:block;height:100%;width:0;border-radius:9px;background:var(--volt);transition:width .5s}
+.meter .t i.r{background:#ff6b52}
+.sheet{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:16px 0}
+.sheet div{background:#fff;border:1px solid var(--line);border-radius:14px;padding:12px 14px;font-size:16px;line-height:1.55;display:flex;gap:10px}
+.sheet b.k{flex:none;font-family:var(--display);font-weight:400;color:var(--turf-600);font-size:18px;min-width:22px}
+@media (max-width:700px){.sheet,.big-num,.cmpball{grid-template-columns:1fr}}
+.deep{background:var(--turf-950);color:#d5e3da;border-radius:14px;padding:12px 16px;font-size:15px;line-height:1.65;margin-top:12px}
+.deep b{color:var(--volt)}
+svg.side{display:block;width:100%;height:auto;border-radius:14px;background:#1b6340}
+</style>
+</head>
+<body>
+<div class="deck" id="deck" data-title="05 경기장 밖 과학">
+<!--@@KIT:deck_top.html@@-->
+
+  <!-- 1. 표지 -->
+  <section class="slide" data-title="표지">
+    <div class="split">
+      <div class="txt">
+        <div class="kicker rise"><b>05</b>경기장 밖 과학 · 2차시</div>
+        <h1 class="big rise d1">공을 멀리,<br>안전하게</h1>
+        <p class="lead rise d2">배트가 공에 힘을 주면 공은 날아가고, 중력과 공기가 공을 붙잡아요. 티볼 공이 말랑한 이유, 공을 가장 멀리 보내는 각도, 1루까지의 경주를 과학으로 살펴봐요.</p>
+        <div class="pillrow rise d3"><span class="pill">티볼의 역사</span><span class="pill">말랑한 공</span><span class="pill">공기 저항</span><span class="pill">발사 각도</span><span class="pill">속력</span><span class="pill">스위트 스폿</span></div>
+      </div>
+      <div class="vis rise d1">
+        <svg id="sIntro" class="side"></svg>
+        <div class="bar"><span class="cap grow">옆에서 본 그림이에요. 점선은 공기가 없을 때, 실선은 공기 저항이 있을 때 공이 가는 길이에요.</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 2. 역사 -->
+  <section class="slide" data-title="티볼의 역사">
+    <div class="split text-first">
+      <div class="txt">
+        <div class="kicker">역사 [9체02-13]</div>
+        <h2>야구를 쉽고 안전하게 바꾼 경기</h2>
+        <ul class="tl">
+          <li><span class="y">1980년경</span><p>오스트레일리아와 뉴질랜드에서 야구·소프트볼을 처음 배우는 6~12세 어린이에게 보급됐어요.</p></li>
+          <li><span class="y">1988</span><p>국제야구연맹과 국제소프트볼협회가 함께 티볼 규칙을 글로 정리했어요.</p></li>
+          <li class="kr"><span class="y">1998</span><p>한국티볼협회가 만들어지고 지도자 교육과 대회가 시작됐어요.</p></li>
+          <li class="kr"><span class="y">2008</span><p>초등학교 5학년, 중학교 2학년 체육 교육과정에 필드형 경기로 들어왔어요.</p></li>
+          <li class="kr"><span class="y">2017</span><p>홈 충돌을 막기 위해 홈을 포스아웃으로 바꾼 규칙이 생겼어요(대구광역시티볼협회).</p></li>
+        </ul>
+        <p class="note">출처: 대구광역시티볼협회 '티볼소개'와 '티볼규칙'.</p>
+      </div>
+      <div class="rise">
+        <div class="big-num">
+          <div><b>0<small>명</small></b><span>투수가 없어서 누구나 멈춘 공을 쳐요.</span></div>
+          <div><b>10<small>명</small></b><span>한 팀 10명, 남녀가 함께 뛸 수 있어요.</span></div>
+          <div><b>30~40<small>분</small></b><span>한 경기 시간. 수업 시간 안에 끝낼 수 있어요.</span></div>
+          <div><b>0<small>번</small></b><span>도루와 슬라이딩은 허용 횟수 0. 다치지 않게 막았어요.</span></div>
+        </div>
+        <p class="note">야구에서 무엇을 빼고 무엇을 바꿨는지 보면 티볼이 "누구나 안전하게"를 목표로 한 경기라는 것을 알 수 있어요.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3. 공 비교 -->
+  <section class="slide" data-title="크고 가벼운 공">
+    <div class="split">
+      <div class="rise">
+        <div class="cmpball">
+          <div><svg width="150" height="150" viewBox="0 0 150 150"><circle cx="75" cy="75" r="68" fill="#fbfbf3" stroke="#9aa08e" stroke-width="3"/><path d="M38 22q22 53 0 106M112 22q-22 53 0 106" stroke="#df4a2f" stroke-width="4" fill="none"/></svg><b>티볼 공</b><span>둘레 약 28~30 cm<br>무게 89~95 g<br>우레탄 (말랑함)</span></div>
+          <div><svg width="150" height="150" viewBox="0 0 150 150"><circle cx="75" cy="75" r="53" fill="#fbfbf3" stroke="#9aa08e" stroke-width="3"/><path d="M47 34q17 41 0 82M103 34q-17 41 0 82" stroke="#df4a2f" stroke-width="4" fill="none"/></svg><b>야구공</b><span>둘레 약 23 cm<br>무게 약 142 g<br>가죽 (딱딱함)</span></div>
+        </div>
+        <p class="note">그림은 둘레 비율에 맞춰 그렸어요. 수치: 대구광역시티볼협회 '티볼용구' 표.</p>
+      </div>
+      <div class="txt">
+        <div class="kicker">공의 비밀 1</div>
+        <h2>크고 가벼우면 공기가 더 세게 붙잡아요</h2>
+        <p>티볼 공은 야구공보다 <b>크지만 더 가벼워요</b>. 공이 날아갈 때 앞에 있는 공기를 밀어내야 하는데, 공이 클수록 밀어내야 할 공기가 많아요.</p>
+        <div class="rule"><span class="ico">공기 저항</span><p>공기 저항은 공의 운동을 방해하는 힘이에요. 가벼운 공일수록 같은 공기 저항에도 속력이 빨리 줄어요.</p></div>
+        <p>그래서 티볼 공은 세게 쳐도 야구공만큼 멀리 가지 않아요. 작은 운동장에서도 경기할 수 있는 이유예요.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4. 말랑한 공 -->
+  <section class="slide" data-title="말랑한 공">
+    <div class="split text-first">
+      <div class="vis rise">
+        <svg id="sSoft" class="side"></svg>
+        <div class="bar">
+          <button class="vbtn on" data-soft="soft">말랑한 공</button>
+          <button class="vbtn" data-soft="hard">딱딱한 공</button>
+          <span class="cap grow" id="softCap">공이 손에 닿아 멈출 때까지 받는 힘을 시간에 따라 그린 모형이에요.</span>
+        </div>
+      </div>
+      <div class="txt">
+        <div class="kicker">공의 비밀 2</div>
+        <h2>천천히 멈추면 힘이 작아요</h2>
+        <p>날아오던 공이 몸에 맞으면, 몸은 공을 멈추게 하는 힘을 주고 똑같은 크기의 힘을 받아요(작용과 반작용).</p>
+        <p>말랑한 공은 몸에 닿은 뒤 <span class="mark">눌리면서 더 긴 시간에 걸쳐</span> 멈춰요. 같은 공을 멈추는 데 시간이 길면 한순간에 받는 힘이 작아져요.</p>
+        <div class="deep"><b>더 알아보기</b> 자동차 에어백, 높은 곳에서 뛰어내릴 때 무릎을 굽히는 것도 같은 원리예요. 그림의 그래프 아래 넓이는 두 공이 같아요(같은 공을 멈춤).</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 5. 발사 각도 -->
+  <section class="slide" data-title="발사 각도">
+    <div class="split">
+      <div class="vis rise">
+        <svg id="sAngle" class="side"></svg>
+        <div class="ctl">
+          <label>각도<input type="range" id="aAng" min="5" max="80" step="1" value="30"><output id="aAngO">30°</output></label>
+          <label>처음 속력<input type="range" id="aV" min="12" max="34" step="1" value="26"><output id="aVO">26 m/s</output></label>
+        </div>
+        <div class="readout">
+          <div>공기 있을 때<b id="aD1">-</b></div>
+          <div>공기 없을 때<b class="w" id="aD2">-</b></div>
+          <div>공중에 있던 시간<b class="w" id="aT">-</b></div>
+        </div>
+        <div class="model-note">공 92 g, 지름 9.3 cm, 치는 높이 0.7 m. 회전과 바람은 넣지 않은 모형이에요.</div>
+      </div>
+      <div class="txt">
+        <div class="kicker">실험</div>
+        <h2>몇 도로 쳐야 가장 멀리 갈까?</h2>
+        <p>공이 날아가는 동안 <b>중력</b>은 공을 아래로 끌어당기고, <b>공기 저항</b>은 공이 나아가는 반대 방향으로 공을 붙잡아요.</p>
+        <p>각도를 바꿔 가며 '공기 있을 때' 거리가 가장 큰 각도를 찾아보세요. 공기가 없을 때와 다른가요?</p>
+        <div class="rule"><span class="ico">찾기</span><p>공기가 없으면 약 45°에서 가장 멀리 가요. 공기 저항이 있으면 그보다 조금 낮은 각도가 더 멀리 가요.</p></div>
+        <p class="note">너무 높이 치면 오래 떠 있어 수비가 달려가 잡을 시간이 생겨요. 경기에서는 멀리보다 '빈 곳'이 더 중요할 때가 많아요.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 6. 퀴즈 1 -->
+  <section class="slide is-quiz" data-title="퀴즈 1">
+    <div class="solo">
+      <div class="kicker">중간 점검</div>
+      <h2>공과 힘을 확인해요</h2>
+      <div class="quiz" data-q="q1"></div>
+      <div class="quiz" data-q="q2"></div>
+      <div class="quiz" data-q="q3"></div>
+    </div>
+  </section>
+
+  <!-- 7. 1루까지의 경주 -->
+  <section class="slide" data-title="1루까지의 경주">
+    <div class="split text-first">
+      <div class="vis rise">
+        <div class="race">
+          <div class="lane"><span class="lb">타자 주자</span><i class="run" id="rRun"></i><span class="goal"></span></div>
+          <div class="lane"><span class="lb">공 (잡기 + 송구)</span><i class="ball" id="rBall"></i><span class="goal"></span></div>
+        </div>
+        <div class="ctl">
+          <label>달리기<input type="range" id="cRun" min="3" max="5.5" step=".1" value="3.8"><output id="cRunO">3.8 초</output></label>
+          <label>송구 속력<input type="range" id="cThr" min="8" max="24" step="1" value="15"><output id="cThrO">15 m/s</output></label>
+          <label>잡는 시간<input type="range" id="cCatch" min="1" max="3.5" step=".1" value="2.0"><output id="cCatchO">2.0 초</output></label>
+        </div>
+        <div class="bar"><button class="vbtn on" id="raceGo">경주 시작</button><span class="verdictbar grow" id="raceV"></span></div>
+        <div class="model-note">제1유격수 자리에서 1루까지 약 20 m를 던진다고 계산해요.</div>
+      </div>
+      <div class="txt">
+        <div class="kicker">속력</div>
+        <h2>속력 <span style="font-family:Pretendard;font-weight:800">=</span> 거리 <span style="font-family:Pretendard;font-weight:800">÷</span> 시간</h2>
+        <p>1루까지 18.29 m를 3.8초에 달리면 속력은 18.29 ÷ 3.8 ≈ <b id="spdRun">4.8</b> m/s예요.</p>
+        <p>수비는 공이 굴러오는 동안과 잡아서 던질 준비를 하는 시간(잡는 시간)이 필요해요. 그다음 송구가 20 m를 날아가요.</p>
+        <div class="rule"><span class="ico">비교</span><p>공이 1루에 도착하는 시간 = 잡는 시간 + 20 m ÷ 송구 속력. 주자의 시간보다 짧으면 아웃이에요.</p></div>
+        <p class="note">수치를 바꿔 보며 "느린 땅볼이 왜 안타가 되기 쉬운지" 설명해 보세요.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 8. 스위트 스폿 -->
+  <section class="slide" data-title="스위트 스폿">
+    <div class="split">
+      <div class="vis rise">
+        <div class="bat" id="batBox">
+          <svg viewBox="0 0 800 200"><defs><linearGradient id="bg1" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffe17a"/><stop offset="1" stop-color="#e0a92b"/></linearGradient></defs>
+            <path d="M40 92 L330 84 Q520 62 760 66 Q780 66 780 100 Q780 134 760 134 Q520 138 330 116 L40 108 Z" fill="url(#bg1)" stroke="#7a5a00" stroke-width="3"/>
+            <rect x="24" y="84" width="22" height="32" rx="6" fill="#3b2b10"/>
+            <text x="60" y="160" fill="#d5e3da" font-size="22" font-weight="800">손잡이</text><text x="700" y="160" fill="#d5e3da" font-size="22" font-weight="800">배트 끝</text>
+          </svg>
+        </div>
+        <div class="meter"><span>공이 나가는 힘</span><div class="t"><i id="mPow"></i></div></div>
+        <div class="meter"><span>손이 울리는 정도</span><div class="t"><i class="r" id="mBuzz"></i></div></div>
+        <div class="bar"><span class="cap grow" id="batCap">배트 위의 동그라미를 눌러 공이 맞는 자리를 골라 보세요.</span></div>
+      </div>
+      <div class="txt">
+        <div class="kicker">배트의 과학</div>
+        <h2>잘 맞은 소리가 나는 자리</h2>
+        <p>배트에는 공이 맞았을 때 <b>손이 거의 울리지 않고 공이 가장 잘 나가는 자리</b>가 있어요. 이 자리를 <button class="term">스위트 스폿</button>이라고 불러요.</p>
+        <p>대개 배트 끝에서 손 한 뼘쯤 안쪽에 있어요. 손잡이 쪽이나 맨 끝에 맞으면 배트가 떨리면서 힘이 공으로 덜 가고 손이 찌릿해요.</p>
+        <div class="rule"><span class="ico">탄성</span><p>공과 배트는 맞는 순간 눌렸다가 다시 펴지며(탄성력) 공을 밀어내요. 배트가 떨리는 데 쓰인 힘은 공으로 가지 못해요.</p></div>
+        <p class="note">그림의 막대 길이는 원리를 보여 주는 대략의 값이에요.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 9. 퀴즈 2 -->
+  <section class="slide is-quiz" data-title="퀴즈 2">
+    <div class="solo">
+      <div class="kicker">마무리 점검</div>
+      <h2>속력과 배트를 확인해요</h2>
+      <div class="quiz" data-q="q4"></div>
+      <div class="quiz" data-q="q5"></div>
+      <div class="quiz" data-q="q6"></div>
+    </div>
+  </section>
+
+  <!-- 10. 결과 -->
+  <section class="slide" data-title="결과">
+    <div class="solo">
+      <div class="kicker">결과</div>
+      <h2>오늘 찾은 과학 한 장</h2>
+      <div id="score"></div>
+      <div class="sheet">
+        <div><b class="k">1</b><span>티볼은 누구나 안전하게 즐기도록 야구를 바꾼 경기 (투수·도루·슬라이딩 없음)</span></div>
+        <div><b class="k">2</b><span>크고 가벼운 공은 공기 저항 때문에 속력이 빨리 줄어요</span></div>
+        <div><b class="k">3</b><span>말랑한 공은 더 긴 시간에 멈춰서 몸이 받는 힘이 작아요</span></div>
+        <div><b class="k">4</b><span>공기가 없으면 45°, 공기가 있으면 그보다 조금 낮은 각도가 가장 멀리</span></div>
+        <div><b class="k">5</b><span>속력 = 거리 ÷ 시간. 공과 주자 중 1루에 먼저 닿는 쪽이 이겨요</span></div>
+        <div><b class="k">6</b><span>스위트 스폿에 맞으면 배트가 덜 떨리고 공이 잘 나가요</span></div>
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:8px">
+        <button class="btn volt" data-nav="home">경기 계획으로 돌아가기 →</button>
+      </div>
+    </div>
+  </section>
+
+<!--@@KIT:deck_bottom.html@@-->
+</div>
+
+<script>
+/*@@KIT:kit.js@@*/
+</script>
+
+<script>
+/* ===== 선생님이 고치기 쉬운 데이터 ===== */
+var GLOSSARY = {
+  '스위트 스폿': '공이 맞았을 때 배트가 가장 덜 떨리고 공이 가장 잘 나가는 자리예요.'
+};
+var QUIZ = {
+  q1: {type:'mc', q:'티볼 공이 야구공보다 세게 쳐도 덜 멀리 가는 까닭으로 알맞은 것은?',
+       opts:['티볼 공은 중력을 받지 않아서', '크고 가벼워서 공기 저항 때문에 속력이 빨리 줄어서', '티볼 배트가 공을 밀어내지 못해서'], a:1,
+       ex:'공이 클수록 밀어내야 할 공기가 많고, 가벼울수록 같은 공기 저항에도 속력이 많이 줄어요.'},
+  q2: {type:'ox', q:'말랑한 공은 몸에 닿아 멈추는 시간이 길어서, 몸이 한순간에 받는 힘이 딱딱한 공보다 작다.', a:true,
+       ex:'같은 공을 멈출 때 시간이 길면 힘이 작아져요. 그래서 티볼 공은 우레탄으로 만들어요.'},
+  q3: {type:'mc', q:'공기 저항이 있을 때, 공이 가장 멀리 가는 각도는?',
+       opts:['약 20°', '45°보다 조금 낮은 각도', '정확히 45°', '60°보다 높은 각도'], a:1,
+       ex:'공기 저항이 없으면 45°가 가장 멀리 가지만, 공기가 공을 붙잡으면 조금 낮게 치는 편이 멀리 가요.'},
+  q4: {type:'mc', q:'1루까지 18 m를 4초에 달렸어요. 속력은?',
+       opts:['2.2 m/s', '4.5 m/s', '22 m/s', '72 m/s'], a:1,
+       ex:'속력 = 거리 ÷ 시간 = 18 m ÷ 4 s = 4.5 m/s예요.'},
+  q5: {type:'mc', q:'수비가 공을 잡는 데 2초, 20 m를 던지는 송구 속력이 20 m/s예요. 공은 몇 초 뒤 1루에 도착할까요?',
+       opts:['1초', '2초', '3초', '22초'], a:2,
+       ex:'잡는 시간 2초 + 20 m ÷ 20 m/s = 1초 → 3초예요. 주자가 3초 안에 1루를 밟으면 세이프예요.'},
+  q6: {type:'mc', q:'스위트 스폿에 대한 설명으로 알맞은 것은?',
+       opts:['배트 손잡이 바로 위', '공이 맞을 때 배트가 가장 덜 떨리고 공이 잘 나가는 자리', '배트에서 가장 무거운 맨 끝'], a:1,
+       ex:'배트 끝에서 손 한 뼘쯤 안쪽에 있어요. 맞으면 손이 거의 울리지 않아요.'}
+};
+</script>
+
+<script>
+try{
+  var deck = PE.deck(document.getElementById('deck'));
+  PE.glossary(GLOSSARY);
+  var MSG = ['모두 맞혔어요. 경기에서 이 과학을 떠올려 봐요!', '잘했어요. 틀린 문제를 한 번 더 보고 가요.', '틀린 문제를 다시 보고, 실험을 한 번 더 해 봐요.'];
+  var quiz = PE.quiz(QUIZ, {onAnswer:function(){ PE.renderScore(document.getElementById('score'), quiz, deck, MSG); }});
+  PE.renderScore(document.getElementById('score'), quiz, deck, MSG);
+}catch(e){ PE_ERR(e, '읽기·퀴즈'); }
+</script>
+
+<script>
+/* ===== 옆에서 본 비행 그림 ===== */
+var NS = 'http://www.w3.org/2000/svg';
+function E(tag, a, p){ var e = document.createElementNS(NS, tag); for(var k in a) e.setAttribute(k, a[k]); if(p) p.appendChild(e); return e; }
+var G = 9.8, KD = .5 * 1.2 * .45 * Math.PI * Math.pow(.0465, 2) / .092;
+function flight(v, deg, drag){
+  var a = deg * Math.PI / 180, vx = v * Math.cos(a), vz = v * Math.sin(a), x = 0, z = .7, t = 0, dt = .005, pts = [[0, .7]];
+  while(t < 12){
+    var sp = Math.hypot(vx, vz), k = drag ? KD : 0;
+    vx -= k * sp * vx * dt; vz -= (G + k * sp * vz) * dt; x += vx * dt; z += vz * dt; t += dt;
+    if(z <= 0){ pts.push([x, 0]); break; }
+    if(Math.round(t / dt) % 4 === 0) pts.push([x, z]);
+  }
+  return {pts:pts, X:x, T:t};
+}
+/* 옆 그림 판: 가로 0~W m, 세로 0~H m */
+function SidePlot(svg, W, H){
+  this.svg = svg; this.W = W; this.H = H;
+  svg.setAttribute('viewBox', '-3 ' + (-H - 1) + ' ' + (W + 6) + ' ' + (H + 4));
+  E('rect', {x:-10, y:-H - 10, width:W + 30, height:H + 20, fill:'#1b6340'}, svg);
+  E('rect', {x:-10, y:0, width:W + 30, height:10, fill:'#2c8752'}, svg);
+  var gr = E('g', null, svg);
+  for(var x = 0; x <= W; x += 10){
+    E('line', {x1:x, y1:0, x2:x, y2:.8, stroke:'#fff', 'stroke-width':.18}, gr);
+    var t = E('text', {x:x, y:2.3, 'text-anchor':'middle', 'font-size':1.4, fill:'rgba(255,255,255,.8)', 'font-weight':700}, gr); t.textContent = x + ' m';
+  }
+  E('line', {x1:-3, y1:0, x2:W + 3, y2:0, stroke:'#f3f6ee', 'stroke-width':.22}, gr);
+  this.g = E('g', null, svg);
+  this.fx = E('g', null, svg);
+}
+SidePlot.prototype.path = function(pts, color, dash, width){
+  return E('polyline', {points:pts.map(function(p){ return p[0].toFixed(2) + ',' + (-p[1]).toFixed(2); }).join(' '), fill:'none', stroke:color, 'stroke-width':width || .32, 'stroke-dasharray':dash || 'none', 'stroke-linecap':'round'}, this.g);
+};
+SidePlot.prototype.clear = function(){ this.g.replaceChildren(); this.fx.replaceChildren(); };
+SidePlot.prototype.ball = function(x, z){ E('circle', {cx:x, cy:-z, r:.7, fill:'#fbfbf3', stroke:'#7d8473', 'stroke-width':.1}, this.fx); };
+SidePlot.prototype.batter = function(){
+  var g = E('g', null, this.g);
+  E('rect', {x:-.35, y:-.7, width:.7, height:.7, fill:'#202826'}, g);
+  E('circle', {cx:-1.2, cy:-1.6, r:.5, fill:'#4f86f0'}, g);
+  E('line', {x1:-1.2, y1:-1.1, x2:-1.2, y2:0, stroke:'#4f86f0', 'stroke-width':.5}, g);
+};
+SidePlot.prototype.label = function(x, z, text, color, anchor){
+  var t = E('text', {x:x, y:-z, 'text-anchor':anchor || 'middle', 'font-size':1.5, 'font-family':'Black Han Sans, Pretendard', fill:color, stroke:'rgba(0,0,0,.5)', 'stroke-width':.3, 'paint-order':'stroke'}, this.fx); t.textContent = text;
+};
+
+/* 1. 표지: 반복 애니메이션 */
+try{
+  (function(){
+    var sp = new SidePlot(document.getElementById('sIntro'), 60, 22);
+    var a = flight(28, 38, true), b = flight(28, 38, false);
+    sp.batter();
+    sp.path(b.pts.filter(function(p){ return p[0] <= 62; }), 'rgba(255,255,255,.55)', '.6 .5', .25);
+    var line = sp.path([[0, .7]], '#ffd23f', null, .36);
+    sp.label(a.X, 1.6, Math.round(a.X) + ' m', '#ffd23f');
+    var t0 = 0, el = document.getElementById('sIntro'), vis = false;
+    function step(now){
+      if(!vis){ return; }
+      if(!t0) t0 = now;
+      var u = ((now - t0) / 1000) / 2.6;
+      if(u > 1.5){ t0 = now; u = 0; }
+      var n = Math.max(2, Math.floor(Math.min(1, u) * a.pts.length));
+      var pts = a.pts.slice(0, n);
+      line.setAttribute('points', pts.map(function(p){ return p[0].toFixed(2) + ',' + (-p[1]).toFixed(2); }).join(' '));
+      sp.fx.querySelectorAll('circle').forEach(function(c){ c.remove(); });
+      var last = pts[pts.length - 1]; sp.ball(last[0], last[1]);
+      requestAnimationFrame(step);
+    }
+    setInterval(function(){
+      var r = el.getBoundingClientRect(), v = r.width > 0 && r.right > 4 && r.left < innerWidth - 4;
+      if(v && !vis){ vis = true; if(PE.reduce){ line.setAttribute('points', a.pts.map(function(p){ return p[0] + ',' + (-p[1]); }).join(' ')); } else { t0 = 0; requestAnimationFrame(step); } }
+      if(!v) vis = false;
+    }, 400);
+  })();
+}catch(e){ PE_ERR(e, '표지 그림'); }
+
+/* 4. 말랑한 공: 힘-시간 그래프 */
+try{
+  (function(){
+    var svg = document.getElementById('sSoft');
+    svg.setAttribute('viewBox', '0 0 100 62');
+    E('rect', {x:0, y:0, width:100, height:62, fill:'#123a2c'}, svg);
+    var ax = E('g', null, svg);
+    E('line', {x1:12, y1:52, x2:95, y2:52, stroke:'#f3f6ee', 'stroke-width':.5}, ax);
+    E('line', {x1:12, y1:52, x2:12, y2:6, stroke:'#f3f6ee', 'stroke-width':.5}, ax);
+    var tx = E('text', {x:95, y:58, 'text-anchor':'end', 'font-size':3.2, fill:'#d5e3da', 'font-weight':700}, ax); tx.textContent = '시간 →';
+    var ty = E('text', {x:14, y:8, 'font-size':3.2, fill:'#d5e3da', 'font-weight':700}, ax); ty.textContent = '↑ 몸이 받는 힘';
+    var curve = E('path', {fill:'rgba(255,210,63,.35)', stroke:'#ffd23f', 'stroke-width':.8}, svg);
+    var ghost = E('path', {fill:'none', stroke:'rgba(255,255,255,.45)', 'stroke-width':.5, 'stroke-dasharray':'1.4 1'}, svg);
+    var lab = E('text', {x:60, y:14, 'font-size':4, fill:'#ffd23f', 'font-family':'Black Han Sans, Pretendard', 'text-anchor':'middle'}, svg);
+    /* 같은 넓이: 높이 × 폭이 일정 */
+    function shape(width){ var h = 1300 / width / 1.6, x0 = 14, pts = []; for(var i = 0; i <= 40; i++){ var u = i / 40; pts.push([x0 + width * u, 52 - h * Math.sin(Math.PI * u)]); } return 'M' + x0 + ' 52 ' + pts.map(function(p){ return 'L' + p[0].toFixed(2) + ' ' + p[1].toFixed(2); }).join(' ') + ' Z'; }
+    function set(kind){
+      var soft = kind === 'soft';
+      curve.setAttribute('d', shape(soft ? 70 : 18));
+      ghost.setAttribute('d', shape(soft ? 18 : 70));
+      lab.textContent = soft ? '오래, 약하게' : '짧게, 세게';
+      document.getElementById('softCap').textContent = soft ? '말랑한 공은 눌리며 오래 멈춰서 힘의 꼭대기가 낮아요. 점선은 딱딱한 공이에요.' : '딱딱한 공은 짧은 순간에 멈춰서 힘이 확 커져요. 점선은 말랑한 공이에요.';
+      Array.prototype.forEach.call(document.querySelectorAll('[data-soft]'), function(b){ b.classList.toggle('on', b.dataset.soft === kind); });
+    }
+    Array.prototype.forEach.call(document.querySelectorAll('[data-soft]'), function(b){ b.onclick = function(){ set(b.dataset.soft); }; });
+    set('soft');
+  })();
+}catch(e){ PE_ERR(e, '말랑한 공'); }
+
+/* 5. 발사 각도 실험 */
+try{
+  (function(){
+    var sp = new SidePlot(document.getElementById('sAngle'), 60, 30);
+    var best = {};
+    function draw(){
+      var ang = +document.getElementById('aAng').value, v = +document.getElementById('aV').value;
+      document.getElementById('aAngO').textContent = ang + '°'; document.getElementById('aVO').textContent = v + ' m/s';
+      sp.clear(); sp.batter();
+      var a = flight(v, ang, true), b = flight(v, ang, false);
+      sp.path(b.pts.filter(function(p){ return p[0] <= 64 && p[1] <= 34; }), 'rgba(255,255,255,.55)', '.6 .5', .25);
+      sp.path(a.pts, '#ffd23f', null, .36);
+      sp.ball(a.X, 0);
+      var key = v; if(!best[key] || a.X > best[key].X) best[key] = {X:a.X, ang:ang};
+      sp.label(Math.min(a.X, 58), 2.4, a.X.toFixed(1) + ' m', '#ffd23f');
+      document.getElementById('aD1').textContent = a.X.toFixed(1) + ' m';
+      document.getElementById('aD2').textContent = b.X > 99 ? b.X.toFixed(0) + ' m' : b.X.toFixed(1) + ' m';
+      document.getElementById('aT').textContent = a.T.toFixed(2) + ' 초';
+    }
+    ['aAng', 'aV'].forEach(function(id){ document.getElementById(id).addEventListener('input', draw); });
+    draw();
+  })();
+}catch(e){ PE_ERR(e, '발사 각도'); }
+
+/* 7. 1루까지의 경주 */
+try{
+  (function(){
+    var run = document.getElementById('rRun'), ball = document.getElementById('rBall'), v = document.getElementById('raceV'), raf = 0;
+    function vals(){ return {r:+document.getElementById('cRun').value, th:+document.getElementById('cThr').value, c:+document.getElementById('cCatch').value}; }
+    function paint(){
+      var o = vals();
+      document.getElementById('cRunO').textContent = o.r.toFixed(1) + ' 초'; document.getElementById('cThrO').textContent = o.th + ' m/s'; document.getElementById('cCatchO').textContent = o.c.toFixed(1) + ' 초';
+      document.getElementById('spdRun').textContent = (18.29 / o.r).toFixed(1);
+      run.style.left = '0'; ball.style.left = '0'; v.textContent = '';
+    }
+    ['cRun', 'cThr', 'cCatch'].forEach(function(id){ document.getElementById(id).addEventListener('input', paint); });
+    document.getElementById('raceGo').onclick = function(){
+      var o = vals(), tb = o.c + 20 / o.th, tr = o.r, T = Math.max(tb, tr) + .3, t0 = performance.now();
+      var lane = run.parentNode.clientWidth - 32 - 20;
+      cancelAnimationFrame(raf);
+      v.textContent = '';
+      (function step(now){
+        var t = (now - t0) / 1000 * 1.0;
+        run.style.left = (Math.min(1, t / tr) * lane) + 'px';
+        var ub = t < o.c ? (t / o.c) * .25 : .25 + Math.min(1, (t - o.c) / (tb - o.c)) * .75;
+        ball.style.left = (Math.min(1, ub) * lane) + 'px';
+        if(t < T){ raf = requestAnimationFrame(step); return; }
+        v.textContent = (tb < tr ? '아웃! 공 ' + tb.toFixed(2) + '초 < 주자 ' + tr.toFixed(2) + '초' : '세이프! 주자 ' + tr.toFixed(2) + '초 ≤ 공 ' + tb.toFixed(2) + '초');
+      })(t0);
+    };
+    paint();
+  })();
+}catch(e){ PE_ERR(e, '1루 경주'); }
+
+/* 8. 스위트 스폿 */
+try{
+  (function(){
+    var box = document.getElementById('batBox');
+    var SPOTS = [
+      {x:18, pow:.35, buzz:.85, t:'손잡이 쪽: 배트가 크게 떨리고 손이 찌릿해요. 공이 힘없이 굴러가요.'},
+      {x:45, pow:.6, buzz:.5, t:'가운데: 조금 나아졌지만 아직 떨림이 커요.'},
+      {x:74, pow:.95, buzz:.08, t:'스위트 스폿: 떨림이 거의 없고 공이 가장 잘 나가요. 끝에서 손 한 뼘쯤 안쪽이에요.'},
+      {x:93, pow:.55, buzz:.6, t:'맨 끝: 배트가 떨리며 힘이 공으로 덜 가요.'}
+    ];
+    SPOTS.forEach(function(s, i){
+      var b = document.createElement('button'); b.textContent = i + 1; b.style.left = s.x + '%'; b.style.top = '50%';
+      b.setAttribute('aria-label', (i + 1) + '번 자리에 공 맞히기');
+      b.onclick = function(){
+        Array.prototype.forEach.call(box.querySelectorAll('button'), function(x){ x.classList.toggle('on', x === b); });
+        document.getElementById('mPow').style.width = (s.pow * 100) + '%';
+        document.getElementById('mBuzz').style.width = (s.buzz * 100) + '%';
+        document.getElementById('batCap').textContent = s.t;
+      };
+      box.appendChild(b);
+    });
+  })();
+}catch(e){ PE_ERR(e, '스위트 스폿'); }
+</script>
+</body>
+</html>

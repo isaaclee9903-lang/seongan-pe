@@ -9,7 +9,7 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 32 32%22%3E%3Crect width=%2232%22 height=%2232%22 rx=%228%22 fill=%22%230c2a20%22/%3E%3Cellipse cx=%2216%22 cy=%2216%22 rx=%2211%22 ry=%227%22 fill=%22%23fff%22 transform=%22rotate(-30 16 16)%22/%3E%3Cpath d=%22M11 10q-2 6 1 12M21 10q2 6-1 12%22 stroke=%22%23ffd23f%22 stroke-width=%222%22 fill=%22none%22 transform=%22rotate(-30 16 16)%22/%3E%3C/svg%3E">
 
-<title>내가 심판 - 태그럭비</title>
+<title>내가 심판 - 티볼</title>
 <style>
 /* ===== PLAYBOOK 공통 디자인 ===== */
 :root{
@@ -175,7 +175,7 @@ body{background:var(--turf-950);color:#fff;overflow:hidden}
 .main{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:16px;padding:14px 16px}
 .left{min-height:0;display:flex;flex-direction:column;justify-content:center}
 .left .vis{padding:10px}
-.left svg.board{max-height:calc(100vh - 200px)}
+.left svg.board{max-height:calc(100vh - 245px)}
 .scnHead{display:flex;align-items:center;gap:10px;margin:0 0 10px}
 .scnHead .no{font-family:var(--display);background:var(--volt);color:var(--turf-950);border-radius:8px;padding:3px 10px 2px;font-size:18px}
 .scnHead h1{font-family:var(--display);font-weight:400;font-size:clamp(22px,2.4vw,30px);margin:0;line-height:1.2}
@@ -236,7 +236,7 @@ body{background:var(--turf-950);color:#fff;overflow:hidden}
           <button class="vbtn" id="bMarks" disabled>판정선</button>
           <span class="grow"></span><span class="speed" id="spd"></span>
         </div>
-        <div class="model-note">파랑 팀이 오른쪽(상대 인골)으로 공격해요. 노란 네모는 허리의 태그예요.</div>
+        <div class="model-note" id="mNote">파랑은 공격(타자·주자), 빨강은 수비예요. 판정한 뒤에는 판정선으로 이유를 보여 줘요.</div>
       </div>
     </div>
     <aside class="panel">
@@ -244,13 +244,13 @@ body{background:var(--turf-950);color:#fff;overflow:hidden}
         <h3>1단계</h3>
         <p class="ask">이 장면, 심판이라면?</p>
         <div class="two">
-          <button class="dec play" data-d="play">경기 계속<small>정상 플레이</small></button>
-          <button class="dec whistle" data-d="foul">휘슬!<small>반칙이 있어요</small></button>
+          <button class="dec play" data-d="play">세이프 · 페어<small>경기 계속</small></button>
+          <button class="dec whistle" data-d="foul">아웃 · 파울<small>휘슬을 불어요</small></button>
         </div>
       </div>
       <div class="box" id="step2" style="display:none">
         <h3>2단계</h3>
-        <p class="ask">어떤 반칙인가요?</p>
+        <p class="ask">무엇 때문인가요?</p>
         <div class="reasons" id="reasons"></div>
       </div>
       <div class="result" id="result" style="display:none"></div>
@@ -478,9 +478,9 @@ PE.glossary = function(G){
 
 </script>
 <script>
-/* ===== 작전판: 위에서 내려다본 태그럭비 경기장, 선수, 공, 장면 재생 =====
-   좌표는 m 단위. x: 왼쪽 트라이 라인 0 → 오른쪽 트라이 라인 L (파랑 팀 공격 방향 +x)
-   y: 위쪽 터치라인 0 → 아래쪽 터치라인 W. 인골은 양 끝 IG m. */
+/* ===== 티볼 경기장: 위에서 내려다본 다이아몬드, 선수, 공, 장면 재생 =====
+   좌표는 m 단위(SVG 좌표 그대로). 홈플레이트 끝점이 (0, 0), 2루 쪽이 위(-y).
+   1루는 오른쪽 위, 3루는 왼쪽 위. 파울라인은 홈에서 ±45도. */
 (function(){
 var NS = 'http://www.w3.org/2000/svg';
 function E(tag, attrs, parent){
@@ -489,330 +489,401 @@ function E(tag, attrs, parent){
   if(parent) parent.appendChild(e);
   return e;
 }
-var uid = 0;
 function lerp(a, b, u){ return a + (b - a) * u; }
 function clamp(v, a, b){ return Math.max(a, Math.min(b, v)); }
+function ease(u){ return u < .5 ? 2*u*u : 1 - Math.pow(-2*u + 2, 2) / 2; }
+var uid = 0;
+var R2 = Math.SQRT1_2;
 
 var TEAM = {
-  blue: {c1:'#6ea2ff', c2:'#1a4fb8', edge:'#0f2f73', arm:'#1d3f86'},
-  red:  {c1:'#ff8a6b', c2:'#b0301d', edge:'#6e170b', arm:'#8e2414'}
+  blue: {c1:'#6ea2ff', c2:'#1a4fb8', edge:'#0f2f73'},
+  red:  {c1:'#ff8a6b', c2:'#b0301d', edge:'#6e170b'},
+  ump:  {c1:'#3b4a43', c2:'#141d19', edge:'#000'}
 };
 
-function Board(svg, o){
+/* 수비 위치 10명(대구광역시티볼협회 규칙 그림을 바탕으로 18.29 m 경기장에 맞춘 대략의 자리) */
+var POS = {
+  C:   {name:'본루수', x:0, y:3.5},
+  '1B':{name:'1루수', x:13.6, y:-14.6},
+  '2B':{name:'2루수', x:7.2, y:-22.2},
+  '3B':{name:'3루수', x:-13.6, y:-14.6},
+  '1SS':{name:'제1유격수', x:-7.2, y:-22.2},
+  '2SS':{name:'제2유격수', x:2.8, y:-15.4},
+  LF:  {name:'좌익수', x:-21, y:-31},
+  '1CF':{name:'제1중견수', x:-7, y:-38},
+  '2CF':{name:'제2중견수', x:7, y:-38},
+  RF:  {name:'우익수', x:21, y:-31}
+};
+
+function Field(svg, o){
   o = o || {};
-  this.svg = svg; this.L = o.len != null ? o.len : 40; this.W = o.wid != null ? o.wid : 25; this.IG = o.ig != null ? o.ig : 5;
-  var v = o.view || {x:-this.IG - 0.6, y:-0.6, w:this.L + 2*this.IG + 1.2, h:this.W + 1.2};
+  this.svg = svg; this.D = o.base || 18.29; this.F = o.fence || 45; this.S = o.size || 1;
+  var D = this.D;
+  this.B = {H:[0,0], 1:[D*R2, -D*R2], 2:[0, -D*2*R2], 3:[-D*R2, -D*R2]};
+  var v = o.view || {x:-this.F*R2 - 4, y:-this.F - 4, w:this.F*2*R2 + 8, h:this.F + 10};
   this.view = v;
   svg.setAttribute('viewBox', v.x + ' ' + v.y + ' ' + v.w + ' ' + v.h);
   svg.setAttribute('preserveAspectRatio', o.par || 'xMidYMid meet');
   svg.classList.add('board');
-  var id = this.id = 'pb' + (++uid);
+  var id = this.id = 'fd' + (++uid);
   var d = E('defs', null, svg);
   function rg(name, c1, c2, cx, cy){
     var g = E('radialGradient', {id:id + name, cx:cx || '.36', cy:cy || '.3', r:'.78'}, d);
     E('stop', {offset:'0', 'stop-color':c1}, g); E('stop', {offset:'1', 'stop-color':c2}, g);
   }
-  rg('blue', TEAM.blue.c1, TEAM.blue.c2); rg('red', TEAM.red.c1, TEAM.red.c2);
-  rg('ball', '#ffffff', '#c5cec8', '.4', '.3');
-  var vg = E('radialGradient', {id:id + 'vig', cx:'.5', cy:'.5', r:'.75'}, d);
-  E('stop', {offset:'.55', 'stop-color':'#000', 'stop-opacity':'0'}, vg); E('stop', {offset:'1', 'stop-color':'#000', 'stop-opacity':'.28'}, vg);
-  var sh = E('linearGradient', {id:id + 'sheen', x1:'0', y1:'0', x2:'0', y2:'1'}, d);
-  E('stop', {offset:'0', 'stop-color':'#fff', 'stop-opacity':'.07'}, sh); E('stop', {offset:'1', 'stop-color':'#fff', 'stop-opacity':'0'}, sh);
+  rg('blue', TEAM.blue.c1, TEAM.blue.c2); rg('red', TEAM.red.c1, TEAM.red.c2); rg('ump', TEAM.ump.c1, TEAM.ump.c2);
+  rg('ball', '#ffffff', '#d9ddc8', '.38', '.3');
+  var vg = E('radialGradient', {id:id + 'vig', cx:'.5', cy:'.6', r:'.8'}, d);
+  E('stop', {offset:'.6', 'stop-color':'#000', 'stop-opacity':'0'}, vg); E('stop', {offset:'1', 'stop-color':'#000', 'stop-opacity':'.25'}, vg);
+  var dirt = E('linearGradient', {id:id + 'dirt', x1:'0', y1:'0', x2:'0', y2:'1'}, d);
+  E('stop', {offset:'0', 'stop-color':'#c9925c'}, dirt); E('stop', {offset:'1', 'stop-color':'#b97e48'}, dirt);
   this.gTurf = E('g', null, svg);
+  this.gZone = E('g', null, svg);
   this.gMarks = E('g', null, svg);
   this.gActors = E('g', null, svg);
   this.gBall = E('g', null, svg);
   this.gFx = E('g', null, svg);
   this.actors = {};
-  this.drawField(o);
+  this.draw(o);
 }
-Board.prototype.drawField = function(o){
-  var L = this.L, W = this.W, IG = this.IG, g = this.gTurf, id = this.id, pad = 8;
-  E('rect', {x:-IG - pad, y:-pad, width:L + 2*IG + 2*pad, height:W + 2*pad, fill:'#1b6340'}, g);
-  var n = Math.ceil((L + 2*IG) / 2.5);
-  for(var i = 0; i < n; i++){
-    E('rect', {x:-IG + i*2.5, y:0, width:Math.min(2.5, L + IG - (-IG + i*2.5)), height:W, fill:i % 2 ? '#2c8752' : '#33935b'}, g);
+Field.prototype.draw = function(o){
+  var g = this.gTurf, id = this.id, D = this.D, F = this.F, B = this.B, v = this.view;
+  var pad = 60;
+  E('rect', {x:v.x - pad, y:v.y - pad, width:v.w + 2*pad, height:v.h + 2*pad, fill:'#1b6340'}, g);
+  /* 페어 지역 잔디: 부채꼴 */
+  var fx = F * R2, fy = -F * R2;
+  var fan = 'M0 0 L' + (-fx) + ' ' + fy + ' A' + F + ' ' + F + ' 0 0 1 ' + fx + ' ' + fy + ' Z';
+  E('path', {d:fan, fill:'#2c8752'}, g);
+  /* 잔디 무늬 (동심원 띠) */
+  var clip = E('clipPath', {id:id + 'fan'}, g);
+  E('path', {d:fan}, clip);
+  var stripes = E('g', {'clip-path':'url(#' + id + 'fan)'}, g);
+  for(var r = 4; r < F; r += 4){
+    if((r / 4) % 2) E('circle', {cx:0, cy:0, r:r + 2, fill:'none', stroke:'#33935b', 'stroke-width':2}, stripes);
   }
-  E('rect', {x:L, y:0, width:IG, height:W, fill:'rgba(255,210,63,.13)'}, g);
-  E('rect', {x:-IG, y:0, width:IG, height:W, fill:'rgba(255,255,255,.05)'}, g);
-  E('rect', {x:-IG, y:0, width:L + 2*IG, height:W, fill:'url(#' + id + 'sheen)'}, g);
-  var ln = {stroke:'#f3f6ee', 'stroke-width':.14, fill:'none', 'stroke-linecap':'round', opacity:.92};
-  E('rect', Object.assign({x:-IG, y:0, width:L + 2*IG, height:W}, ln), g);
-  E('line', Object.assign({x1:0, y1:0, x2:0, y2:W}, ln, {'stroke-width':.26}), g);
-  E('line', Object.assign({x1:L, y1:0, x2:L, y2:W}, ln, {'stroke-width':.26}), g);
-  E('line', Object.assign({x1:L/2, y1:0, x2:L/2, y2:W, 'stroke-dasharray':'.7 .5'}, ln), g);
-  if(o.labels !== false){
-    var t1 = E('text', {x:L + IG/2, y:W/2, 'text-anchor':'middle', 'dominant-baseline':'middle', 'font-size':1.25, fill:'rgba(255,255,255,.55)', 'font-family':'Black Han Sans, Pretendard', transform:'rotate(90 ' + (L + IG/2) + ' ' + W/2 + ')', 'letter-spacing':'.4'}, g);
-    t1.textContent = '상대 인골';
-    var t2 = E('text', {x:-IG/2, y:W/2, 'text-anchor':'middle', 'dominant-baseline':'middle', 'font-size':1.25, fill:'rgba(255,255,255,.35)', 'font-family':'Black Han Sans, Pretendard', transform:'rotate(-90 ' + (-IG/2) + ' ' + W/2 + ')', 'letter-spacing':'.4'}, g);
-    t2.textContent = '우리 인골';
-  }
-  [[-IG,0],[-IG,W],[0,0],[0,W],[L/2,0],[L/2,W],[L,0],[L,W],[L+IG,0],[L+IG,W]].forEach(function(p){
-    E('path', {d:'M' + (p[0]-.38) + ' ' + (p[1]+.3) + ' L' + p[0] + ' ' + (p[1]-.42) + ' L' + (p[0]+.38) + ' ' + (p[1]+.3) + ' Z', fill:'#ff8a1f', stroke:'#a84d00', 'stroke-width':.06}, g);
+  /* 내야 흙 */
+  var ir = D * 1.12;
+  E('path', {d:'M0 2.6 L' + (-ir*R2 - 1.2) + ' ' + (-ir*R2 + 1.2) + ' A' + (D*1.55) + ' ' + (D*1.55) + ' 0 0 1 ' + (ir*R2 + 1.2) + ' ' + (-ir*R2 + 1.2) + ' Z', fill:'url(#' + id + 'dirt)', opacity:.92}, g);
+  /* 안쪽 잔디 */
+  var ii = D * .78;
+  E('path', {d:'M0 ' + (-D*.2) + ' L' + (-ii*R2) + ' ' + (-ii*R2 - D*.2*R2) + ' L0 ' + (-ii*2*R2) + ' L' + (ii*R2) + ' ' + (-ii*R2 - D*.2*R2) + ' Z', fill:'#2f8b55'}, g);
+  /* 주로(베이스 사이 흙길)는 흙 위에 이미 포함. 파울라인 */
+  var ln = {stroke:'#f3f6ee', 'stroke-width':.22, 'stroke-linecap':'round', fill:'none'};
+  E('line', Object.assign({x1:0, y1:0, x2:-fx, y2:fy}, ln), g);
+  E('line', Object.assign({x1:0, y1:0, x2:fx, y2:fy}, ln), g);
+  /* 담장 */
+  E('path', {d:'M' + (-fx) + ' ' + fy + ' A' + F + ' ' + F + ' 0 0 1 ' + fx + ' ' + fy, fill:'none', stroke:'#ffd23f', 'stroke-width':.5, opacity:.85}, g);
+  /* 타자 서클 (반지름 3 m) */
+  this.circleEl = E('circle', {cx:0, cy:0, r:3, fill:'rgba(255,255,255,.08)', stroke:'#f3f6ee', 'stroke-width':.16}, g);
+  /* 베이스 */
+  var bs = 1.15;
+  [1,2,3].forEach(function(k){
+    var p = B[k];
+    E('rect', {x:p[0] - bs/2, y:p[1] - bs/2, width:bs, height:bs, fill:'#fff', stroke:'#6b5a44', 'stroke-width':.08, transform:'rotate(45 ' + p[0] + ' ' + p[1] + ')'}, g);
   });
-  E('rect', {x:-IG - pad, y:-pad, width:L + 2*IG + 2*pad, height:W + 2*pad, fill:'url(#' + id + 'vig)', 'pointer-events':'none'}, g);
+  /* 홈플레이트 (오각형, 끝점이 원점) */
+  E('path', {d:'M0 0 L-.55 -.55 L-.55 -1.1 L.55 -1.1 L.55 -.55 Z', fill:'#fff', stroke:'#6b5a44', 'stroke-width':.07}, g);
+  /* 배팅티: 홈플레이트 뒤 */
+  this.teeG = E('g', {transform:'translate(0 .6)'}, g);
+  E('circle', {r:.42, fill:'#202826', stroke:'#000', 'stroke-width':.05}, this.teeG);
+  E('circle', {r:.18, fill:'#ff8a1f'}, this.teeG);
+  if(o.labels){
+    var tl = {'text-anchor':'middle', 'font-size':1.5 * this.S, 'font-family':'Black Han Sans, Pretendard', fill:'rgba(255,255,255,.9)', stroke:'rgba(0,0,0,.45)', 'stroke-width':.3, 'paint-order':'stroke'};
+    var S = this.S;
+    [['1', '1루', 2.4, 1.2], ['2', '2루', 0, -1.7], ['3', '3루', -2.4, 1.2]].forEach(function(a){
+      var p = B[a[0]], t = E('text', Object.assign({x:p[0] + a[2] * S, y:p[1] + a[3] * S}, tl), g); t.textContent = a[1];
+    });
+    var th = E('text', Object.assign({x:3.6 * S, y:1.9}, tl), g); th.textContent = '홈';
+  }
+  if(o.foulLabels){
+    var fl = {'font-size':1.3 * this.S, 'font-family':'Black Han Sans, Pretendard', fill:'rgba(255,255,255,.55)', 'text-anchor':'middle'};
+    var a = E('text', Object.assign({x:-fx * .62 - 3.2, y:fy * .62 + 1.0, transform:'rotate(45 ' + (-fx * .62 - 3.2) + ' ' + (fy * .62 + 1.0) + ')'}, fl), g); a.textContent = '파울 지역';
+    var b = E('text', Object.assign({x:fx * .62 + 3.2, y:fy * .62 + 1.0, transform:'rotate(-45 ' + (fx * .62 + 3.2) + ' ' + (fy * .62 + 1.0) + ')'}, fl), g); b.textContent = '파울 지역';
+    var c = E('text', Object.assign({x:0, y:-F * .72}, fl, {fill:'rgba(255,255,255,.5)'}), g); c.textContent = '페어 지역';
+  }
+  E('rect', {x:v.x - pad, y:v.y - pad, width:v.w + 2*pad, height:v.h + 2*pad, fill:'url(#' + id + 'vig)', 'pointer-events':'none'}, g);
 };
-Board.prototype.player = function(id, team, num, o){ var a = new Actor(this, id, team, num, o || {}); this.actors[id] = a; return a; };
-Board.prototype.ball = function(){ return this._ball || (this._ball = new Ball(this)); };
-Board.prototype.toLocal = function(ev){
+Field.prototype.tee = function(on){ this.teeG.style.display = on === false ? 'none' : ''; };
+/* 페어 판정: 파울라인 위는 페어. 타자 서클 안(서클 라인은 페어)에 멈추면 파울 */
+Field.prototype.isFair = function(x, y, lineW){
+  var w = (lineW == null ? .05 : lineW) / 2;
+  if(-y < -w) return false;
+  var off = Math.abs(x) * R2 - (-y) * R2;
+  return off <= w;
+};
+Field.prototype.inCircle = function(x, y){ return Math.hypot(x, y) < 3 - .025; };
+Field.prototype.base = function(k){ return this.B[k]; };
+Field.prototype.player = function(id, team, label, o){ var a = new Actor(this, id, team, label, o || {}); this.actors[id] = a; return a; };
+Field.prototype.ball = function(){ return this._ball || (this._ball = new Ball(this)); };
+Field.prototype.toLocal = function(ev){
   var pt = this.svg.createSVGPoint(); pt.x = ev.clientX; pt.y = ev.clientY;
   var p = pt.matrixTransform(this.svg.getScreenCTM().inverse()); return {x:p.x, y:p.y};
 };
-Board.prototype.clearMarks = function(){ this.gMarks.replaceChildren(); };
-Board.prototype.E = E;
+Field.prototype.clearMarks = function(){ this.gMarks.replaceChildren(); };
+Field.prototype.zone = function(d, fill){ return E('path', {d:d, fill:fill}, this.gZone); };
+Field.prototype.label = function(x, y, text, color, anchor, size, parent){
+  var t = E('text', {x:x, y:y, 'text-anchor':anchor || 'middle', 'dominant-baseline':'middle', 'font-size':(size || 1.3) * this.S, 'font-family':'Black Han Sans, Pretendard', fill:color || '#fff', stroke:'rgba(0,0,0,.6)', 'stroke-width':.32 * this.S, 'paint-order':'stroke'}, parent || this.gMarks);
+  t.textContent = text; return t;
+};
+Field.prototype.arrow = function(a, c, color, text, parent, dash){
+  var g = parent || this.gMarks, s = this.S;
+  var dx = c[0] - a[0], dy = c[1] - a[1], d = Math.hypot(dx, dy) || 1, ux = dx/d, uy = dy/d;
+  E('line', {x1:a[0], y1:a[1], x2:c[0] - ux*.7*s, y2:c[1] - uy*.7*s, stroke:color, 'stroke-width':.3*s, 'stroke-linecap':'round', 'stroke-dasharray':dash || 'none'}, g);
+  E('path', {d:'M' + c[0] + ' ' + c[1] + ' L' + (c[0] - ux*1.1*s - uy*.6*s) + ' ' + (c[1] - uy*1.1*s + ux*.6*s) + ' L' + (c[0] - ux*1.1*s + uy*.6*s) + ' ' + (c[1] - uy*1.1*s - ux*.6*s) + ' Z', fill:color}, g);
+  if(text) this.label((a[0] + c[0]) / 2 - uy * 1.4 * s, (a[1] + c[1]) / 2 + ux * 1.4 * s, text, color, 'middle', 1.1, g);
+};
+Field.prototype.E = E;
 
 /* ---- 선수 ---- */
-function Actor(b, id, team, num, o){
-  this.b = b; this.id = id; this.team = team; this.x = 0; this.y = 0; this.ang = team === 'red' ? 180 : 0;
-  var t = TEAM[team], g = this.g = E('g', {'class':'actor'}, b.gActors);
-  this.ringEl = E('circle', {r:1.45, fill:'none', stroke:'#ffd23f', 'stroke-width':.18, 'stroke-dasharray':'.55 .32', opacity:0}, g);
-  E('ellipse', {cx:.24, cy:.34, rx:1.0, ry:.9, fill:'rgba(0,0,0,.26)'}, g);
-  this.arms = [0,1].map(function(){ return E('line', {x1:0, y1:0, x2:0, y2:0, stroke:t.arm, 'stroke-width':.34, 'stroke-linecap':'round', opacity:0}, g); });
-  this.rot = E('g', null, g);
-  this.tagEls = [-1, 1].map(function(s){ return E('rect', {x:-.42, y:s * .82 - .2 + (s > 0 ? .06 : -.06), width:.62, height:.4, rx:.12, fill:'#ffd23f', stroke:'#7a5a00', 'stroke-width':.06}, this.rot); }, this);
-  E('circle', {r:.82, fill:'url(#' + b.id + team + ')', stroke:t.edge, 'stroke-width':.09}, this.rot);
-  E('path', {d:'M.86 -.36 L1.24 0 L.86 .36 Z', fill:t.edge}, this.rot);
-  this.numEl = E('text', {x:0, y:.31, 'text-anchor':'middle', 'font-size':.82, 'font-weight':800, fill:'#fff'}, g);
-  this.numEl.textContent = num != null ? num : '';
-  this.raised = E('rect', {x:-.32, y:-2.05, width:.64, height:.38, rx:.1, fill:'#ffd23f', stroke:'#7a5a00', 'stroke-width':.06, opacity:0}, g);
-  this.tags = [true, true];
+function Actor(f, id, team, label, o){
+  this.f = f; this.id = id; this.team = team; this.x = 0; this.y = 0;
+  var s = f.S * (o.scale || 1);
+  this.s = s;
+  var t = TEAM[team], g = this.g = E('g', {'class':'actor'}, f.gActors);
+  this.ringEl = E('circle', {r:1.5*s, fill:'none', stroke:'#ffd23f', 'stroke-width':.2*s, 'stroke-dasharray':(.6*s) + ' ' + (.34*s), opacity:0}, g);
+  E('ellipse', {cx:.22*s, cy:.32*s, rx:.95*s, ry:.85*s, fill:'rgba(0,0,0,.26)'}, g);
+  this.bat = E('line', {x1:0, y1:0, x2:0, y2:0, stroke:'#ffcf5a', 'stroke-width':.34*s, 'stroke-linecap':'round', opacity:0}, g);
+  this.glove = E('circle', {r:.42*s, fill:'#8a4f22', stroke:'#4a2a10', 'stroke-width':.06*s, opacity:0}, g);
+  this.body = E('g', null, g);
+  E('circle', {r:.8*s, fill:'url(#' + f.id + team + ')', stroke:t.edge, 'stroke-width':.09*s}, this.body);
+  this.numEl = E('text', {x:0, y:.3*s, 'text-anchor':'middle', 'font-size':(label && String(label).length > 2 ? .58 : .78)*s, 'font-weight':800, fill:'#fff'}, this.body);
+  this.numEl.textContent = label != null ? label : '';
   this.bub = null;
-  if(o.label){
-    var lb = E('text', {x:0, y:-1.35, 'text-anchor':'middle', 'font-size':.72, 'font-weight':800, fill:'#fff', stroke:'rgba(0,0,0,.55)', 'stroke-width':.18, 'paint-order':'stroke'}, g);
-    lb.textContent = o.label; this.labelEl = lb;
+  if(o.name){
+    var lb = E('text', {x:0, y:-1.3*s, 'text-anchor':'middle', 'font-size':.7*s, 'font-weight':800, fill:'#fff', stroke:'rgba(0,0,0,.55)', 'stroke-width':.18*s, 'paint-order':'stroke'}, g);
+    lb.textContent = o.name;
   }
-  this.face(this.ang);
+  if(o.glove) this.glove.setAttribute('opacity', 1);
+  this.setGlove(o.glove ? 30 : null);
 }
 Actor.prototype.pos = function(x, y){
   this.x = x; this.y = y; this.g.setAttribute('transform', 'translate(' + x.toFixed(3) + ' ' + y.toFixed(3) + ')');
-  if(this.bub) this.bub.setAttribute('transform', 'translate(' + x.toFixed(3) + ' ' + (y - 2.2).toFixed(3) + ')');
+  if(this.bub) this.bub.setAttribute('transform', 'translate(' + x.toFixed(3) + ' ' + (y - 2.9*this.s).toFixed(3) + ')');
 };
-Actor.prototype.face = function(a){ this.ang = a; this.rot.setAttribute('transform', 'rotate(' + a.toFixed(1) + ')' + (this.diving ? ' scale(1.5 .74)' : '')); };
-Actor.prototype.setDive = function(on){ if(this.diving !== on){ this.diving = on; this.face(this.ang); } };
-Actor.prototype.setTags = function(l, r){
-  this.tags = [l, r];
-  this.tagEls[0].style.display = l ? '' : 'none'; this.tagEls[1].style.display = r ? '' : 'none';
+Actor.prototype.setGlove = function(ang){
+  if(ang == null){ this.glove.setAttribute('opacity', 0); return; }
+  var a = ang * Math.PI / 180, s = this.s;
+  this.glove.setAttribute('cx', (Math.cos(a) * .95 * s).toFixed(3)); this.glove.setAttribute('cy', (Math.sin(a) * .95 * s).toFixed(3));
+  this.glove.setAttribute('opacity', 1);
 };
-Actor.prototype.tagWorld = function(side){
-  var a = this.ang * Math.PI / 180, ly = side ? .9 : -.9, lx = -.1;
-  return {x:this.x + lx * Math.cos(a) - ly * Math.sin(a), y:this.y + lx * Math.sin(a) + ly * Math.cos(a)};
+/* 스윙: u 0 → 1, 배트가 몸 뒤(3루 쪽)에서 앞(투수 방향)으로 돈다 */
+Actor.prototype.swing = function(u, dir){
+  if(u == null){ this.bat.setAttribute('opacity', 0); return; }
+  var s = this.s, a0 = 160, a1 = -60, a = (lerp(a0, a1, u) + (dir || 0)) * Math.PI / 180;
+  this.bat.setAttribute('x1', (Math.cos(a) * .6 * s).toFixed(3)); this.bat.setAttribute('y1', (-Math.sin(a) * .6 * s).toFixed(3));
+  this.bat.setAttribute('x2', (Math.cos(a) * 2.2 * s).toFixed(3)); this.bat.setAttribute('y2', (-Math.sin(a) * 2.2 * s).toFixed(3));
+  this.bat.setAttribute('opacity', 1);
 };
-Actor.prototype.arm = function(side, tx, ty){
-  var ln = this.arms[side];
-  if(tx == null){ ln.setAttribute('opacity', 0); return; }
-  var dx = tx - this.x, dy = ty - this.y, d = Math.hypot(dx, dy) || 1, reach = Math.min(d, 2.0);
-  ln.setAttribute('x1', (dx/d * .55).toFixed(3)); ln.setAttribute('y1', (dy/d * .55).toFixed(3));
-  ln.setAttribute('x2', (dx/d * reach).toFixed(3)); ln.setAttribute('y2', (dy/d * reach).toFixed(3));
-  ln.setAttribute('opacity', 1);
+/* 슬라이딩: 몸을 미끄러지는 방향으로 납작하게 */
+Actor.prototype.slide = function(ang){
+  if(ang == null){ if(this._sl){ this.body.removeAttribute('transform'); this._sl = false; } return; }
+  this.body.setAttribute('transform', 'rotate(' + ang.toFixed(1) + ') scale(1.55 .7)'); this._sl = true;
 };
 Actor.prototype.ring = function(on, color){
   this.ringEl.setAttribute('opacity', on ? 1 : 0);
   if(color) this.ringEl.setAttribute('stroke', color);
 };
-Actor.prototype.raise = function(on){ this.raised.setAttribute('opacity', on ? 1 : 0); };
 Actor.prototype.say = function(text, tone){
+  var s = this.s;
   if(!text){ if(this.bub) this.bub.style.display = 'none'; return; }
   if(!this.bub){
-    this.bub = E('g', {'pointer-events':'none'}, this.b.gFx);
-    this.bubR = E('rect', {y:-.95, height:1.5, rx:.5, fill:'#fff', stroke:'rgba(0,0,0,.25)', 'stroke-width':.05}, this.bub);
-    this.bubP = E('path', {d:'M-.3 .5 L0 1.05 L.3 .5 Z', fill:'#fff'}, this.bub);
-    this.bubT = E('text', {x:0, y:.1, 'text-anchor':'middle', 'dominant-baseline':'middle', 'font-size':.9, 'font-family':'Black Han Sans, Pretendard', fill:'#14201a'}, this.bub);
+    this.bub = E('g', {'pointer-events':'none'}, this.f.gFx);
+    this.bubR = E('rect', {y:-.95*s, height:1.55*s, rx:.5*s, fill:'#fff', stroke:'rgba(0,0,0,.25)', 'stroke-width':.05*s}, this.bub);
+    this.bubP = E('path', {d:'M' + (-.3*s) + ' ' + (.55*s) + ' L0 ' + (1.1*s) + ' L' + (.3*s) + ' ' + (.55*s) + ' Z', fill:'#fff'}, this.bub);
+    this.bubT = E('text', {x:0, y:.1*s, 'text-anchor':'middle', 'dominant-baseline':'middle', 'font-size':.95*s, 'font-family':'Black Han Sans, Pretendard', fill:'#14201a'}, this.bub);
   }
   this.bub.style.display = '';
   if(this.bubT.textContent !== text){
     this.bubT.textContent = text;
-    var w = Math.max(2.4, text.length * .92 + .9);
+    var w = Math.max(2.6, text.length * .98 + 1) * s;
     this.bubR.setAttribute('x', -w/2); this.bubR.setAttribute('width', w);
   }
-  this.bubR.setAttribute('fill', tone === 'foul' ? '#ffe3df' : tone === 'volt' ? '#ffd23f' : '#fff');
-  this.bubP.setAttribute('fill', tone === 'foul' ? '#ffe3df' : tone === 'volt' ? '#ffd23f' : '#fff');
+  var fill = tone === 'foul' ? '#ffe3df' : tone === 'volt' ? '#ffd23f' : tone === 'ok' ? '#dcf5e5' : '#fff';
+  this.bubR.setAttribute('fill', fill); this.bubP.setAttribute('fill', fill);
   this.pos(this.x, this.y);
 };
+Actor.prototype.remove = function(){ this.g.remove(); if(this.bub) this.bub.remove(); delete this.f.actors[this.id]; };
 
-/* ---- 공 ---- */
-function Ball(b){
-  var g = this.g = E('g', {'pointer-events':'none'}, b.gBall);
-  this.sh = E('ellipse', {rx:.46, ry:.3, fill:'rgba(0,0,0,.3)'}, g);
+/* ---- 공 (h: 높이 m. 위에서 본 그림이라 그림자와 공 사이를 벌려 높이를 보여 준다) ---- */
+function Ball(f){
+  var s = f.S, g = this.g = E('g', {'pointer-events':'none'}, f.gBall);
+  this.f = f;
+  this.trail = E('polyline', {points:'', fill:'none', stroke:'rgba(255,255,255,.55)', 'stroke-width':.18*s, 'stroke-dasharray':(.3*s) + ' ' + (.3*s), 'stroke-linecap':'round'}, g);
+  this.sh = E('ellipse', {rx:.42*s, ry:.3*s, fill:'rgba(0,0,0,.32)'}, g);
   this.body = E('g', null, g);
-  E('ellipse', {rx:.5, ry:.32, fill:'url(#' + b.id + 'ball)', stroke:'#65736b', 'stroke-width':.05}, this.body);
-  E('path', {d:'M-.2 -.3 Q-.27 0 -.2 .3 M.2 -.3 Q.27 0 .2 .3', stroke:'#ffd23f', 'stroke-width':.09, fill:'none'}, this.body);
-  E('path', {d:'M-.12 0 H.12 M-.08 -.06 V.06 M0 -.06 V.06 M.08 -.06 V.06', stroke:'#7b8a82', 'stroke-width':.035}, this.body);
+  E('circle', {r:.42*s, fill:'url(#' + f.id + 'ball)', stroke:'#7d8473', 'stroke-width':.05*s}, this.body);
+  E('path', {d:'M' + (-.22*s) + ' ' + (-.34*s) + ' Q' + (-.05*s) + ' 0 ' + (-.22*s) + ' ' + (.34*s) + ' M' + (.22*s) + ' ' + (-.34*s) + ' Q' + (.05*s) + ' 0 ' + (.22*s) + ' ' + (.34*s), stroke:'#df4a2f', 'stroke-width':.07*s, fill:'none'}, this.body);
+  this.pts = [];
 }
-Ball.prototype.set = function(x, y, rot, h){
-  h = h || 0; rot = rot || 0;
-  this.x = x; this.y = y;
-  this.sh.setAttribute('cx', (x + .18 + h*.5).toFixed(3)); this.sh.setAttribute('cy', (y + .26 + h*.65).toFixed(3));
-  this.sh.setAttribute('opacity', (1 - Math.min(.6, h*.35)).toFixed(2));
-  this.body.setAttribute('transform', 'translate(' + x.toFixed(3) + ' ' + (y - h).toFixed(3) + ') rotate(' + rot.toFixed(1) + ') scale(' + (1 + h*.22).toFixed(3) + ')');
+Ball.prototype.set = function(x, y, h){
+  h = Math.max(0, h || 0);
+  var s = this.f.S, lift = h * .55, sc = 1 + Math.min(1.2, h * .07);
+  this.x = x; this.y = y; this.h = h;
+  this.sh.setAttribute('cx', (x + .1).toFixed(3)); this.sh.setAttribute('cy', (y + .15).toFixed(3));
+  this.sh.setAttribute('opacity', (1 - Math.min(.65, h * .05)).toFixed(2));
+  this.body.setAttribute('transform', 'translate(' + x.toFixed(3) + ' ' + (y - lift).toFixed(3) + ') scale(' + sc.toFixed(3) + ')');
 };
 Ball.prototype.show = function(on){ this.g.style.display = on ? '' : 'none'; };
+Ball.prototype.setTrail = function(pts){ this.trail.setAttribute('points', pts.map(function(p){ return p[0].toFixed(2) + ',' + p[1].toFixed(2); }).join(' ')); };
 
 /* ---- 장면 재생 ----
-   scn = { dur, view?, actors:[{id,team,num,keys:[[t,x,y],...], tags:[1,1], label}],
-           ball:[{on:id,t0,t1} | {from:id,to:id,t0,t1} | {from:id,xy:[x,y],t0,t1,drop:true} | {xy:[x,y],t0,t1}],
-           events:[{t,type:'tag',who,side,by} | {t,type:'say',who,text,dur,tone} | {t,type:'raise',who,dur}
-                   | {t,type:'arm',who,side,to:id|'tag0'|'tag1'|[x,y],until} | {t,type:'ring',who,until,color} | {t,type:'tagback',who}],
-           marks:[{type:'passline',who,at} | {type:'offside',at,who,dist} | {type:'steps',who,t0,t1} | {type:'ring',who,at,color}
-                  | {type:'arrow',from:[x,y],to:[x,y],color,label} | {type:'text',x,y,text,color} | {type:'ballpath',t0,t1}] } */
-function Scene(board, scn, o){
+   scn = { dur,
+     actors:[{id, team, label, keys:[[t, x, y] | [t, '1'|'2'|'3'|'H'] ...], glove:true, name}],
+     ball:[{t0, t1, on:id} | {t0, t1, from:P, to:P, kind:'fly'|'ground'|'line'|'throw'|'roll', peak, bounces}],
+        P = [x, y] | 'tee' | actorId | '1'..'3','H'  (actorId면 그 시각의 선수 위치)
+     events:[{t, type:'say', who, text, tone, dur} | {t, type:'swing', who, dur, dir} | {t, type:'ring', who, until, color} | {t, type:'slide', who, until}
+             | {t, type:'call', text, tone, x, y, dur} | {t, type:'base', base, color, dur}],
+     marks:[{type:'arrow', from, to, color, label, at} | {type:'text', x, y, text, color, at} | {type:'force', bases:[..], at}
+            | {type:'lane', from:'1', to:'2', at} | {type:'ring', x, y, r, color, at} | {type:'trail', t0, t1, at}] } */
+function Scene(field, scn, o){
   o = o || {};
-  this.b = board; this.s = scn; this.t = 0; this.speed = 1; this.playing = false;
-  this.loop = !!o.loop; this.marksOn = !!o.marks; this.hold = o.hold != null ? o.hold : 1.2;
+  this.f = field; this.s = scn; this.t = 0; this.speed = 1; this.playing = false;
+  this.loop = !!o.loop; this.marksOn = !!o.marks; this.hold = o.hold != null ? o.hold : 1.4;
   this.onEnd = o.onEnd || null; this.onTick = o.onTick || null;
   var self = this;
   this.A = {};
-  scn.actors.forEach(function(a){
-    var p = board.player(a.id, a.team, a.num, {label:a.label});
-    self.A[a.id] = p;
-  });
-  this.ball = scn.ball ? board.ball() : null;
+  scn.actors.forEach(function(a){ self.A[a.id] = field.player(a.id, a.team, a.label, {glove:a.glove, name:a.name, scale:a.scale}); });
+  this.ball = scn.ball ? field.ball() : null;
+  this.callG = E('g', {'pointer-events':'none'}, field.gFx);
   this._mk = '';
   this.render(0);
 }
+Scene.prototype.pt = function(p, t){
+  var B = this.f.B;
+  if(Array.isArray(p)) return {x:p[0], y:p[1]};
+  if(p === 'tee') return {x:0, y:.6};
+  if(B[p]) return {x:B[p][0], y:B[p][1]};
+  return this.posAt(p, t);
+};
 Scene.prototype.def = function(id){ for(var i = 0; i < this.s.actors.length; i++) if(this.s.actors[i].id === id) return this.s.actors[i]; };
+Scene.prototype.key = function(k){
+  if(typeof k[1] === 'string'){ var b = this.f.B[k[1]]; return [k[0], b[0], b[1]]; }
+  return k;
+};
 Scene.prototype.posAt = function(id, t){
-  var k = this.def(id).keys;
-  if(t <= k[0][0]) return {x:k[0][1], y:k[0][2]};
-  for(var i = 0; i < k.length - 1; i++){
-    if(t <= k[i+1][0]){
-      var u = (t - k[i][0]) / Math.max(1e-6, k[i+1][0] - k[i][0]);
-      return {x:lerp(k[i][1], k[i+1][1], u), y:lerp(k[i][2], k[i+1][2], u)};
+  var d = this.def(id); if(!d) return {x:0, y:0};
+  var ks = d.keys.map(this.key, this);
+  if(t <= ks[0][0]) return {x:ks[0][1], y:ks[0][2]};
+  for(var i = 0; i < ks.length - 1; i++){
+    if(t <= ks[i+1][0]){
+      var u = (t - ks[i][0]) / Math.max(1e-6, ks[i+1][0] - ks[i][0]);
+      /* 베이스를 도는 주자는 베이스 사이를 바깥으로 살짝 휘게 */
+      var x = lerp(ks[i][1], ks[i+1][1], u), y = lerp(ks[i][2], ks[i+1][2], u);
+      return {x:x, y:y};
     }
   }
-  var l = k[k.length - 1]; return {x:l[1], y:l[2]};
+  var l = ks[ks.length - 1]; return {x:l[1], y:l[2]};
 };
 Scene.prototype.ballSeg = function(t){
   var bs = this.s.ball; if(!bs) return null;
   for(var i = 0; i < bs.length; i++) if(t >= bs[i].t0 && t <= bs[i].t1) return bs[i];
-  return t < bs[0].t0 ? bs[0] : bs[bs.length - 1];
+  if(t < bs[0].t0) return {hold:true, at:bs[0]};
+  var last = null; for(var j = 0; j < bs.length; j++) if(bs[j].t1 <= t) last = bs[j];
+  return {after:true, seg:last};
 };
-Scene.prototype.holderAt = function(t){ var s = this.ballSeg(t); return s && s.on ? s.on : null; };
-Scene.prototype.faceAt = function(id, t){
-  var a = this.posAt(id, t - .08), c = this.posAt(id, t + .08), dx = c.x - a.x, dy = c.y - a.y;
-  if(Math.hypot(dx, dy) > .05) return Math.atan2(dy, dx) * 180 / Math.PI;
-  var d = this.def(id), me = this.posAt(id, t), bp = this.ballPos(t);
-  if(bp && this.holderAt(t) !== id && Math.hypot(bp.x - me.x, bp.y - me.y) > .5) return Math.atan2(bp.y - me.y, bp.x - me.x) * 180 / Math.PI;
-  return d.face != null ? d.face : (d.team === 'red' ? 180 : 0);
-};
-Scene.prototype.carry = function(id, t){
-  var p = this.posAt(id, t), a = this._faceNoBall(id, t) * Math.PI / 180;
-  return {x:p.x + Math.cos(a) * .55 + Math.cos(a + Math.PI/2) * .55, y:p.y + Math.sin(a) * .55 + Math.sin(a + Math.PI/2) * .55, rot:this._faceNoBall(id, t) + 90};
-};
-Scene.prototype._faceNoBall = function(id, t){
-  var a = this.posAt(id, t - .08), c = this.posAt(id, t + .08), dx = c.x - a.x, dy = c.y - a.y;
-  if(Math.hypot(dx, dy) > .05) return Math.atan2(dy, dx) * 180 / Math.PI;
-  var d = this.def(id); return d.face != null ? d.face : (d.team === 'red' ? 180 : 0);
+Scene.prototype.segPos = function(s, t){
+  if(s.on){ var p = this.posAt(s.on, t); return {x:p.x + .7*this.f.S, y:p.y - .5*this.f.S, h:.6}; }
+  var u = clamp((t - s.t0) / Math.max(1e-6, s.t1 - s.t0), 0, 1);
+  var p0 = this.pt(s.from, s.t0), p1 = this.pt(s.to, s.t1);
+  var ue = s.kind === 'roll' ? 1 - Math.pow(1 - u, 1.8) : s.kind === 'ground' ? 1 - Math.pow(1 - u, 1.3) : u;
+  var x = lerp(p0.x, p1.x, ue), y = lerp(p0.y, p1.y, ue), h = 0;
+  var pk = s.peak != null ? s.peak : (s.kind === 'fly' ? 14 : s.kind === 'line' ? 2.4 : s.kind === 'throw' ? 1.6 : 0);
+  var h0 = s.h0 != null ? s.h0 : (s.from === 'tee' ? .7 : s.kind === 'throw' ? 1.3 : 0);
+  var h1 = s.h1 != null ? s.h1 : (s.kind === 'throw' ? 1.2 : 0);
+  if(s.kind === 'ground' || s.kind === 'roll'){
+    var nb = s.bounces || 3, ph = ue * nb, k = Math.floor(ph), fr = ph - k;
+    h = (pk || 1.2) * Math.pow(.45, k) * 4 * fr * (1 - fr);
+    if(k === 0 && s.from === 'tee') h = Math.max(h, h0 * (1 - fr));
+  } else {
+    h = lerp(h0, h1, u) + 4 * pk * u * (1 - u);
+  }
+  return {x:x, y:y, h:h};
 };
 Scene.prototype.ballPos = function(t){
   var s = this.ballSeg(t); if(!s) return null;
-  if(s.on){ var c = this.carry(s.on, t); return {x:c.x, y:c.y, rot:c.rot, h:0}; }
-  if(!s.from && !s.xy0){ return {x:s.xy[0], y:s.xy[1], rot:s.rot || 20, h:0}; }
-  var u = clamp((t - s.t0) / Math.max(1e-6, s.t1 - s.t0), 0, 1);
-  var p0 = s.from ? this.carry(s.from, s.t0) : {x:s.xy0[0], y:s.xy0[1]};
-  var p1 = s.to ? this.carry(s.to, s.t1) : {x:s.xy[0], y:s.xy[1]};
-  var x = lerp(p0.x, p1.x, u), y = lerp(p0.y, p1.y, u);
-  var dir = Math.atan2(p1.y - p0.y, p1.x - p0.x) * 180 / Math.PI;
-  if(s.place){ return {x:x, y:y, rot:dir, h:.7 * (1 - u)}; }
-  if(s.kick){ return {x:x, y:y, rot:dir + u * 720, h:2.2 * Math.sin(Math.PI * u)}; }
-  if(s.drop){
-    var h = u < .55 ? 1.1 * (1 - Math.pow(u/.55, 2)) * (1 - u) : .35 * Math.sin(Math.PI * (u - .55) / .45);
-    return {x:x, y:y, rot:dir + u * 620, h:Math.max(0, h)};
+  if(s.hold){ var a = s.at; if(a.on) return this.segPos(a, t); var p = this.pt(a.from, t); return {x:p.x, y:p.y, h:a.from === 'tee' ? .7 : 0}; }
+  if(s.after){
+    var l = s.seg;
+    if(l.on) return this.segPos(l, t);
+    if(l.to && !Array.isArray(l.to) && this.def(l.to)) return this.segPos({on:l.to}, t);
+    var e = this.segPos(l, l.t1); return {x:e.x, y:e.y, h:0};
   }
-  return {x:x, y:y, rot:dir, h:1.3 * Math.sin(Math.PI * u)};
+  return this.segPos(s, t);
 };
 Scene.prototype.render = function(t){
-  var s = this.s, self = this, ev = s.events || [];
+  var s = this.s, self = this, ev = s.events || [], f = this.f;
   this.t = t;
   s.actors.forEach(function(d){
     var a = self.A[d.id], p = self.posAt(d.id, t);
-    a.pos(p.x, p.y); a.face(self.faceAt(d.id, t));
-    var tg = d.tags ? [!!d.tags[0], !!d.tags[1]] : [true, true];
-    var bubble = null, tone = null, raised = false, ring = null, dive = false;
-    var arms = [null, null];
+    a.pos(p.x, p.y);
+    var bubble = null, tone = null, ring = null, sw = null, swDir = 0, sl = null;
     ev.forEach(function(e){
-      if(e.t > t) return;
-      if(e.who !== d.id) return;
-      if(e.type === 'tag') tg[e.side] = false;
-      if(e.type === 'tagback') tg = [true, true];
-      if(e.type === 'dive' && t < (e.until != null ? e.until : 1e9)) dive = true;
+      if(e.t > t || e.who !== d.id) return;
       if(e.type === 'say' && t < e.t + (e.dur || 1.4)){ bubble = e.text; tone = e.tone; }
-      if(e.type === 'raise' && t < e.t + (e.dur || 1.4)) raised = true;
       if(e.type === 'ring' && t < (e.until != null ? e.until : 1e9)) ring = e.color || '#ffd23f';
-      if(e.type === 'arm'){ arms[e.side || 0] = (e.until == null || t < e.until) ? e : null; }
+      if(e.type === 'swing' && t < e.t + (e.dur || .35) + .5){ sw = clamp((t - e.t) / (e.dur || .35), 0, 1); swDir = e.dir || 0; }
+      if(e.type === 'slide' && t < (e.until != null ? e.until : 1e9)){ var q0 = self.posAt(d.id, e.t - .2), q1 = self.posAt(d.id, e.t); sl = Math.atan2(q1.y - q0.y, q1.x - q0.x) * 180 / Math.PI; }
     });
-    a.setDive(dive); a.face(self.faceAt(d.id, t));
-    a.setTags(tg[0], tg[1]); a.say(bubble, tone); a.raise(raised); a.ring(!!ring, ring);
-    [0,1].forEach(function(side){
-      var e = arms[side];
-      if(!e){ a.arm(side, null); return; }
-      var tgt;
-      if(typeof e.to === 'string' && /^tag[01]$/.test(e.to)){ tgt = a.tagWorld(+e.to[3]); }
-      else if(typeof e.to === 'string'){ tgt = self.posAt(e.to, t); }
-      else tgt = {x:e.to[0], y:e.to[1]};
-      a.arm(side, tgt.x, tgt.y);
-    });
+    a.say(bubble, tone); a.ring(!!ring, ring); a.swing(sw, swDir); a.slide(sl);
+    if(d.glove){
+      var bp = self.ballPos(t), ang = d.team === 'red' ? 90 : -90;
+      if(bp){ var dx = bp.x - p.x, dy = bp.y - p.y; if(Math.hypot(dx, dy) > .2) ang = Math.atan2(dy, dx) * 180 / Math.PI; }
+      a.setGlove(ang);
+    }
   });
-  if(this.ball){ var bp = this.ballPos(t); this.ball.set(bp.x, bp.y, bp.rot, bp.h); }
+  if(this.ball){
+    var bp = this.ballPos(t);
+    this.ball.set(bp.x, bp.y, bp.h);
+    var tr = (s.marks || []).filter(function(m){ return m.type === 'trail'; })[0];
+    if(tr && this.marksOn && t >= (tr.at || 0)){
+      var pts = []; for(var q = tr.t0; q <= Math.min(t, tr.t1) + 1e-6; q += .04){ var b = this.ballPos(q); pts.push([b.x, b.y]); }
+      this.ball.setTrail(pts);
+    } else this.ball.setTrail([]);
+  }
+  /* 판정 표시와 베이스 반짝임 */
+  var cg = this.callG; cg.replaceChildren();
+  ev.forEach(function(e){
+    if(e.t > t) return;
+    if(e.type === 'call' && t < e.t + (e.dur || 1.8)){
+      var w = Math.max(5, e.text.length * 1.5 + 1.6) * f.S, h = 2.6 * f.S;
+      var bg = e.tone === 'foul' ? '#d2372c' : e.tone === 'ok' ? '#ffffff' : '#ffd23f';
+      var fg = e.tone === 'foul' ? '#fff' : e.tone === 'ok' ? '#15834a' : '#071c15';
+      var gx = E('g', {transform:'translate(' + e.x + ' ' + e.y + ')'}, cg);
+      E('rect', {x:-w/2, y:-h/2, width:w, height:h, rx:h/2, fill:bg, stroke:'rgba(0,0,0,.3)', 'stroke-width':.08*f.S}, gx);
+      var tx = E('text', {x:0, y:.08*f.S, 'text-anchor':'middle', 'dominant-baseline':'middle', 'font-size':1.45*f.S, 'font-family':'Black Han Sans, Pretendard', fill:fg}, gx); tx.textContent = e.text;
+    }
+    if(e.type === 'base' && t < e.t + (e.dur || 1.2)){
+      var b = f.B[e.base], u = (t - e.t) / (e.dur || 1.2);
+      E('circle', {cx:b[0], cy:b[1], r:(1 + u * 1.6) * f.S, fill:'none', stroke:e.color || '#ffd23f', 'stroke-width':.3*f.S, opacity:(1 - u).toFixed(2)}, cg);
+    }
+  });
   this.drawMarks(t);
   if(this.onTick) this.onTick(t);
 };
 Scene.prototype.drawMarks = function(t){
-  var on = this.marksOn ? (this.s.marks || []).filter(function(m){ var at = m.at != null ? m.at : (m.t0 != null ? m.t0 : 0); return t >= at; }) : [];
+  var on = this.marksOn ? (this.s.marks || []).filter(function(m){ return m.type !== 'trail' && t >= (m.at || 0); }) : [];
   var key = on.length + ':' + on.map(function(m){ return m.type; }).join(',');
   if(key === this._mk) return;
   this._mk = key;
-  var b = this.b, g = b.gMarks, self = this, L = b.L, W = b.W, IG = b.IG, TOP = Math.max(1.6, b.view.y + 1.6), BOT = Math.min(W - 1.2, b.view.y + b.view.h - 1.2);
+  var f = this.f, g = f.gMarks, B = f.B;
   g.replaceChildren();
   on.forEach(function(m){
-    if(m.type === 'passline'){
-      var p = self.ballPos(m.at), x = p.x;
-      E('rect', {x:x, y:0, width:L + IG - x, height:W, fill:'rgba(223,74,47,.26)'}, g);
-      E('rect', {x:-IG, y:0, width:x + IG, height:W, fill:'rgba(255,255,255,.08)'}, g);
-      E('line', {x1:x, y1:0, x2:x, y2:W, stroke:'#fff', 'stroke-width':.2, 'stroke-dasharray':'.6 .35'}, g);
-      label(x + .5, m.ly != null ? m.ly : TOP, '앞 (상대 인골 쪽) →', '#ffe1da', 'start');
-      label(x - .5, m.ly != null ? m.ly : TOP, '← 뒤', '#ffffff', 'end');
+    if(m.type === 'arrow') f.arrow(m.from, m.to, m.color || '#ffd23f', m.label, g, m.dash);
+    if(m.type === 'text') f.label(m.x, m.y, m.text, m.color || '#fff', m.anchor, m.size, g);
+    if(m.type === 'ring') E('circle', {cx:m.x, cy:m.y, r:m.r || 2, fill:'none', stroke:m.color || '#ff6b52', 'stroke-width':.28*f.S}, g);
+    if(m.type === 'force'){
+      m.bases.forEach(function(k){
+        var b = B[k];
+        E('circle', {cx:b[0], cy:b[1], r:1.9*f.S, fill:'rgba(255,210,63,.18)', stroke:'#ffd23f', 'stroke-width':.24*f.S, 'stroke-dasharray':(.5*f.S) + ' ' + (.3*f.S)}, g);
+        f.label(b[0], b[1] - 2.8*f.S, '포스', '#ffd23f', 'middle', 1.1, g);
+      });
     }
-    if(m.type === 'offside'){
-      var bp = self.ballPos(m.at), lx = bp.x + (m.dist || 3);
-      E('rect', {x:bp.x, y:0, width:lx - bp.x, height:W, fill:'rgba(223,74,47,.22)'}, g);
-      E('line', {x1:lx, y1:0, x2:lx, y2:W, stroke:'#ffd23f', 'stroke-width':.22, 'stroke-dasharray':'.7 .4'}, g);
-      E('line', {x1:bp.x, y1:0, x2:bp.x, y2:W, stroke:'rgba(255,255,255,.6)', 'stroke-width':.12, 'stroke-dasharray':'.3 .3'}, g);
-      label((bp.x + lx) / 2, m.ly != null ? m.ly : BOT, (m.dist || 3) + 'm', '#ffd23f', 'middle');
-      label(lx + .4, m.ly2 != null ? m.ly2 : TOP, '수비는 이 선 뒤로', '#ffd23f', 'start');
-    }
-    if(m.type === 'steps'){
-      var last = self.posAt(m.who, m.t0), acc = 0, n = 0;
-      for(var tt = m.t0; tt <= m.t1 + 1e-6; tt += .02){
-        var p2 = self.posAt(m.who, tt); acc += Math.hypot(p2.x - last.x, p2.y - last.y); last = p2;
-        if(acc >= .8){ acc = 0; n++;
-          E('circle', {cx:p2.x, cy:p2.y + (n % 2 ? .35 : -.35), r:.26, fill:n > 3 ? '#ff6b52' : '#ffffff', stroke:'rgba(0,0,0,.35)', 'stroke-width':.05}, g);
-        }
-      }
-      var pe = self.posAt(m.who, m.t1);
-      label(pe.x, pe.y + 2.3, n + '걸음', n > 3 ? '#ffb4a6' : '#ffffff', 'middle');
-    }
-    if(m.type === 'ring'){
-      var pr = m.who ? self.posAt(m.who, m.at) : {x:m.x, y:m.y};
-      E('circle', {cx:pr.x, cy:pr.y, r:m.r || 1.9, fill:'none', stroke:m.color || '#ff6b52', 'stroke-width':.24}, g);
-    }
-    if(m.type === 'arrow') arrow(m.from, m.to, m.color || '#ffd23f', m.label);
-    if(m.type === 'text') label(m.x, m.y, m.text, m.color || '#fff', m.anchor || 'middle', m.size);
-    if(m.type === 'ballpath'){
-      var pts = [];
-      for(var t2 = m.t0; t2 <= m.t1 + 1e-6; t2 += .05){ var q = self.ballPos(t2); pts.push(q.x.toFixed(2) + ',' + q.y.toFixed(2)); }
-      E('polyline', {points:pts.join(' '), fill:'none', stroke:m.color || '#ffd23f', 'stroke-width':.18, 'stroke-dasharray':'.35 .25'}, g);
+    if(m.type === 'lane'){
+      var a = B[m.from], c = B[m.to], dx = c[0] - a[0], dy = c[1] - a[1], d = Math.hypot(dx, dy), nx = -dy/d, ny = dx/d, w = 1;
+      E('path', {d:'M' + (a[0] + nx*w) + ' ' + (a[1] + ny*w) + ' L' + (c[0] + nx*w) + ' ' + (c[1] + ny*w) + ' L' + (c[0] - nx*w) + ' ' + (c[1] - ny*w) + ' L' + (a[0] - nx*w) + ' ' + (a[1] - ny*w) + ' Z', fill:'rgba(255,255,255,.14)', stroke:'#fff', 'stroke-width':.12, 'stroke-dasharray':'.4 .3'}, g);
+      f.label((a[0] + c[0]) / 2 + nx * 2.6, (a[1] + c[1]) / 2 + ny * 2.6, '양쪽 1 m', '#fff', 'middle', 1.0, g);
     }
   });
-  function label(x, y, text, color, anchor, size){
-    var tx = E('text', {x:x, y:y, 'text-anchor':anchor || 'middle', 'dominant-baseline':'middle', 'font-size':size || .95, 'font-family':'Black Han Sans, Pretendard', fill:color, stroke:'rgba(0,0,0,.55)', 'stroke-width':.22, 'paint-order':'stroke'}, g);
-    tx.textContent = text;
-  }
-  function arrow(a, c, color, text){
-    var dx = c[0] - a[0], dy = c[1] - a[1], d = Math.hypot(dx, dy) || 1, ux = dx/d, uy = dy/d;
-    E('line', {x1:a[0], y1:a[1], x2:c[0] - ux*.5, y2:c[1] - uy*.5, stroke:color, 'stroke-width':.22, 'stroke-linecap':'round'}, g);
-    E('path', {d:'M' + c[0] + ' ' + c[1] + ' L' + (c[0] - ux*.8 - uy*.45) + ' ' + (c[1] - uy*.8 + ux*.45) + ' L' + (c[0] - ux*.8 + uy*.45) + ' ' + (c[1] - uy*.8 - ux*.45) + ' Z', fill:color}, g);
-    if(text) label((a[0] + c[0]) / 2, (a[1] + c[1]) / 2 - .8, text, color, 'middle');
-  }
 };
 Scene.prototype.play = function(speed){
   var self = this;
@@ -839,11 +910,31 @@ Scene.prototype.play = function(speed){
 Scene.prototype.pause = function(){ this.playing = false; cancelAnimationFrame(this._raf); };
 Scene.prototype.seek = function(t){ this.render(clamp(t, 0, this.s.dur)); };
 Scene.prototype.setMarks = function(on){ this.marksOn = on; this._mk = ''; this.render(this.t); };
+Scene.prototype.destroy = function(){
+  this.pause();
+  for(var k in this.A) this.A[k].remove();
+  this.callG.remove(); this.f.clearMarks();
+  if(this.ball){ this.ball.g.remove(); this.f._ball = null; }
+};
 
-window.PB = {Board:Board, Scene:Scene, E:E, lerp:lerp, clamp:clamp, TEAM:TEAM};
+/* 달리기 키 만들기: 베이스 순서대로 일정한 속력(m/s)으로 */
+function runKeys(f, t0, from, to, speed, startXY){
+  var order = ['H', '1', '2', '3', 'H2'], B = f.B;
+  var pos = function(k){ return k === 'H2' ? B.H : B[k]; };
+  var i = order.indexOf(from), j = order.indexOf(to === 'H' && from !== 'H' ? 'H2' : to);
+  var keys = [], t = t0, cur = startXY || pos(from);
+  keys.push([t, cur[0], cur[1]]);
+  for(var k = i + 1; k <= j; k++){
+    var p = pos(order[k]), d = Math.hypot(p[0] - cur[0], p[1] - cur[1]);
+    t += d / speed; keys.push([t, p[0], p[1]]); cur = p;
+  }
+  return keys;
+}
+
+window.FD = {Field:Field, Scene:Scene, E:E, lerp:lerp, clamp:clamp, ease:ease, TEAM:TEAM, POS:POS, runKeys:runKeys};
 
 /* 화면에 보일 때만 반복 재생하는 작은 장면 */
-PB.loopWhenVisible = function(scene, el){
+FD.loopWhenVisible = function(scene, el){
   var vis = false;
   function check(){
     var r = el.getBoundingClientRect();
@@ -859,123 +950,180 @@ PB.loopWhenVisible = function(scene, el){
 
 <script>
 /* ===== 판정 종류와 장면 데이터 =====
-   answer: null이면 정상 플레이, 아니면 REASONS의 키 */
+   answer: null이면 세이프·페어(경기 계속), 아니면 REASONS의 키. view: 보여 줄 범위(m) */
 var REASONS = {
-  fwd:'앞으로 패스', knock:'녹온', run:'태그 뒤 계속 달리기', guard:'태그 가리기',
-  handoff:'손으로 밀기', grab:'옷 잡기·몸 접촉', offside:'오프사이드', dive:'다이빙·슬라이딩'
+  force:'포스아웃', tag:'태그아웃', fly:'플라이 아웃', strike:'스트라이크 아웃',
+  early:'루반칙 (미리 출발)', slide:'슬라이딩', lane:'주로 이탈 (1 m)', foul:'파울'
 };
-var V1 = {x:4, y:3, w:32, h:19};
-var SCENES = [
-  {title:'뒤에서 따라오는 친구에게 패스', view:V1, answer:null,
-   ex:'7번이 공을 놓는 순간 10번은 흰 점선(공의 위치)보다 뒤에 있었어요. 뒤로 한 패스라 정상이에요.',
-   dur:3.4, actors:[
-    {id:'b1', team:'blue', num:7, keys:[[0,10,11],[1.9,19.5,11],[2.4,21.5,11.2],[3.4,24,11.5]]},
-    {id:'b2', team:'blue', num:10, keys:[[0,6,16],[1.9,15.5,16],[2.4,18,16],[3.4,22.5,16]]},
-    {id:'r1', team:'red', num:2, keys:[[0,30,10],[1.9,26,10.5],[3.4,24.5,13]]},
-    {id:'r2', team:'red', num:5, keys:[[0,31,17],[3.4,27,16.5]]}],
-   ball:[{on:'b1', t0:0, t1:1.9}, {from:'b1', to:'b2', t0:1.9, t1:2.35}, {on:'b2', t0:2.35, t1:3.4}],
-   marks:[{type:'passline', at:1.9}]},
-  {title:'앞서 달리던 친구에게 패스', view:V1, answer:'fwd',
-   ex:'공을 놓는 순간 10번이 공보다 앞(상대 인골 쪽)에 있었어요. 앞으로 패스 반칙이에요.',
-   dur:3.4, actors:[
-    {id:'b1', team:'blue', num:7, keys:[[0,10,11],[1.9,19.5,11],[2.4,21,11],[3.4,22,11]]},
-    {id:'b2', team:'blue', num:10, keys:[[0,15,16.5],[1.9,23,16.5],[2.4,25,16.5],[3.4,27,16.5]]},
-    {id:'r1', team:'red', num:2, keys:[[0,31,10],[1.9,27,10.5],[3.4,25,12]]},
-    {id:'r2', team:'red', num:5, keys:[[0,33,19],[3.4,30,18]]}],
-   ball:[{on:'b1', t0:0, t1:1.9}, {from:'b1', to:'b2', t0:1.9, t1:2.35}, {on:'b2', t0:2.35, t1:3.4}],
-   marks:[{type:'passline', at:1.9}]},
-  {title:'빠르게 달리며 뒤로 패스', view:V1, answer:null,
-   ex:'7번은 손을 뒤로 뻗어 패스했고, 공을 놓는 순간 10번은 뒤에 있었어요. 그런데 노란 점선을 보면 공이 땅 위에서 조금 앞으로 갔지요? 7번이 빠르게 달리던 빠르기를 공도 함께 가지고 있었기 때문이에요. 그래서 정상 패스예요. 자세한 이유는 05 경기장 밖 과학에서 알아봐요.',
-   dur:3.4, actors:[
-    {id:'b1', team:'blue', num:7, keys:[[0,6,11],[2.0,19,11],[2.6,22.9,11],[3.4,26,11]]},
-    {id:'b2', team:'blue', num:10, keys:[[0,3,15.5],[2.0,16,15.5],[2.7,20.5,15.5],[3.4,24,15.5]]},
-    {id:'r1', team:'red', num:2, keys:[[0,33,11],[3.4,29.5,12]]}],
-   ball:[{on:'b1', t0:0, t1:2.0}, {from:'b1', to:'b2', t0:2.0, t1:2.7}, {on:'b2', t0:2.7, t1:3.4}],
-   marks:[{type:'passline', at:2.0}, {type:'ballpath', t0:2.0, t1:2.7, at:2.7}, {type:'text', at:2.7, x:20.5, y:19.6, text:'공은 땅 위에서 조금 앞으로', color:'#ffd23f'}]},
-  {title:'태그를 당한 뒤', view:V1, answer:'run',
-   ex:'태그를 당하면 3걸음 안에 멈춰야 하는데, 7번은 10걸음 넘게 계속 달렸어요. 태그 지점에서 상대 프리패스예요.',
-   dur:3.2, actors:[
-    {id:'b1', team:'blue', num:7, keys:[[0,8,12],[1.5,16,12],[3.2,24,12.3]]},
-    {id:'b2', team:'blue', num:10, keys:[[0,5,16],[3.2,18,16]]},
-    {id:'r1', team:'red', num:2, keys:[[0,24,11],[1.5,16.9,11.2],[2.4,19.4,9.6],[3.2,20,9]]},
-    {id:'r2', team:'red', num:5, keys:[[0,30,15],[3.2,27,14.5]]}],
-   ball:[{on:'b1', t0:0, t1:3.2}],
-   events:[{t:1.5, type:'tag', who:'b1', side:0}, {t:1.5, type:'say', who:'r1', text:'태그!'}, {t:1.5, type:'raise', who:'r1'}],
-   marks:[{type:'steps', who:'b1', t0:1.5, t1:3.2}]},
-  {title:'태그를 당한 뒤 (2)', view:V1, answer:null,
-   ex:'7번은 한 걸음 만에 멈췄고, 1초 안에 뒤쪽 10번에게 패스했어요. 태그한 2번도 3m 선 뒤로 물러났어요. 모두 규칙을 지켰어요.',
-   dur:3.6, actors:[
-    {id:'b1', team:'blue', num:7, keys:[[0,8,12],[1.5,16,12],[1.85,17.2,12],[3.6,17.2,12]]},
-    {id:'b2', team:'blue', num:10, keys:[[0,4,16],[2.3,13.5,16],[2.8,15.5,16],[3.6,18,16]]},
-    {id:'r1', team:'red', num:2, keys:[[0,24,11],[1.5,16.95,11.2],[2.4,21.4,11],[3.6,21.4,11]]},
-    {id:'r2', team:'red', num:5, keys:[[0,29,15],[1.6,24,15],[3.6,24,15]]}],
-   ball:[{on:'b1', t0:0, t1:2.3}, {from:'b1', to:'b2', t0:2.3, t1:2.75}, {on:'b2', t0:2.75, t1:3.6}],
-   events:[{t:1.5, type:'tag', who:'b1', side:0}, {t:1.5, type:'say', who:'r1', text:'태그!'}, {t:1.5, type:'raise', who:'r1'}],
-   marks:[{type:'steps', who:'b1', t0:1.5, t1:1.85}, {type:'offside', at:1.6, dist:3, ly:20.5, ly2:4.6}]},
-  {title:'수비가 다가올 때', view:V1, answer:'guard',
-   ex:'7번이 손으로 자기 태그를 가리고 달려서 2번이 태그를 뗄 수 없었어요. 태그 가리기 반칙이에요.',
-   dur:3.2, actors:[
-    {id:'b1', team:'blue', num:7, keys:[[0,8,12],[3.2,24,12]]},
-    {id:'b2', team:'blue', num:10, keys:[[0,5,16],[3.2,19,16]]},
-    {id:'r1', team:'red', num:2, keys:[[0,22,7.5],[1.6,16.6,10.4],[2.2,17.6,10.4],[3.2,17.2,9.5]]}],
-   ball:[{on:'b1', t0:0, t1:3.2}],
-   events:[{t:.6, type:'arm', who:'b1', side:0, to:'tag0'}, {t:1.5, type:'arm', who:'r1', side:1, to:'b1', until:2.1}, {t:1.8, type:'say', who:'r1', text:'못 떼겠어!'}],
-   marks:[{type:'ring', who:'b1', at:1.7, r:1.3}, {type:'text', at:1.7, x:16, y:20, text:'손으로 자기 태그를 가림', color:'#ffb4a6'}]},
-  {title:'수비와 마주쳤을 때', view:V1, answer:'handoff',
-   ex:'7번이 팔을 뻗어 2번 수비를 밀어냈어요. 손이나 팔로 수비를 미는 것(핸드오프)은 반칙이에요.',
-   dur:3.2, actors:[
-    {id:'b1', team:'blue', num:7, keys:[[0,8,12],[1.4,15.5,12],[2.1,19,12.2],[3.2,24,12.5]]},
-    {id:'b2', team:'blue', num:10, keys:[[0,5,16],[3.2,19,16]]},
-    {id:'r1', team:'red', num:2, keys:[[0,22,11.5],[1.4,17.1,11.6],[1.75,17.9,10],[2.2,18.5,8.6],[3.2,18.5,8.6]]}],
-   ball:[{on:'b1', t0:0, t1:3.2}],
-   events:[{t:1.35, type:'arm', who:'b1', side:0, to:'r1', until:1.85}, {t:1.7, type:'say', who:'r1', text:'밀었어!', tone:'foul'}],
-   marks:[{type:'ring', who:'r1', at:1.45, r:1.6}, {type:'arrow', at:1.8, from:[17.4,11.2], to:[18.4,8.4], color:'#ff8b75', label:'밀려남'}]},
-  {title:'수비가 태그를 떼는 장면', view:V1, answer:'grab',
-   ex:'2번 수비가 7번의 옷을 붙잡아 멈춘 뒤 태그를 뗐어요. 수비는 태그만 떼야 해요. 옷 잡기는 반칙이에요.',
-   dur:3.0, actors:[
-    {id:'b1', team:'blue', num:7, keys:[[0,8,12],[1.4,15.5,12],[2.2,16.6,12],[3,17,12]]},
-    {id:'b2', team:'blue', num:10, keys:[[0,5,16],[3,16,16]]},
-    {id:'r1', team:'red', num:2, keys:[[0,22,10.4],[1.4,16.6,10.6],[2.2,17.3,10.7],[3,19,10.4]]}],
-   ball:[{on:'b1', t0:0, t1:3}],
-   events:[{t:1.4, type:'arm', who:'r1', side:0, to:'b1', until:2.3}, {t:1.5, type:'arm', who:'r1', side:1, to:'b1', until:2.3}, {t:1.6, type:'say', who:'b1', text:'옷 잡지 마!', tone:'foul', dur:1.1}, {t:2.2, type:'tag', who:'b1', side:0}, {t:2.2, type:'say', who:'r1', text:'태그!'}],
-   marks:[{type:'ring', who:'b1', at:1.7, r:2.1}]},
-  {title:'패스를 받다가', view:V1, answer:'knock',
-   ex:'10번이 패스를 받다가 공을 앞(상대 인골 쪽)으로 떨어뜨렸어요. 녹온이에요. 상대 팀 공이 돼요.',
-   dur:3.0, actors:[
-    {id:'b1', team:'blue', num:7, keys:[[0,12,9],[1.2,17,9],[3,19,9]]},
-    {id:'b2', team:'blue', num:10, keys:[[0,9,13.5],[1.65,15.6,13.5],[2.2,16.6,13.5],[3,16.6,13.5]]},
-    {id:'r1', team:'red', num:2, keys:[[0,28,12],[3,23.5,12.5]]}],
-   ball:[{on:'b1', t0:0, t1:1.2}, {from:'b1', to:'b2', t0:1.2, t1:1.65}, {from:'b2', xy:[20,14.2], t0:1.7, t1:2.4, drop:true}, {xy:[20,14.2], t0:2.4, t1:3}],
-   events:[{t:1.75, type:'say', who:'b2', text:'앗!'}],
-   marks:[{type:'arrow', at:2.4, from:[16.2,16], to:[19.8,16], color:'#ff8b75', label:'앞으로 떨어짐'}]},
-  {title:'패스를 받다가 (2)', view:V1, answer:null,
-   ex:'10번이 공을 놓쳤지만 뒤쪽으로 떨어졌어요. 녹온이 아니에요. 얼른 주워서 경기를 계속하면 돼요.',
-   dur:3.6, actors:[
-    {id:'b1', team:'blue', num:7, keys:[[0,12,9],[1.2,17,9],[3.6,19,9]]},
-    {id:'b2', team:'blue', num:10, keys:[[0,9,13.5],[1.65,15.6,13.5],[2.0,15.9,13.5],[2.6,13.4,14.2],[3.6,18,14]]},
-    {id:'r1', team:'red', num:2, keys:[[0,28,12],[3.6,23,12.5]]}],
-   ball:[{on:'b1', t0:0, t1:1.2}, {from:'b1', to:'b2', t0:1.2, t1:1.65}, {from:'b2', xy:[12.8,14.6], t0:1.7, t1:2.3, drop:true}, {xy:[12.8,14.6], t0:2.3, t1:2.6}, {on:'b2', t0:2.6, t1:3.6}],
-   events:[{t:1.75, type:'say', who:'b2', text:'앗!'}],
-   marks:[{type:'arrow', at:2.3, from:[15.6,16.4], to:[13,16.4], color:'#ffffff', label:'뒤로 떨어짐'}]},
-  {title:'태그 뒤 패스를 가로챔', view:V1, answer:'offside',
-   ex:'7번이 태그를 당했을 때 5번 수비는 공 바로 앞에 있었어요. 3m 선 뒤로 물러나지 않고 패스를 가로챘으니 오프사이드예요.',
-   dur:3.4, actors:[
-    {id:'b1', team:'blue', num:7, keys:[[0,8,11],[1.5,16,11],[1.8,16.8,11],[3.4,16.8,11]]},
-    {id:'b2', team:'blue', num:10, keys:[[0,4,16],[2.4,13,15.8],[3.4,15,15.8]]},
-    {id:'r1', team:'red', num:2, keys:[[0,24,10],[1.5,16.95,10.2],[2.4,20.8,10.2],[3.4,21,10]]},
-    {id:'r2', team:'red', num:5, keys:[[0,24,15.5],[1.5,18.2,14.4],[2.4,17.8,14.2],[2.8,16.8,14.6],[3.4,17.2,14.6]]}],
-   ball:[{on:'b1', t0:0, t1:2.4}, {from:'b1', to:'r2', t0:2.4, t1:2.75}, {on:'r2', t0:2.75, t1:3.4}],
-   events:[{t:1.5, type:'tag', who:'b1', side:0}, {t:1.5, type:'say', who:'r1', text:'태그!'}, {t:1.5, type:'raise', who:'r1'}, {t:2.8, type:'say', who:'r2', text:'가로챘다!'}],
-   marks:[{type:'offside', at:1.6, dist:3, ly:20.5, ly2:4.6}, {type:'ring', who:'r2', at:1.6, r:1.6}]},
-  {title:'인골 앞에서', view:{x:22, y:4, w:26, h:17}, answer:'dive',
-   ex:'9번이 인골에서 미끄러지며 공을 내려놓았어요. 다이빙·슬라이딩은 다칠 수 있어서 반칙이에요. 서서 공을 내려놓아야 해요.',
-   dur:3.2, actors:[
-    {id:'b1', team:'blue', num:9, keys:[[0,26,12.5],[1.6,37,12.5],[2.0,39.6,12.6],[2.4,42.8,12.8],[3.2,43.2,12.8]]},
-    {id:'r1', team:'red', num:2, keys:[[0,32,7],[2.4,38,10],[3.2,38.5,10.5]]}],
-   ball:[{on:'b1', t0:0, t1:2.3}, {from:'b1', xy:[44,13.4], t0:2.3, t1:2.5, place:true}, {xy:[44,13.4], t0:2.5, t1:3.2}],
-   events:[{t:2.0, type:'dive', who:'b1'}, {t:2.1, type:'say', who:'b1', text:'슬라이딩!', tone:'foul', dur:1.1}],
-   marks:[{type:'arrow', at:2.4, from:[38.5,15.2], to:[42.8,15.2], color:'#ff8b75', label:'미끄러짐'}]}
-];
+var D = 18.29, r = D * Math.SQRT1_2;
+var B1 = [r, -r], B2 = [0, -2*r], B3 = [-r, -r], BH = [0, 0], BAT = [-1.3, .5];
+var VIN = {x:-25, y:-31.5, w:50, h:37.5}, VOUT = {x:-30, y:-44, w:60, h:48}, VNEAR = {x:-12.8, y:-13.6, w:25.6, h:19.2};
+function at(a, b, u){ return [a[0] + (b[0] - a[0]) * u, a[1] + (b[1] - a[1]) * u]; }
+function run(t0, pts, v){
+  var k = [[t0, pts[0][0], pts[0][1]]], t = t0;
+  for(var i = 1; i < pts.length; i++){ t += Math.hypot(pts[i][0] - pts[i-1][0], pts[i][1] - pts[i-1][1]) / v; k.push([t, pts[i][0], pts[i][1]]); }
+  return k;
+}
+function F(id, key, keys){ var p = FD.POS[key]; return {id:id, team:'red', label:key, glove:true, keys:keys || [[0, p.x, p.y]]}; }
+function batter(num, t0, to, v){ return {id:'bat', team:'blue', label:String(num), keys:[[0, BAT[0], BAT[1]], [t0, BAT[0], BAT[1]]].concat(run(t0, [BAT].concat(to), v || 6.2).slice(1))}; }
+var SWING = {t:.45, type:'swing', who:'bat', dur:.3};
+var SCENES = [];
+
+/* 1. 1루 세이프: 느린 땅볼, 타자가 먼저 */
+(function(){
+  var g = [-9.5, -20.5], tb = 3.75;
+  SCENES.push({view:VIN, title:'느린 땅볼, 1루에서 누가 먼저?', answer:null,
+    ex:'타자 주자가 1루를 밟은 뒤에 공이 1루수 글러브에 들어왔어요. 세이프!',
+    dur:5.0, actors:[batter(3, .75, [[r + .1, -r + .1], [r + 2.2, -r + 2.2]], 6.4),
+      F('ss', '1SS', [[0, -7.2, -22.2], [.5, -7.2, -22.2], [1.9, g[0] + .4, g[1] - .4]]),
+      F('fb', '1B', [[0, 13.6, -14.6], [.8, 13.6, -14.6], [1.8, r + .3, -r - 1.0]]), F('s2', '2SS'), F('tb', '3B'), F('sb', '2B'), F('c', 'C')],
+    ball:[{t0:.62, t1:2.1, from:'tee', to:g, kind:'roll', bounces:3, peak:1}, {t0:2.1, t1:2.75, on:'ss'}, {t0:2.75, t1:4.25, from:'ss', to:'fb', kind:'throw', peak:2.2}, {t0:4.25, t1:5, on:'fb'}],
+    events:[SWING, {t:3.85, type:'base', base:'1', color:'#3fcf7f'}],
+    marks:[{type:'text', x:r + 4.5, y:-r - 4.2, text:'발이 먼저', color:'#a9f0c4', at:3.85}, {type:'ring', x:B1[0], y:B1[1], r:2.2, color:'#3fcf7f', at:3.85}]});
+})();
+
+/* 2. 1루 포스아웃 */
+(function(){
+  var g = [5.2, -17.6];
+  SCENES.push({view:VIN, title:'2루수 앞 땅볼', answer:'force',
+    ex:'타자는 1루로 꼭 가야 하니 1루는 포스예요. 공을 가진 1루수가 타자보다 먼저 1루를 밟았어요. 포스아웃!',
+    dur:4.6, actors:[batter(6, .75, [[r - 3.4, -r + 3.4], [r - 2.6, -r + 2.6]], 6.2),
+      F('sb', '2B', [[0, 7.2, -22.2], [.5, 7.2, -22.2], [1.3, g[0] + .4, g[1] - .6]]),
+      F('fb', '1B', [[0, 13.6, -14.6], [.8, 13.6, -14.6], [1.7, r + .3, -r - 1.0]]), F('s2', '2SS'), F('ss', '1SS'), F('tb', '3B'), F('c', 'C')],
+    ball:[{t0:.62, t1:1.4, from:'tee', to:g, kind:'ground', bounces:3, peak:1.3}, {t0:1.4, t1:1.7, on:'sb'}, {t0:1.7, t1:2.2, from:'sb', to:'fb', kind:'throw'}, {t0:2.2, t1:4.6, on:'fb'}],
+    events:[SWING, {t:2.25, type:'base', base:'1', color:'#ff6b52'}],
+    marks:[{type:'force', bases:['1'], at:0}, {type:'text', x:r - 6, y:-r + 7, text:'아직 달리는 중', color:'#ffb4a6', at:2.2}]});
+})();
+
+/* 3. 2루 주자, 3루에서 베이스만 밟음 (포스 아님) → 세이프 */
+(function(){
+  var g = [-5.8, -17.4], tp = at(B2, B3, (2.75 - .65) / 3.05);
+  SCENES.push({view:VIN, title:'3루수가 공을 잡고 3루를 밟았어요', answer:null,
+    ex:'1루가 비어 있었으니 2루 주자는 3루로 꼭 가야 하는 상황(포스)이 아니에요. 베이스를 밟는 것만으로는 아웃이 아니고, 주자를 태그해야 해요. 세이프!',
+    dur:4.8, actors:[batter(2, .75, [[r + .1, -r + .1]], 6.2),
+      {id:'r2', team:'blue', label:'주자', keys:[[0, .4, B2[1]], [.65, .4, B2[1]]].concat(run(.65, [[.4, B2[1]], [B3[0] + .3, B3[1]]], 6).slice(1))},
+      F('ss', '1SS', [[0, -7.2, -22.2], [.5, -7.2, -22.2], [1.4, g[0] - .3, g[1] - .7]]),
+      F('tb', '3B', [[0, -13.6, -14.6], [.8, -13.6, -14.6], [1.7, B3[0] - .3, B3[1] - 1.1]]), F('fb', '1B'), F('sb', '2B'), F('s2', '2SS'), F('c', 'C')],
+    ball:[{t0:.62, t1:1.45, from:'tee', to:g, kind:'ground', bounces:3, peak:1.3}, {t0:1.45, t1:1.75, on:'ss'}, {t0:1.75, t1:2.25, from:'ss', to:'tb', kind:'throw'}, {t0:2.25, t1:4.8, on:'tb'}],
+    events:[SWING, {t:2.3, type:'base', base:'3', color:'#ffd23f'}, {t:2.4, type:'say', who:'tb', text:'밟았다!', dur:1.2}],
+    marks:[{type:'text', x:-6, y:-28.8, text:'1루가 비어 있음 → 포스 아님', color:'#fff', at:0}]});
+})();
+
+/* 4. 태그아웃 */
+(function(){
+  var g = [-5.8, -17.4], tp = at(B2, B3, (2.6 - .65) / 3.05);
+  SCENES.push({view:VIN, title:'3루로 달리는 2루 주자', answer:'tag',
+    ex:'포스 상황이 아니어서 3루수가 공을 쥔 글러브로 베이스 밖의 주자를 직접 터치했어요. 태그아웃!',
+    dur:4.4, actors:[batter(5, .75, [[r + .1, -r + .1]], 6.2),
+      {id:'r2', team:'blue', label:'주자', keys:[[0, .4, B2[1]], [.65, .4, B2[1]], [2.6, tp[0], tp[1]], [2.9, tp[0] - .2, tp[1] + .1]]},
+      F('ss', '1SS', [[0, -7.2, -22.2], [.5, -7.2, -22.2], [1.4, g[0] - .3, g[1] - .7]]),
+      F('tb', '3B', [[0, -13.6, -14.6], [.8, -13.6, -14.6], [1.6, -12.3, -14.0], [2.3, -12.3, -14.0], [2.6, tp[0] - 1.1, tp[1] + 1.0]]), F('fb', '1B'), F('sb', '2B'), F('s2', '2SS'), F('c', 'C')],
+    ball:[{t0:.62, t1:1.45, from:'tee', to:g, kind:'ground', bounces:3, peak:1.3}, {t0:1.45, t1:1.75, on:'ss'}, {t0:1.75, t1:2.25, from:'ss', to:'tb', kind:'throw'}, {t0:2.25, t1:4.4, on:'tb'}],
+    events:[SWING, {t:2.6, type:'ring', who:'r2', until:4.4, color:'#ff6b52'}],
+    marks:[{type:'ring', x:tp[0] - .5, y:tp[1] + .5, r:2.4, color:'#ff6b52', at:2.6}, {type:'text', x:tp[0] + 1, y:tp[1] - 3.2, text:'터치!', color:'#ffb4a6', at:2.6}]});
+})();
+
+/* 5. 홈 포스아웃 */
+(function(){
+  var g = [2.4, -12.4], hp = at(B3, BH, (2.35 - .65) / 3.05);
+  SCENES.push({view:{x:-22, y:-27, w:44, h:33}, title:'3루 주자가 홈으로', answer:'force',
+    ex:'티볼은 홈에서 충돌을 막으려고 홈을 언제나 포스아웃으로 판정해요. 공을 가진 본루수가 주자보다 먼저 홈을 밟았으니 아웃!',
+    dur:4.4, actors:[batter(8, .75, [[6.5, -6.8]], 6.2),
+      {id:'r3', team:'blue', label:'주자', keys:[[0, B3[0] - .2, B3[1] - .2], [.65, B3[0] - .2, B3[1] - .2], [2.35, hp[0], hp[1]], [2.9, hp[0] + .2, hp[1] + .4]]},
+      F('s2', '2SS', [[0, 2.8, -15.4], [.55, 2.8, -15.4], [1.3, g[0] + .3, g[1] - .8]]), F('c', 'C', [[0, 0, 4.2], [.9, 0, 4.2], [1.6, .9, -.2]]), F('fb', '1B'), F('tb', '3B'), F('ss', '1SS')],
+    ball:[{t0:.62, t1:1.35, from:'tee', to:g, kind:'ground', bounces:2, peak:1.1}, {t0:1.35, t1:1.7, on:'s2'}, {t0:1.7, t1:2.25, from:'s2', to:'c', kind:'throw'}, {t0:2.25, t1:4.4, on:'c'}],
+    events:[SWING, {t:2.3, type:'base', base:'H', color:'#ff6b52'}],
+    marks:[{type:'force', bases:['H'], at:0}]});
+})();
+
+/* 6. 주로 이탈 */
+(function(){
+  var g = [-3.0, -21.5], p0 = at(B2, B3, .35), out = [p0[0] - 2.2, p0[1] - 3.0];
+  SCENES.push({view:VIN, title:'태그를 피하는 2루 주자', answer:'lane',
+    ex:'태그를 피하려고 2루와 3루를 잇는 직선에서 1 m보다 훨씬 멀리 벗어났어요. 터치되지 않았어도 주자 아웃이에요.',
+    dur:4.6, actors:[batter(1, .75, [[r + .1, -r + .1]], 6.2),
+      {id:'r2', team:'blue', label:'주자', keys:[[0, .4, B2[1]], [.65, .4, B2[1]], [1.7, p0[0], p0[1]], [2.5, out[0], out[1]], [3.2, B3[0] - 1.8, B3[1] - 1.6]]},
+      F('ss', '1SS', [[0, -7.2, -22.2], [.5, -7.2, -22.2], [1.2, g[0] - .4, g[1] - .4], [2.2, p0[0] + .2, p0[1] + 1.6]]),
+      F('tb', '3B'), F('fb', '1B'), F('sb', '2B'), F('s2', '2SS'), F('c', 'C')],
+    ball:[{t0:.62, t1:1.25, from:'tee', to:g, kind:'line', peak:1.2}, {t0:1.25, t1:4.6, on:'ss'}],
+    events:[SWING, {t:2.0, type:'say', who:'r2', text:'피하자!', dur:1.2}, {t:2.6, type:'ring', who:'r2', until:4.6, color:'#ff6b52'}],
+    marks:[{type:'lane', from:'2', to:'3', at:0}]});
+})();
+
+/* 7. 루반칙 */
+SCENES.push({view:VIN, title:'1루 주자의 출발', answer:'early',
+  ex:'타자가 공을 치기 전에 1루 주자가 베이스를 떠났어요. 티볼에는 도루가 없어서 루반칙으로 주자 아웃, 경기가 멈춰요.',
+  dur:3.0, actors:[{id:'bat', team:'blue', label:'4', keys:[[0, BAT[0], BAT[1]]]},
+    {id:'r1', team:'blue', label:'주자', keys:[[0, B1[0] + .2, B1[1] - .2], [.25, B1[0] + .2, B1[1] - .2], [1.25, 9.4, -15.8], [1.6, 9.0, -16.2]]},
+    F('fb', '1B'), F('sb', '2B'), F('s2', '2SS'), F('ss', '1SS'), F('tb', '3B'), F('c', 'C')],
+  ball:[{t0:0, t1:1.0, from:'tee', to:'tee', kind:'line', peak:0, h0:.7, h1:.7}, {t0:1.0, t1:1.8, from:'tee', to:[1.5, -16], kind:'ground', bounces:2, peak:1.2}],
+  events:[{t:.85, type:'swing', who:'bat', dur:.3}],
+  marks:[{type:'text', x:B1[0] + 3.6, y:B1[1] + 2.4, text:'치기 전에 떠남', color:'#ffb4a6', at:0}, {type:'ring', x:B1[0], y:B1[1], r:2, color:'#ff6b52', at:0}]});
+
+/* 8. 슬라이딩 */
+(function(){
+  var g = [-14, -34];
+  SCENES.push({view:VIN, title:'2루로 뛰어드는 주자', answer:'slide',
+    ex:'공보다 먼저 들어왔지만 슬라이딩을 했어요. 티볼은 다치지 않도록 슬라이딩을 금지해서, 슬라이딩한 주자는 아웃이에요.',
+    dur:4.6, actors:[batter(7, .75, [[r + .1, -r + .1]], 6.2),
+      {id:'r1', team:'blue', label:'주자', keys:[[0, B1[0] + .2, B1[1] - .2], [.65, B1[0] + .2, B1[1] - .2], [2.9, 2.6, -23.3], [3.3, .4, -25.4]]},
+      F('lf', 'LF', [[0, -21, -31], [.7, -21, -31], [2.0, -15, -32.8]]), F('s2', '2SS', [[0, 2.8, -15.4], [.8, 2.8, -15.4], [2.4, -.9, -26.3]]),
+      F('fb', '1B'), F('sb', '2B'), F('ss', '1SS'), F('tb', '3B')],
+    ball:[{t0:.62, t1:1.9, from:'tee', to:g, kind:'line', peak:3}, {t0:1.9, t1:2.3, on:'lf'}, {t0:2.3, t1:3.6, from:'lf', to:'s2', kind:'throw', peak:2.5}, {t0:3.6, t1:4.6, on:'s2'}],
+    events:[SWING, {t:2.9, type:'slide', who:'r1'}, {t:3.0, type:'say', who:'r1', text:'슬라이딩!', dur:1.4, tone:'foul'}],
+    marks:[{type:'ring', x:B2[0], y:B2[1], r:2.4, color:'#ff6b52', at:2.9}]});
+})();
+
+/* 9. 플라이 아웃 */
+(function(){
+  var fl = [9.5, -35];
+  SCENES.push({view:VOUT, title:'높이 뜬 공', answer:'fly',
+    ex:'친 공이 땅에 닿기 전에 제2중견수가 잡았어요. 타자는 바로 아웃이에요.',
+    dur:4.0, actors:[batter(10, .75, [[r - 3, -r + 3]], 6.2),
+      F('cf', '2CF', [[0, 7, -38], [.7, 7, -38], [2.4, fl[0] + .3, fl[1] - .8]]), F('rf', 'RF'), F('c1', '1CF'), F('sb', '2B'), F('fb', '1B'), F('lf', 'LF')],
+    ball:[{t0:.62, t1:2.7, from:'tee', to:fl, kind:'fly', peak:15}, {t0:2.7, t1:4.0, on:'cf'}],
+    events:[SWING],
+    marks:[{type:'trail', t0:.62, t1:2.7, at:0}, {type:'text', x:fl[0], y:fl[1] + 4.5, text:'땅에 닿기 전에 잡음', color:'#ffb4a6', at:2.7}]});
+})();
+
+/* 10. 외야 파울라인 위 */
+(function(){
+  var land = [-22.6, -22.6];
+  SCENES.push({view:VOUT, title:'3루 쪽 깊숙한 타구', answer:null,
+    ex:'외야에서는 공이 처음 떨어진 곳으로 판정해요. 공이 3루 쪽 파울라인 위에 떨어졌고, 파울라인은 페어 지역에 들어가요. 페어!',
+    dur:4.0, actors:[batter(9, .75, [[r + .1, -r + .1], [r - 2, -r - 2.2]], 6.2),
+      F('lf', 'LF', [[0, -21, -31], [.7, -21, -31], [2.6, -21.5, -25.5]]), F('tb', '3B'), F('ss', '1SS'), F('c1', '1CF')],
+    ball:[{t0:.62, t1:2.1, from:'tee', to:land, kind:'line', peak:5}, {t0:2.1, t1:3.2, from:land, to:[-26.5, -24.5], kind:'roll', bounces:2, peak:1.2}, {t0:3.2, t1:4.0, on:'lf'}],
+    events:[SWING],
+    marks:[{type:'ring', x:land[0], y:land[1], r:2.4, color:'#3fcf7f', at:2.1}, {type:'text', x:land[0] + 6.5, y:land[1] + 1.6, text:'처음 떨어진 곳: 선 위', color:'#a9f0c4', at:2.1}]});
+})();
+
+/* 11. 내야 땅볼이 베이스 앞에서 파울 지역으로 */
+(function(){
+  var p1 = [-7.6, -9.4], p2 = [-10.6, -8.2];
+  SCENES.push({view:VIN, title:'3루 쪽으로 굴러간 땅볼', answer:'foul',
+    ex:'처음에는 페어 지역에 떨어졌지만, 3루 베이스에 닿기 전에 파울 지역으로 굴러 나가 멈췄어요. 내야에서는 공이 멈춘 곳으로 판정하니 파울이에요.',
+    dur:3.8, actors:[batter(4, .75, [[2.6, -2.8], [3.2, -3.4]], 6.2), F('tb', '3B', [[0, -13.6, -14.6], [.8, -13.6, -14.6], [2.6, -12, -10.2]]), F('ss', '1SS'), F('c', 'C')],
+    ball:[{t0:.62, t1:1.4, from:'tee', to:p1, kind:'ground', bounces:2, peak:.9}, {t0:1.4, t1:2.6, from:p1, to:p2, kind:'roll', bounces:1, peak:.2}],
+    events:[SWING],
+    marks:[{type:'trail', t0:.62, t1:2.6, at:0}, {type:'ring', x:p2[0], y:p2[1], r:1.6, color:'#ff6b52', at:2.6}, {type:'text', x:p2[0] - .5, y:p2[1] + 3, text:'멈춘 곳: 파울 지역', color:'#ffb4a6', at:2.6}]});
+})();
+
+/* 12. 타자 서클 안에 멈춘 공 */
+SCENES.push({view:VNEAR, title:'배트 끝에 맞은 약한 타구', answer:'foul',
+  ex:'공이 페어 지역 쪽으로 굴렀지만 타자 서클(반지름 3 m) 안에서 멈췄어요. 티볼에서는 서클 안에 멈춘 공은 파울이에요.',
+  dur:3.0, actors:[batter(5, .9, [[1.6, -1.8], [2.4, -2.6]], 4.5), F('c', 'C', [[0, 0, 4.2]])],
+  ball:[{t0:.62, t1:1.9, from:'tee', to:[.7, -2.1], kind:'roll', bounces:2, peak:.5}],
+  events:[SWING],
+  marks:[{type:'ring', x:0, y:0, r:3, color:'#ff6b52', at:1.9}, {type:'text', x:0, y:-4, text:'타자 서클 안에서 멈춤', color:'#ffb4a6', at:1.9, size:.85}]});
+
+/* 13. 2스트라이크 뒤 티를 침 */
+SCENES.push({view:VNEAR, title:'스트라이크 2개, 타자의 스윙', answer:'strike',
+  ex:'배트가 공 아래 배팅 티를 쳤어요. 티를 치면 스트라이크인데, 이미 스트라이크가 2개였으니 타자 아웃이에요.',
+  dur:2.6, actors:[{id:'bat', team:'blue', label:'2', keys:[[0, BAT[0], BAT[1]]]}, F('c', 'C', [[0, 0, 4.2]])],
+  ball:[{t0:0, t1:.75, from:'tee', to:'tee', kind:'line', peak:0, h0:.7, h1:.7}, {t0:.75, t1:1.4, from:'tee', to:[.3, -.9], kind:'roll', bounces:1, peak:.4}],
+  events:[{t:.1, type:'say', who:'bat', text:'2스트라이크', dur:.9}, {t:.55, type:'swing', who:'bat', dur:.25, dir:-25}, {t:.8, type:'say', who:'c', text:'틱!', dur:.8}],
+  marks:[{type:'ring', x:0, y:.6, r:1.1, color:'#ff6b52', at:.8}, {type:'text', x:4.6, y:2.4, text:'배팅 티를 침', color:'#ffb4a6', at:.8, size:.85}]});
 </script>
 
 <script>
@@ -998,8 +1146,8 @@ try{
     cur = i; phase = 'watch'; pick = null;
     var s = SCENES[i];
     var fresh = svgHost.cloneNode(false); svgHost.parentNode.replaceChild(fresh, svgHost); svgHost = fresh;
-    board = new PB.Board(svgHost, {view:s.view});
-    scene = new PB.Scene(board, s, {onEnd:function(){ enable(true); }});
+    board = new FD.Field(svgHost, {view:s.view, labels:false});
+    scene = new FD.Scene(board, s, {onEnd:function(){ enable(true); }}); window.SCN = scene;
     $('hNo').textContent = i + 1; $('hTitle').textContent = s.title;
     $('step1').style.display = ''; $('step2').style.display = 'none'; $('result').style.display = 'none';
     Array.prototype.forEach.call(document.querySelectorAll('.dec'), function(b){ b.classList.remove('sel'); });
@@ -1034,7 +1182,7 @@ try{
     Array.prototype.forEach.call(rs.children, function(b){ b.disabled = true; });
     var s = SCENES[cur], ok = call === s.answer;
     if(!(cur in res)) res[cur] = ok;
-    var ans = s.answer ? '반칙: ' + REASONS[s.answer] + ' → 상대 팀 프리패스' : '정상 플레이 → 경기 계속';
+    var ans = !s.answer ? '세이프 · 페어 → 경기 계속' : s.answer === 'foul' ? '파울 → 스트라이크 하나, 주자는 원래 베이스로' : '아웃: ' + REASONS[s.answer];
     var r = $('result');
     r.innerHTML = '<div class="verdict"><span class="mark ' + (ok ? 'ok' : 'no') + '">' + (ok ? '정확한 판정!' : '아쉬운 판정') + '</span></div>' +
       '<div class="ans ' + (s.answer ? 'foul' : 'ok') + '">' + ans + '</div><p>' + s.ex + '</p>' +
@@ -1054,7 +1202,7 @@ try{
     var rank = ok >= n - 1 ? '주심 자격 충분!' : ok >= Math.ceil(n * .7) ? '믿음직한 부심' : '심판 연습생';
     var miss = SCENES.map(function(s, i){ return i; }).filter(function(i){ return !res[i]; });
     $('finalIn').innerHTML = '<div class="kicker">판정 결과</div><div class="rank">' + rank + '</div>' +
-      '<div class="scorebox"><div><div class="lbl">정확한 판정</div><div class="digits">' + ok + '<small> / ' + n + '</small></div></div><div style="flex:1;min-width:220px"><div class="msg">심판은 공이 손을 떠나는 순간, 태그가 떼어지는 순간을 봐요. 경기에서도 이 순간을 기억해요.</div></div></div>' +
+      '<div class="scorebox"><div><div class="lbl">정확한 판정</div><div class="digits">' + ok + '<small> / ' + n + '</small></div></div><div style="flex:1;min-width:220px"><div class="msg">심판은 공과 주자 중 무엇이 먼저 베이스에 닿았는지, 그 베이스가 포스인지, 공이 어디에 멈췄는지를 봐요. 수업 경기에서 우리가 직접 판정할 때도 이 세 가지를 기억해요.</div></div></div>' +
       (miss.length ? '<h3>다시 볼 장면</h3><div class="review">' + miss.map(function(i){ return '<button data-i="' + i + '">장면 ' + (i+1) + ' · ' + SCENES[i].title + ' →</button>'; }).join('') + '</div>' : '') +
       '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:18px"><button class="btn ghost" id="again">처음부터 다시</button><button class="btn volt" data-nav="science">05 경기장 밖 과학으로 →</button></div>';
     $('final').classList.add('on');

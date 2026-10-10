@@ -1,0 +1,1497 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&display=swap">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 32 32%22%3E%3Crect width=%2232%22 height=%2232%22 rx=%228%22 fill=%22%230c2a20%22/%3E%3Cellipse cx=%2216%22 cy=%2216%22 rx=%2211%22 ry=%227%22 fill=%22%23fff%22 transform=%22rotate(-30 16 16)%22/%3E%3Cpath d=%22M11 10q-2 6 1 12M21 10q2 6-1 12%22 stroke=%22%23ffd23f%22 stroke-width=%222%22 fill=%22none%22 transform=%22rotate(-30 16 16)%22/%3E%3C/svg%3E">
+
+<title>규칙 읽기 - 티볼</title>
+<style>
+/* ===== PLAYBOOK 공통 디자인 ===== */
+:root{
+  --turf-950:#071c15; --turf-900:#0c2a20; --turf-800:#123a2c; --turf-700:#175038; --turf-600:#1c6646; --turf-500:#2a8055;
+  --paper:#f6f4ec; --card:#ffffff; --ink:#14201a; --muted:#56655c; --line:#e1e5da;
+  --volt:#ffd23f; --volt-deep:#e6b400; --volt-soft:#fff6d1;
+  --blue:#2563d9; --blue-soft:#e7eefc; --red:#df4a2f; --red-soft:#fdebe6;
+  --ok:#11703e; --ok-soft:#e2f3e8; --foul:#b9281f; --foul-soft:#fce9e7;
+  --display:"Black Han Sans","Pretendard",sans-serif;
+  --fs:18px;
+  --shadow:0 14px 34px -16px rgba(7,28,21,.45);
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{
+  font-family:"Pretendard",-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+  color:var(--ink);background:var(--paper);-webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent;
+  word-break:keep-all;overflow-wrap:break-word;
+}
+button{font:inherit;color:inherit;cursor:pointer;touch-action:manipulation}
+button:focus-visible{outline:3px solid var(--volt);outline-offset:2px}
+svg text{font-family:"Pretendard",sans-serif}
+.dsp{font-family:var(--display);font-weight:400;letter-spacing:-.005em}
+
+/* ---- 가로로 넘기는 카드 묶음 ---- */
+.deck{position:fixed;inset:0;display:flex;flex-direction:column;background:var(--paper)}
+.rail{flex:none;display:flex;align-items:center;gap:14px;padding:6px 14px 6px 18px;background:var(--turf-900);color:#fff;min-height:52px}
+.rail .ttl{font-weight:700;font-size:14px;color:rgba(255,255,255,.72);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:34%}
+.rail .segs{flex:1;display:flex;gap:4px;min-width:0}
+.rail .seg{flex:1;min-width:0;height:40px;border:0;background:none;padding:0;position:relative}
+.rail .seg::before{content:"";position:absolute;left:0;right:0;top:16px;height:8px;border-radius:4px;background:rgba(255,255,255,.15);transition:background .3s}
+.rail .seg.quiz::before{background:rgba(255,255,255,.28)}
+.rail .seg.done::before{background:rgba(255,210,63,.45)}
+.rail .seg.on::before{background:var(--volt);box-shadow:0 0 0 3px rgba(255,210,63,.25)}
+.rail .count{font-family:var(--display);font-size:20px;color:var(--volt);min-width:62px;text-align:right;font-variant-numeric:tabular-nums}
+.rail .fsz{display:flex;gap:4px}
+.rail .fsz button{width:44px;height:40px;border-radius:10px;border:0;background:rgba(255,255,255,.1);color:#fff;font-weight:800}
+.rail .fsz button:last-child{font-size:20px}
+.track{flex:1;display:flex;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;scrollbar-width:none;overscroll-behavior-x:contain;min-height:0}
+.track::-webkit-scrollbar{display:none}
+.slide{flex:0 0 100%;width:100%;height:100%;scroll-snap-align:start;scroll-snap-stop:always;overflow-y:auto;overflow-x:hidden;padding:24px 36px 96px;position:relative}
+.ctrl{position:fixed;right:18px;bottom:16px;display:flex;gap:10px;z-index:20}
+.ctrl button{width:58px;height:58px;border-radius:50%;border:0;background:var(--turf-900);color:#fff;box-shadow:var(--shadow);display:grid;place-items:center;transition:transform .15s,opacity .2s}
+.ctrl button:active{transform:scale(.94)}
+.ctrl button.next{background:var(--volt);color:var(--turf-950)}
+.ctrl button:disabled{opacity:.3;pointer-events:none}
+.swipe-hint{position:fixed;left:50%;bottom:30px;transform:translateX(-50%);background:rgba(12,42,32,.88);color:#fff;font-size:14px;font-weight:700;padding:8px 16px;border-radius:999px;pointer-events:none;z-index:15;transition:opacity .5s}
+
+/* ---- 카드 안 배치 ---- */
+.split{display:grid;grid-template-columns:minmax(0,1.22fr) minmax(0,.78fr);gap:36px;align-items:center;min-height:100%;max-width:1320px;margin:0 auto}
+.split:has(> .txt:first-child),.split.text-first{grid-template-columns:minmax(0,.78fr) minmax(0,1.22fr)}
+.split.even{grid-template-columns:1fr 1fr}
+.split.text-first .txt{order:-1}
+.solo{max-width:900px;margin:0 auto}
+.wide{max-width:1240px;margin:0 auto}
+@media (max-width:900px),(orientation:portrait){
+  .split,.split.even,.split:has(> .txt:first-child),.split.text-first{grid-template-columns:1fr;gap:22px;align-items:start;min-height:0}
+  .split.text-first .txt{order:0}
+  .slide{padding:22px 20px 112px}
+  .rail .ttl{display:none}
+}
+.kicker{display:inline-flex;align-items:center;gap:10px;font-weight:800;font-size:13px;letter-spacing:.06em;color:var(--turf-600)}
+.kicker b{font-family:var(--display);font-weight:400;background:var(--turf-900);color:var(--volt);border-radius:7px;padding:3px 9px 2px;font-size:15px;letter-spacing:0}
+h1.big{font-family:var(--display);font-weight:400;font-size:clamp(40px,5.6vw,68px);line-height:1.1;margin:.25em 0 .3em;letter-spacing:-.01em}
+h2{font-family:var(--display);font-weight:400;font-size:clamp(28px,3.3vw,40px);line-height:1.22;margin:.3em 0 .5em}
+h3{font-size:20px;margin:1em 0 .4em}
+p,li{font-size:var(--fs);line-height:1.8}
+p{margin:0 0 .8em}
+.lead{font-size:calc(var(--fs) + 2px);color:var(--muted)}
+.mark{background:linear-gradient(transparent 58%,rgba(255,210,63,.6) 58%);font-weight:700}
+.rule{display:flex;gap:14px;align-items:flex-start;background:var(--volt-soft);border-left:6px solid var(--volt);padding:14px 18px;border-radius:0 14px 14px 0;margin:14px 0}
+.rule .ico{flex:none;font-family:var(--display);font-size:15px;color:var(--turf-950);background:var(--volt);border-radius:6px;padding:2px 8px 1px;margin-top:4px}
+.rule p{margin:0;font-weight:600}
+.note{font-size:14px;color:var(--muted);line-height:1.6;margin-top:10px}
+.pillrow{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}
+.pill{display:inline-flex;align-items:center;gap:6px;min-height:34px;padding:0 14px;border-radius:999px;background:#fff;border:1px solid var(--line);font-weight:700;font-size:15px}
+.call{display:inline-flex;align-items:center;gap:8px;font-weight:800;padding:5px 14px;border-radius:999px;font-size:15px}
+.call.ok{background:var(--ok-soft);color:var(--ok)}
+.call.foul{background:var(--foul-soft);color:var(--foul)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:10px;min-height:52px;padding:0 24px;border-radius:14px;border:0;background:var(--turf-900);color:#fff;font-weight:800;font-size:17px;text-decoration:none;box-shadow:var(--shadow)}
+.btn.volt{background:var(--volt);color:var(--turf-950)}
+.btn.ghost{background:#fff;color:var(--ink);border:2px solid var(--line);box-shadow:none}
+
+/* ---- 그림 판 (잔디) ---- */
+.vis{background:var(--turf-800);border-radius:24px;padding:12px;box-shadow:var(--shadow);position:relative;overflow:hidden}
+.vis svg.board{display:block;width:100%;height:auto;border-radius:14px}
+.vis .bar{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:10px 4px 2px}
+.vis .bar .grow{flex:1}
+.vis .cap{color:#d5e3da;font-size:14px;line-height:1.5}
+.vbtn{min-height:44px;padding:0 16px;border-radius:999px;border:0;background:rgba(255,255,255,.12);color:#fff;font-weight:700;font-size:15px;display:inline-flex;align-items:center;gap:8px}
+.vbtn.on{background:var(--volt);color:var(--turf-950)}
+.vis.paper{background:#fff;border:1px solid var(--line)}
+.model-note{font-size:12.5px;color:rgba(255,255,255,.55);padding:6px 4px 0}
+.vis.paper .model-note{color:var(--muted)}
+
+/* ---- 퀴즈 ---- */
+.quiz{background:var(--card);border:1px solid var(--line);border-radius:22px;padding:22px 24px;box-shadow:0 8px 24px -18px rgba(0,0,0,.35);margin:0 0 18px}
+.quiz .qn{font-family:var(--display);color:var(--turf-600);font-size:16px;display:flex;align-items:center;gap:8px}
+.quiz .qn .src{font-family:"Pretendard";font-size:13px;font-weight:600;color:var(--muted)}
+.quiz .q{font-size:calc(var(--fs) + 1px);font-weight:700;line-height:1.65;margin:6px 0 14px}
+.opts{display:grid;gap:10px}
+.opts.two{grid-template-columns:1fr 1fr}
+.opt{min-height:54px;text-align:left;padding:12px 16px;border-radius:14px;border:2px solid var(--line);background:#fff;font-size:17px;font-weight:600;display:flex;gap:12px;align-items:center;line-height:1.5;transition:border-color .2s,background .2s}
+.opt .k{flex:none;width:30px;height:30px;border-radius:8px;background:#edf1ea;display:grid;place-items:center;font-family:var(--display);font-size:15px}
+.opt:hover{border-color:#c9d3c4}
+.opt.right{border-color:var(--ok);background:var(--ok-soft)}
+.opt.right .k{background:var(--ok);color:#fff}
+.opt.wrong{border-color:var(--foul);background:var(--foul-soft)}
+.opt.wrong .k{background:var(--foul);color:#fff}
+.opt[disabled]{cursor:default}
+.opts.ox{grid-template-columns:1fr 1fr}
+.opts.ox .opt{justify-content:center;font-family:var(--display);font-size:38px;min-height:88px}
+.opts.pics{grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
+.opts.pics .opt{flex-direction:column;justify-content:flex-start;text-align:center;padding:10px;font-size:15px}
+.opts.pics .opt svg{width:100%;height:auto;max-width:150px}
+.fb{margin-top:12px;padding:12px 16px;border-radius:12px;font-size:16px;line-height:1.7;display:none}
+.fb.show{display:block}
+.fb.ok{background:var(--ok-soft)}
+.fb.no{background:var(--foul-soft)}
+.fb b{font-weight:800}
+.sentence{font-size:calc(var(--fs) + 1px);line-height:2.3;font-weight:600}
+.blank{display:inline-flex;align-items:center;justify-content:center;min-width:92px;min-height:44px;border:0;border-bottom:3px solid var(--turf-500);background:#f1f5ef;border-radius:8px 8px 0 0;padding:0 10px;font-weight:800;color:var(--turf-700);vertical-align:middle;margin:0 2px}
+.blank.right{background:var(--ok-soft);border-color:var(--ok);color:var(--ok)}
+.blank.wrong{background:var(--foul-soft);border-color:var(--foul);color:var(--foul)}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.chip{min-height:46px;padding:0 18px;border-radius:999px;border:2px solid var(--line);background:#fff;font-weight:700;font-size:16px}
+.chip.used{opacity:.35}
+.scorebox{background:#0b120f;color:#fff;border-radius:22px;padding:22px 26px;display:flex;align-items:center;gap:22px;flex-wrap:wrap;box-shadow:var(--shadow)}
+.scorebox .digits{font-family:var(--display);font-size:76px;line-height:1;color:var(--volt);font-variant-numeric:tabular-nums}
+.scorebox .digits small{font-size:34px;color:rgba(255,255,255,.5)}
+.scorebox .lbl{font-weight:700;color:rgba(255,255,255,.7);font-size:15px}
+.scorebox .msg{font-size:18px;font-weight:700;margin-top:4px}
+.review{display:grid;gap:8px;margin-top:14px}
+.review button{min-height:48px;text-align:left;border-radius:12px;border:1px solid var(--line);background:#fff;padding:8px 14px;font-weight:600;font-size:15px}
+
+/* ---- 용어 풀이 ---- */
+.term{border:0;background:none;padding:0;font:inherit;color:inherit;font-weight:700;border-bottom:2px dotted var(--turf-500);cursor:help}
+h1 .term,h2 .term{font-weight:400}
+.gloss{position:fixed;z-index:50;max-width:300px;background:var(--turf-950);color:#fff;border-radius:14px;padding:12px 16px;font-size:15px;line-height:1.6;box-shadow:var(--shadow)}
+.gloss b{color:var(--volt);display:block;font-size:14px;margin-bottom:2px}
+
+/* ---- 등장 효과 (내용을 숨기지 않음) ---- */
+@keyframes rise{from{transform:translateY(16px)}to{transform:none}}
+.slide.enter .rise{animation:rise .55s cubic-bezier(.2,.7,.2,1) both}
+.slide.enter .rise.d1{animation-delay:.08s}.slide.enter .rise.d2{animation-delay:.16s}.slide.enter .rise.d3{animation-delay:.24s}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+
+/* ---- 오류 상자 ---- */
+#errbox{position:fixed;left:12px;right:12px;bottom:12px;z-index:99;background:#b3261e;color:#fff;border-radius:12px;padding:12px 16px;font-size:14px;line-height:1.5;display:none;box-shadow:var(--shadow)}
+
+.legend{list-style:none;padding:0;margin:14px 0;display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.legend li{display:flex;gap:10px;align-items:center;background:#fff;border:1px solid var(--line);border-radius:12px;padding:7px 12px;font-size:15.5px;line-height:1.35;font-weight:600}
+.legend .b{flex:none;min-width:40px;height:28px;border-radius:8px;background:#b5321c;color:#fff;font-weight:800;font-size:13px;display:grid;place-items:center;padding:0 6px}
+@media (max-width:700px){.legend{grid-template-columns:1fr}}
+.dims{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0 2px}
+.dims span{background:var(--turf-900);color:#fff;border-radius:10px;padding:6px 12px;font-weight:700;font-size:15px}
+.dims b{color:var(--volt);font-family:var(--display);font-weight:400;font-size:18px;margin-left:4px}
+.verdict{position:absolute;left:50%;top:22px;transform:translateX(-50%);font-family:var(--display);font-size:22px;padding:8px 18px;border-radius:999px;white-space:nowrap;box-shadow:var(--shadow);pointer-events:none;max-width:calc(100% - 32px);overflow:hidden;text-overflow:ellipsis}
+.verdict.ok{background:#fff;color:var(--ok)} .verdict.foul{background:var(--foul);color:#fff} .verdict.idle{background:rgba(7,28,21,.85);color:#fff;font-family:Pretendard;font-weight:800;font-size:16px}
+.diff{display:grid;grid-template-columns:auto 1fr 1fr;gap:0;border-radius:16px;overflow:hidden;border:1px solid var(--line);margin:14px 0;background:#fff}
+.diff div{padding:9px 12px;font-size:15.5px;line-height:1.45;border-top:1px solid var(--line)}
+.diff .h{font-weight:800;background:var(--turf-900);color:#fff;border-top:0}
+.diff .h.t{color:var(--volt)}
+.diff .k{font-weight:800;color:var(--turf-600);background:#f4f6f0}
+/* 볼카운트 전광판 */
+.sb{background:#0b120f;border-radius:22px;padding:20px;box-shadow:var(--shadow);color:#fff}
+.sb .lamps{display:flex;gap:26px;align-items:center;justify-content:center;flex-wrap:wrap}
+.sb .lp{display:flex;align-items:center;gap:10px}
+.sb .lp b{font-family:var(--display);font-weight:400;font-size:30px;width:34px;text-align:center}
+.sb .lp i{width:38px;height:38px;border-radius:50%;background:#1d2723;box-shadow:inset 0 2px 4px rgba(0,0,0,.6);transition:background .2s}
+.sb .lp.s i.on{background:var(--volt);box-shadow:0 0 16px rgba(255,210,63,.7)}
+.sb .lp.o i.on{background:#ff5a45;box-shadow:0 0 16px rgba(255,90,69,.7)}
+.sb .bat{font-family:var(--display);font-size:20px;color:rgba(255,255,255,.75);text-align:center;margin:4px 0 14px}
+.sb .bat em{font-style:normal;color:var(--volt)}
+.sb .acts{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:16px}
+.sb .acts button{min-height:56px;border-radius:14px;border:0;background:#1a2520;color:#fff;font-weight:800;font-size:15.5px;line-height:1.3;padding:6px}
+.sb .acts button.hit{background:var(--blue)}
+.sb .msg{margin-top:14px;background:#141d19;border-radius:14px;padding:12px 16px;font-size:17px;font-weight:700;line-height:1.55;min-height:58px}
+.sb .msg b{color:var(--volt)}
+@media (max-width:560px){.sb .acts{grid-template-columns:1fr 1fr}}
+.cmp{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:14px 0}
+.cmp .c{background:#fff;border:1px solid var(--line);border-radius:18px;padding:14px 16px}
+.cmp .c h3{margin:0 0 6px;font-size:18px;display:flex;gap:8px;align-items:center}
+.cmp .c p{font-size:16px;line-height:1.6;margin:0}
+.cmp .c .tag{font-size:12px;font-weight:800;border-radius:999px;padding:3px 9px;background:var(--volt);color:var(--turf-950)}
+.cmp .c .tag.g{background:#e7ece4;color:var(--muted)}
+@media (max-width:700px){.cmp{grid-template-columns:1fr}}
+.order{display:flex;gap:6px;flex-wrap:wrap;margin:10px 0 4px}
+.order span{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;font-family:var(--display);font-size:17px;background:#e7ece4;color:var(--muted);transition:background .2s,color .2s}
+.order span.done{background:var(--blue-soft);color:var(--blue)}
+.order span.now{background:var(--blue);color:#fff;box-shadow:0 0 0 4px rgba(37,99,217,.25)}
+.lineup .vis{padding:14px}
+.lineup .row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;color:#fff}
+.lineup .row .btn{min-height:48px}
+.lineup .msg{color:#e3efe7;font-size:16px;line-height:1.6;margin-top:10px;min-height:52px}
+.lineup .msg b{color:var(--volt)}
+@media (orientation:landscape) and (min-width:901px){.lineup svg.board{max-height:calc(100vh - 360px)}}
+.nw{white-space:nowrap}
+.sheet{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:16px 0}
+.sheet div{background:#fff;border:1px solid var(--line);border-radius:14px;padding:12px 14px;font-size:16px;line-height:1.55;display:flex;gap:10px}
+.sheet b.k{flex:none;font-family:var(--display);font-weight:400;color:var(--turf-600);font-size:18px;min-width:22px}
+@media (max-width:700px){.sheet{grid-template-columns:1fr}}
+.swatch{display:inline-block;width:14px;height:14px;border-radius:50%;vertical-align:-2px;margin-right:4px}
+</style>
+</head>
+<body>
+<div class="deck" id="deck" data-title="02 규칙 읽기">
+<div class="rail">
+  <div class="ttl"></div>
+  <div class="segs"></div>
+  <div class="fsz"><button type="button" aria-label="글자 작게">가</button><button type="button" aria-label="글자 크게">가</button></div>
+  <div class="count">1 / 1</div>
+</div>
+<div class="track">
+
+
+  <!-- 1. 표지 -->
+  <section class="slide" data-title="표지">
+    <div class="split">
+      <div class="txt">
+        <div class="kicker rise"><b>02</b>규칙 읽기 · 1차시</div>
+        <h1 class="big rise d1">투수 없는 야구,<br>티볼</h1>
+        <p class="lead rise d2">배팅 티 위에 멈춰 있는 공을 쳐서 베이스를 돌아 홈으로 들어오면 1점이에요. 수비는 공을 잡아 주자보다 먼저 베이스에 보내 아웃을 만들어요.</p>
+        <div class="diff rise d3">
+          <div class="h"></div><div class="h t">티볼</div><div class="h">야구</div>
+          <div class="k">투수</div><div>없음 (티 위의 공을 침)</div><div>있음</div>
+          <div class="k">인원</div><div>10명, 남녀 함께</div><div>9명</div>
+          <div class="k">도루</div><div>금지 (친 뒤에 출발)</div><div>허용</div>
+          <div class="k">공·배트</div><div>말랑한 우레탄</div><div>딱딱한 가죽·나무·금속</div>
+        </div>
+      </div>
+      <div class="vis rise d1">
+        <svg id="sIntro"></svg>
+        <div class="bar"><span class="cap grow"><span class="swatch" style="background:#4f86f0"></span>공격(타자·주자) <span class="swatch" style="background:#e5603f;margin-left:8px"></span>수비. 땅볼을 잡아 1루에 먼저 던지면 아웃이에요.</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 2. 경기장과 수비 위치 -->
+  <section class="slide" data-title="경기장과 수비 위치">
+    <div class="split">
+      <div class="vis rise">
+        <svg id="tField"></svg>
+        <div class="bar">
+          <button class="vbtn on" data-fd="18.29">협회 기본 18.29 m</button>
+          <button class="vbtn" data-fd="23">중학교 남 23 m</button>
+          <button class="vbtn" data-fd="20">중학교 여 20 m</button>
+        </div>
+        <div class="model-note" id="fdNote">베이스 사이 거리를 바꿔 보세요. 수비 자리도 함께 넓어져요.</div>
+      </div>
+      <div class="txt">
+        <div class="kicker">경기장과 수비 위치</div>
+        <h2>홈에서 1·2·3루를 돌아 다시 홈으로</h2>
+        <div class="dims"><span>베이스 사이<b id="dBase">18.29 m</b></span><span>홈~2루<b id="dDiag">25.87 m</b></span><span>타자 서클<b>반지름 3 m</b></span></div>
+        <ul class="legend">
+          <li><span class="b">C</span>본루수 (포수 자리)</li>
+          <li><span class="b">1B</span>1루수</li>
+          <li><span class="b">2B</span>2루수</li>
+          <li><span class="b">3B</span>3루수</li>
+          <li><span class="b">1SS</span>제1유격수</li>
+          <li><span class="b">2SS</span>제2유격수</li>
+          <li><span class="b">LF</span>좌익수</li>
+          <li><span class="b">RF</span>우익수</li>
+          <li><span class="b">1CF</span>제1중견수</li>
+          <li><span class="b">2CF</span>제2중견수</li>
+        </ul>
+        <p class="note">투수가 없는 대신 <b>유격수와 중견수가 2명씩</b>이에요. 타자가 칠 때 본루수 말고는 모두 페어 지역 안에, 본루수는 타자 서클 밖에 있어야 해요. 수업에서는 운동장 크기에 맞춰 거리를 줄이기도 해요(학교마다 다를 수 있음).</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3. 페어와 파울 -->
+  <section class="slide" data-title="페어와 파울">
+    <div class="split text-first">
+      <div class="vis rise">
+        <svg id="tFair" style="touch-action:none;cursor:crosshair"></svg>
+        <div class="verdict idle" id="fairVerdict">경기장 아무 곳이나 눌러 공을 놓아 보세요</div>
+        <div class="bar"><span class="cap grow" id="fairCap">공이 멈춘 곳(내야) 또는 처음 떨어진 곳(외야)을 누른다고 생각해요.</span></div>
+      </div>
+      <div class="txt">
+        <div class="kicker">페어와 파울</div>
+        <h2>두 파울라인 사이가 <button class="term">페어</button></h2>
+        <p>홈에서 1루, 3루 쪽으로 뻗은 두 선이 파울라인이에요. 그 사이가 페어 지역이고, <span class="mark">파울라인 위도 페어</span>예요.</p>
+        <div class="rule"><span class="ico">내야</span><p>공이 마지막에 멈춘 곳으로 판정해요. 1·3루 베이스를 맞거나 그 위를 지나가면 페어.</p></div>
+        <div class="rule"><span class="ico">외야</span><p>공이 처음 땅에 떨어진 곳으로 판정해요.</p></div>
+        <p>티볼에만 있는 규칙도 있어요. 친 공이 <b>타자 서클 안에서 멈추면 파울</b>이에요. 단, 페어 지역 쪽 서클 선 위는 페어예요.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4. 타격과 스트라이크 -->
+  <section class="slide" data-title="스트라이크">
+    <div class="split">
+      <div class="rise">
+        <div class="sb">
+          <div class="bat" id="sbBat">타자 <em>7번</em> 타석</div>
+          <div class="lamps">
+            <div class="lp s"><b>S</b><i></i><i></i></div>
+            <div class="lp o"><b>O</b><i></i></div>
+          </div>
+          <div class="acts">
+            <button data-k="miss">헛스윙</button>
+            <button data-k="tee">배팅 티를 침</button>
+            <button data-k="foul">친 공이 파울</button>
+            <button data-k="bunt">번트를 댐</button>
+            <button data-k="late">10초 안에 못 침</button>
+            <button data-k="fair" class="hit">페어 타구!</button>
+          </div>
+          <div class="msg" id="sbMsg">버튼을 눌러 타석을 진행해 보세요.</div>
+        </div>
+      </div>
+      <div class="txt">
+        <div class="kicker">타격과 스트라이크</div>
+        <h2>스트라이크 두 번 뒤에는 한 번만 더</h2>
+        <p>타자는 구심이 "플레이"를 외친 뒤 <b>10초 안에</b> 쳐야 해요. 다음은 모두 스트라이크예요.</p>
+        <div class="pillrow"><span class="pill">헛스윙</span><span class="pill">배팅 티를 침</span><span class="pill">파울</span><span class="pill">번트</span><span class="pill">10초 넘김</span></div>
+        <div class="rule"><span class="ico">아웃</span><p>스트라이크가 2개인 상태에서 위의 일이 한 번 더 일어나면 타자는 아웃이에요. 야구와 달리 <span class="mark">파울도 아웃</span>이 돼요.</p></div>
+        <p class="note">친 뒤 배트를 타자 서클 밖으로 던지면 아웃이에요. 배트는 서클 안에 내려놓고 달려요.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 5. 퀴즈 1 -->
+  <section class="slide is-quiz" data-title="퀴즈 1">
+    <div class="solo">
+      <div class="kicker">중간 점검</div>
+      <h2>여기까지 확인해요</h2>
+      <div class="quiz" data-q="q1"></div>
+      <div class="quiz" data-q="q2"></div>
+      <div class="quiz" data-q="q3"></div>
+    </div>
+  </section>
+
+  <!-- 6. 주자는 친 뒤에 -->
+  <section class="slide" data-title="친 뒤에 출발">
+    <div class="split">
+      <div class="vis rise">
+        <svg id="sEarly"></svg>
+        <div class="bar"><span class="cap grow">1루 주자가 공을 치기 전에 출발했어요.</span></div>
+      </div>
+      <div class="txt">
+        <div class="kicker">주자</div>
+        <h2>주자는 타자가 <span class="mark">친 뒤에</span> 출발</h2>
+        <p>티볼에는 도루가 없어요. 타자가 공을 치기 전에 베이스를 떠나면 <button class="term">루반칙</button>으로 그 주자가 아웃되고 경기가 멈춰요.</p>
+        <div class="rule"><span class="ico">금지</span><p>도루, 미리 떠나기(리드), 슬라이딩. 슬라이딩을 하면 아웃이에요. 베이스는 달려서 지나가요.</p></div>
+        <p>주자는 1루 → 2루 → 3루 → 홈 순서로 베이스를 밟아요. 한 베이스에는 한 사람만 있을 수 있고, 앞 주자를 앞질러도 아웃이에요.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 7. 포스아웃 -->
+  <section class="slide" data-title="포스아웃">
+    <div class="split text-first">
+      <div class="vis rise">
+        <svg id="sForce"></svg>
+        <div class="bar"><span class="cap grow">노란 점선 원은 주자가 꼭 가야 하는 베이스(포스)예요.</span></div>
+      </div>
+      <div class="txt">
+        <div class="kicker">아웃 만들기 1</div>
+        <h2><button class="term">포스아웃</button>: 베이스를 먼저 밟아라</h2>
+        <p>타자가 치면 타자는 무조건 1루로 달려야 해요. 그래서 1루에 있던 주자는 자리를 비워 주려고 <b>2루로 꼭 가야</b> 해요.</p>
+        <div class="rule"><span class="ico">포스</span><p>주자가 꼭 가야 하는 베이스에 공을 가진 수비가 먼저 닿으면, 주자를 건드리지 않아도 아웃이에요.</p></div>
+        <p>그림에서는 2루를 먼저 밟아 1루 주자를 아웃시켰어요. 타자는 1루에서 살았어요.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 8. 태그아웃 -->
+  <section class="slide" data-title="태그아웃">
+    <div class="split">
+      <div class="vis rise">
+        <svg id="sTag"></svg>
+        <div class="bar"><span class="cap grow">1루가 비어 있어 2루 주자는 3루로 꼭 가지 않아도 돼요(포스 아님).</span></div>
+      </div>
+      <div class="txt">
+        <div class="kicker">아웃 만들기 2</div>
+        <h2><button class="term">태그아웃</button>: 주자를 직접 터치</h2>
+        <p>주자가 꼭 가야 하는 상황이 아니면 베이스만 밟아서는 아웃이 안 돼요. 공을 가진 수비가 <b>베이스 밖에 있는 주자를 터치</b>해야 해요.</p>
+        <div class="rule"><span class="ico">1 m</span><p>태그를 피하려고 베이스 사이 직선에서 양쪽으로 1 m 넘게 벗어나면 주자 아웃이에요.</p></div>
+        <p class="note">포스인지 아닌지는 "뒤에서 밀고 오는 주자가 있는가"로 생각하면 쉬워요.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 9. 홈은 포스아웃 -->
+  <section class="slide" data-title="홈 충돌 방지">
+    <div class="split text-first">
+      <div class="vis rise">
+        <svg id="sHome"></svg>
+        <div class="bar"><span class="cap grow">본루수는 공을 잡고 홈을 밟기만 해요. 주자와 부딪치지 않아요.</span></div>
+      </div>
+      <div class="txt">
+        <div class="kicker">안전 규칙</div>
+        <h2>홈에서는 밟기만 해도 아웃</h2>
+        <p>홈에서 본루수와 주자가 부딪치면 크게 다칠 수 있어요. 그래서 티볼에서는 <span class="mark">홈을 언제나 포스아웃으로</span> 판정해요.</p>
+        <div class="rule"><span class="ico">홈</span><p>공을 가진 본루수가 주자보다 먼저 홈을 밟으면 홈으로 오던 주자는 아웃. 태그할 필요가 없어요.</p></div>
+        <p class="note">대구광역시티볼협회 규칙(2017년 개정) 기준이에요. 대회나 학교에 따라 홈 옆에 주자용 선을 따로 두기도 해요.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 10. 뜬공 -->
+  <section class="slide" data-title="뜬공과 태그업">
+    <div class="split">
+      <div class="vis rise">
+        <svg id="sFly"></svg>
+        <div class="bar"><span class="cap grow">3루 주자는 공이 잡히는 순간까지 베이스에서 기다려요.</span></div>
+      </div>
+      <div class="txt">
+        <div class="kicker">뜬공</div>
+        <h2>잡히면 타자 아웃, 주자는 <button class="term">태그업</button></h2>
+        <p>친 공이 땅에 닿기 전에 수비에게 잡히면 <b>타자는 바로 아웃</b>이에요. 파울 지역에서 잡아도 아웃이에요.</p>
+        <div class="rule"><span class="ico">주자</span><p>뜬공이 수비에게 처음 닿은 뒤에 출발할 수 있어요. 그 전에 베이스를 떠났다면 돌아가서 다시 밟아야 해요.</p></div>
+        <p>그래서 3루 주자는 공이 잡히는 것을 보고 출발해 홈으로 들어왔어요.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 11. 공수 교대 -->
+  <section class="slide" data-title="공수 교대">
+    <div class="split lineup">
+      <div class="rise">
+        <div class="vis">
+          <svg id="tLine"></svg>
+          <div class="order" id="lineOrder"></div>
+          <div class="row"><button class="btn volt" id="lineNext">다음 타자 →</button><button class="vbtn" id="lineReset">처음부터</button></div>
+          <div class="msg" id="lineMsg">버튼을 눌러 타자가 한 명씩 치게 해 보세요.</div>
+        </div>
+      </div>
+      <div class="txt">
+        <div class="kicker">공수 교대</div>
+        <h2>10명이 모두 치면 교대</h2>
+        <div class="cmp">
+          <div class="c"><h3>전원 타격제 <span class="tag">협회 공식</span></h3><p>아웃 수와 상관없이 1번부터 10번까지 모두 한 번씩 치면 공수를 바꿔요. <span class="nw">남은 주자(<button class="term">잔루</button>)는</span> 다음 회 공격에 그대로 이어져요(마지막 회 제외).</p></div>
+          <div class="c"><h3>3아웃제 <span class="tag g">대회에 따라</span></h3><p>야구처럼 아웃 3개면 바꿔요. 남은 주자는 없어져요.</p></div>
+        </div>
+        <p class="note">누구나 공을 칠 수 있게 만든 방식이에요. 수업에서는 시간에 맞춰 둘 중 하나를 골라요(학교마다 다를 수 있음).</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 12. 퀴즈 2 -->
+  <section class="slide is-quiz" data-title="퀴즈 2">
+    <div class="solo">
+      <div class="kicker">마무리 점검</div>
+      <h2>주자와 아웃을 확인해요</h2>
+      <div class="quiz" data-q="q4"></div>
+      <div class="quiz" data-q="q5"></div>
+      <div class="quiz" data-q="q6"></div>
+      <div class="quiz" data-q="q7"></div>
+    </div>
+  </section>
+
+  <!-- 13. 결과 -->
+  <section class="slide" data-title="결과">
+    <div class="solo">
+      <div class="kicker">결과</div>
+      <h2>오늘의 규칙 한 장</h2>
+      <div id="score"></div>
+      <div class="sheet">
+        <div><b class="k">1</b><span>투수 없이 티 위의 공을 쳐요. 한 팀 10명, 남녀 함께</span></div>
+        <div><b class="k">2</b><span>파울라인 위는 페어. 타자 서클 안에서 멈추면 파울</span></div>
+        <div><b class="k">3</b><span>헛스윙·티·파울·번트·10초는 스트라이크. 2스트라이크 뒤 한 번 더면 아웃</span></div>
+        <div><b class="k">4</b><span>주자는 친 뒤에 출발. 도루·슬라이딩 금지</span></div>
+        <div><b class="k">5</b><span>꼭 가야 하는 베이스는 밟아서 포스아웃, 아니면 주자를 태그</span></div>
+        <div><b class="k">6</b><span>홈은 언제나 포스아웃. 본루수는 밟기만 해요</span></div>
+        <div><b class="k">7</b><span>뜬공이 잡히면 타자 아웃. 주자는 공이 닿은 뒤 출발</span></div>
+        <div><b class="k">8</b><span>10명이 모두 치면 공수 교대, 남은 주자는 다음 회로</span></div>
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:8px">
+        <button class="btn volt" data-nav="playground">03 규칙 놀이터에서 수비 판단해 보기 →</button>
+      </div>
+    </div>
+  </section>
+
+</div>
+<div class="ctrl">
+  <button type="button" class="prev" aria-label="이전 카드"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button>
+  <button type="button" class="next" aria-label="다음 카드"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg></button>
+</div>
+<div class="swipe-hint">옆으로 밀거나 오른쪽 아래 버튼을 눌러 넘겨요</div>
+
+</div>
+
+<script>
+/* ===== PLAYBOOK 공통 스크립트: 오류 상자, 이동, 카드 넘김, 퀴즈, 용어 풀이 ===== */
+(function(){
+  var shown = [];
+  window.PE_ERR = function(e, where){
+    try{
+      var box = document.getElementById('errbox');
+      if(!box){ box = document.createElement('div'); box.id = 'errbox'; document.body.appendChild(box); }
+      var msg = (where ? '[' + where + '] ' : '') + (e && e.message ? e.message : String(e));
+      if(shown.indexOf(msg) > -1) return;
+      shown.push(msg);
+      box.style.display = 'block';
+      box.innerHTML = '<b>화면 일부가 제대로 열리지 않았어요.</b> 새로고침해 보고, 계속되면 선생님께 알려 주세요.<br><small>' + shown.join('<br>').replace(/</g,'&lt;') + '</small>';
+    }catch(_){}
+  };
+  window.addEventListener('error', function(ev){ PE_ERR(ev.error || ev.message, '페이지'); });
+})();
+
+window.PE = window.PE || {};
+
+/* 탭 껍데기로 이동 요청 */
+PE.nav = function(target){
+  try{ if(window.parent && window.parent !== window) window.parent.postMessage({type:'pe-nav', target:target}, '*'); }catch(e){}
+};
+document.addEventListener('click', function(ev){
+  var a = ev.target.closest && ev.target.closest('[data-nav]');
+  if(a){ ev.preventDefault(); PE.nav(a.getAttribute('data-nav')); }
+});
+
+PE.reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/* ---- 카드 넘김 ---- */
+PE.deck = function(root){
+  var track = root.querySelector('.track');
+  var slides = Array.prototype.slice.call(track.children);
+  var segs = root.querySelector('.segs');
+  var count = root.querySelector('.count');
+  var prev = root.querySelector('.ctrl .prev'), next = root.querySelector('.ctrl .next');
+  var idx = -1, seen = {}, listeners = [];
+  var ttl = root.querySelector('.rail .ttl'); if(ttl) ttl.textContent = root.dataset.title || '';
+  slides.forEach(function(s, i){
+    var b = document.createElement('button');
+    b.className = 'seg' + (s.classList.contains('is-quiz') ? ' quiz' : '');
+    b.setAttribute('aria-label', (i+1) + '번째 카드' + (s.dataset.title ? ': ' + s.dataset.title : ''));
+    b.onclick = function(){ go(i); };
+    segs.appendChild(b);
+  });
+  var segEls = segs.children;
+  function go(i, smooth){
+    i = Math.max(0, Math.min(slides.length - 1, i));
+    track.scrollTo({left: i * track.clientWidth, behavior: (smooth === false || PE.reduce) ? 'auto' : 'smooth'});
+  }
+  function update(){
+    var i = Math.round(track.scrollLeft / Math.max(1, track.clientWidth));
+    if(i === idx) return;
+    idx = i; seen[i] = true;
+    slides.forEach(function(s, k){ s.classList.toggle('enter', k === i); s.toggleAttribute('inert', false); });
+    for(var k = 0; k < segEls.length; k++){
+      segEls[k].classList.toggle('on', k === i);
+      segEls[k].classList.toggle('done', !!seen[k] && k !== i);
+    }
+    count.textContent = (i+1) + ' / ' + slides.length;
+    prev.disabled = i === 0; next.disabled = i === slides.length - 1;
+    listeners.forEach(function(fn){ try{ fn(i, slides[i]); }catch(e){ PE_ERR(e, '카드 넘김'); } });
+  }
+  var raf = 0;
+  track.addEventListener('scroll', function(){ cancelAnimationFrame(raf); raf = requestAnimationFrame(update); }, {passive:true});
+  prev.onclick = function(){ go(idx - 1); };
+  next.onclick = function(){ go(idx + 1); };
+  window.addEventListener('resize', function(){ var k = idx; idx = -1; go(k, false); setTimeout(update, 60); });
+  document.addEventListener('keydown', function(e){
+    if(/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)) return;
+    if(e.key === 'ArrowRight' || e.key === 'PageDown'){ go(idx + 1); e.preventDefault(); }
+    if(e.key === 'ArrowLeft' || e.key === 'PageUp'){ go(idx - 1); e.preventDefault(); }
+  });
+  var fsz = root.querySelectorAll('.fsz button');
+  var sizes = [16, 18, 20, 22], si = 1;
+  try{ si = +(localStorage.getItem('pe-fs') || 1); }catch(e){}
+  function applyFs(){ document.documentElement.style.setProperty('--fs', sizes[si] + 'px'); try{ localStorage.setItem('pe-fs', si); }catch(e){} }
+  if(fsz.length === 2){
+    fsz[0].onclick = function(){ si = Math.max(0, si - 1); applyFs(); };
+    fsz[1].onclick = function(){ si = Math.min(sizes.length - 1, si + 1); applyFs(); };
+  }
+  applyFs();
+  var hint = root.querySelector('.swipe-hint');
+  if(hint){ setTimeout(function(){ hint.style.opacity = 0; }, 3800); }
+  setTimeout(update, 30);
+  return {
+    go: go,
+    slides: slides,
+    get idx(){ return idx; },
+    onChange: function(fn){ listeners.push(fn); },
+    indexOf: function(el){ var s = el.closest('.slide'); return slides.indexOf(s); }
+  };
+};
+
+/* ---- 퀴즈 ----
+   QUIZ = { id: {type:'mc'|'ox'|'pics'|'chips', q, opts, a, ex, src} }
+   <div class="quiz" data-q="id"></div> 자리에 그린다. 첫 번째 답만 점수에 넣는다. */
+PE.quiz = function(QUIZ, opt){
+  opt = opt || {};
+  var state = {}; // id -> {first:true/false}
+  var order = [];
+  var nums = {};
+  var holders = document.querySelectorAll('.quiz[data-q]');
+  Array.prototype.forEach.call(holders, function(h, n){
+    var id = h.getAttribute('data-q'), d = QUIZ[id];
+    if(!d){ h.textContent = '문제 데이터 없음: ' + id; return; }
+    order.push(id); nums[id] = order.length;
+    var head = '<div class="qn">문제 ' + order.length + (d.src ? ' <span class="src">' + d.src + '</span>' : '') + '</div>';
+    var q = '<div class="q">' + d.q + '</div>';
+    h.innerHTML = head + q;
+    var fb = document.createElement('div'); fb.className = 'fb';
+    function done(ok){
+      if(!(id in state)) state[id] = ok;
+      fb.className = 'fb show ' + (ok ? 'ok' : 'no');
+      fb.innerHTML = (ok ? '<b>정답이에요.</b> ' : '<b>다시 생각해 봐요.</b> ') + (d.ex || '');
+      if(opt.onAnswer) opt.onAnswer(id, ok, state);
+    }
+    if(d.type === 'chips'){
+      var parts = d.q.split(/\[\[(\d+)\]\]/);
+      var sent = document.createElement('div'); sent.className = 'sentence';
+      var blanks = [];
+      h.querySelector('.q').remove();
+      parts.forEach(function(p, i){
+        if(i % 2 === 0){ sent.appendChild(document.createTextNode(p)); return; }
+        var b = document.createElement('button'); b.className = 'blank'; b.textContent = ' ';
+        b.setAttribute('aria-label', '빈칸'); b._val = null;
+        b.onclick = function(){ if(b._val == null || b.classList.contains('right')) return; b._chip.classList.remove('used'); b._val = null; b.textContent = ' '; b.classList.remove('wrong'); };
+        blanks.push(b); sent.appendChild(b);
+      });
+      h.appendChild(sent);
+      var chips = document.createElement('div'); chips.className = 'chips';
+      d.chips.forEach(function(c){
+        var cb = document.createElement('button'); cb.className = 'chip'; cb.textContent = c;
+        cb.onclick = function(){
+          if(cb.classList.contains('used')) return;
+          var empty = blanks.filter(function(b){ return b._val == null; })[0];
+          if(!empty) return;
+          empty._val = c; empty._chip = cb; empty.textContent = c; cb.classList.add('used');
+          if(blanks.every(function(b){ return b._val != null; })){
+            var ok = blanks.every(function(b, i){ return b._val === d.a[i]; });
+            blanks.forEach(function(b, i){ b.classList.toggle('right', b._val === d.a[i]); b.classList.toggle('wrong', b._val !== d.a[i]); });
+            done(ok);
+          }
+        };
+        chips.appendChild(cb);
+      });
+      h.appendChild(chips);
+    } else {
+      var box = document.createElement('div');
+      var opts = d.type === 'ox' ? ['O', 'X'] : d.opts;
+      box.className = 'opts' + (d.type === 'ox' ? ' ox' : '') + (d.type === 'pics' ? ' pics' : '') + (d.two ? ' two' : '');
+      opts.forEach(function(o, i){
+        var b = document.createElement('button'); b.className = 'opt';
+        b.innerHTML = (d.type === 'ox' ? '' : '<span class="k">' + (i+1) + '</span>') + '<span>' + o + '</span>';
+        b.onclick = function(){
+          var ans = d.type === 'ox' ? (d.a ? 0 : 1) : d.a;
+          var ok = i === ans;
+          b.classList.add(ok ? 'right' : 'wrong');
+          if(ok){ Array.prototype.forEach.call(box.children, function(x){ x.disabled = true; }); }
+          done(ok);
+        };
+        box.appendChild(b);
+      });
+      h.appendChild(box);
+    }
+    h.appendChild(fb);
+  });
+  return {
+    order: order,
+    state: state,
+    nums: nums,
+    score: function(){ var s = 0; order.forEach(function(id){ if(state[id] === true) s++; }); return s; },
+    answered: function(){ return order.filter(function(id){ return id in state; }).length; }
+  };
+};
+
+/* 결과 칸 그리기 */
+PE.renderScore = function(el, quiz, deck, msgs){
+  var n = quiz.order.length, s = quiz.score(), a = quiz.answered();
+  var msg = a < n ? '아직 ' + (n - a) + '문제를 풀지 않았어요.' : (s === n ? msgs[0] : s >= n * 0.6 ? msgs[1] : msgs[2]);
+  var wrong = quiz.order.filter(function(id){ return quiz.state[id] === false; });
+  var html = '<div class="scorebox"><div><div class="lbl">맞힌 문제</div><div class="digits">' + s + '<small> / ' + n + '</small></div></div><div style="flex:1;min-width:200px"><div class="msg">' + msg + '</div></div></div>';
+  if(wrong.length){
+    html += '<div class="review">' + wrong.map(function(id){
+      var h = document.querySelector('.quiz[data-q="' + id + '"]');
+      var label = '틀린 문제 ' + quiz.nums[id] + ' 다시 보기';
+      return '<button data-go="' + deck.indexOf(h) + '">' + label + ' →</button>';
+    }).join('') + '</div>';
+  }
+  el.innerHTML = html;
+  Array.prototype.forEach.call(el.querySelectorAll('[data-go]'), function(b){ b.onclick = function(){ deck.go(+b.dataset.go); }; });
+};
+
+/* ---- 용어 풀이 ---- */
+PE.glossary = function(G){
+  var pop = null;
+  function close(){ if(pop){ pop.remove(); pop = null; } }
+  document.addEventListener('click', function(ev){
+    var t = ev.target.closest && ev.target.closest('.term');
+    close();
+    if(!t) return;
+    var key = t.dataset.t || t.textContent.trim();
+    if(!G[key]) return;
+    pop = document.createElement('div'); pop.className = 'gloss';
+    pop.innerHTML = '<b>' + key + '</b>' + G[key];
+    document.body.appendChild(pop);
+    var r = t.getBoundingClientRect(), pw = pop.offsetWidth, ph = pop.offsetHeight;
+    var x = Math.min(window.innerWidth - pw - 10, Math.max(10, r.left + r.width / 2 - pw / 2));
+    var y = r.bottom + 8; if(y + ph > window.innerHeight - 10) y = r.top - ph - 8;
+    pop.style.left = x + 'px'; pop.style.top = y + 'px';
+    ev.stopPropagation();
+  });
+  document.addEventListener('scroll', close, true);
+};
+
+</script>
+<script>
+/* ===== 티볼 경기장: 위에서 내려다본 다이아몬드, 선수, 공, 장면 재생 =====
+   좌표는 m 단위(SVG 좌표 그대로). 홈플레이트 끝점이 (0, 0), 2루 쪽이 위(-y).
+   1루는 오른쪽 위, 3루는 왼쪽 위. 파울라인은 홈에서 ±45도. */
+(function(){
+var NS = 'http://www.w3.org/2000/svg';
+function E(tag, attrs, parent){
+  var e = document.createElementNS(NS, tag);
+  if(attrs) for(var k in attrs) e.setAttribute(k, attrs[k]);
+  if(parent) parent.appendChild(e);
+  return e;
+}
+function lerp(a, b, u){ return a + (b - a) * u; }
+function clamp(v, a, b){ return Math.max(a, Math.min(b, v)); }
+function ease(u){ return u < .5 ? 2*u*u : 1 - Math.pow(-2*u + 2, 2) / 2; }
+var uid = 0;
+var R2 = Math.SQRT1_2;
+
+var TEAM = {
+  blue: {c1:'#6ea2ff', c2:'#1a4fb8', edge:'#0f2f73'},
+  red:  {c1:'#ff8a6b', c2:'#b0301d', edge:'#6e170b'},
+  ump:  {c1:'#3b4a43', c2:'#141d19', edge:'#000'}
+};
+
+/* 수비 위치 10명(대구광역시티볼협회 규칙 그림을 바탕으로 18.29 m 경기장에 맞춘 대략의 자리) */
+var POS = {
+  C:   {name:'본루수', x:0, y:3.5},
+  '1B':{name:'1루수', x:13.6, y:-14.6},
+  '2B':{name:'2루수', x:7.2, y:-22.2},
+  '3B':{name:'3루수', x:-13.6, y:-14.6},
+  '1SS':{name:'제1유격수', x:-7.2, y:-22.2},
+  '2SS':{name:'제2유격수', x:2.8, y:-15.4},
+  LF:  {name:'좌익수', x:-21, y:-31},
+  '1CF':{name:'제1중견수', x:-7, y:-38},
+  '2CF':{name:'제2중견수', x:7, y:-38},
+  RF:  {name:'우익수', x:21, y:-31}
+};
+
+function Field(svg, o){
+  o = o || {};
+  this.svg = svg; this.D = o.base || 18.29; this.F = o.fence || 45; this.S = o.size || 1;
+  var D = this.D;
+  this.B = {H:[0,0], 1:[D*R2, -D*R2], 2:[0, -D*2*R2], 3:[-D*R2, -D*R2]};
+  var v = o.view || {x:-this.F*R2 - 4, y:-this.F - 4, w:this.F*2*R2 + 8, h:this.F + 10};
+  this.view = v;
+  svg.setAttribute('viewBox', v.x + ' ' + v.y + ' ' + v.w + ' ' + v.h);
+  svg.setAttribute('preserveAspectRatio', o.par || 'xMidYMid meet');
+  svg.classList.add('board');
+  var id = this.id = 'fd' + (++uid);
+  var d = E('defs', null, svg);
+  function rg(name, c1, c2, cx, cy){
+    var g = E('radialGradient', {id:id + name, cx:cx || '.36', cy:cy || '.3', r:'.78'}, d);
+    E('stop', {offset:'0', 'stop-color':c1}, g); E('stop', {offset:'1', 'stop-color':c2}, g);
+  }
+  rg('blue', TEAM.blue.c1, TEAM.blue.c2); rg('red', TEAM.red.c1, TEAM.red.c2); rg('ump', TEAM.ump.c1, TEAM.ump.c2);
+  rg('ball', '#ffffff', '#d9ddc8', '.38', '.3');
+  var vg = E('radialGradient', {id:id + 'vig', cx:'.5', cy:'.6', r:'.8'}, d);
+  E('stop', {offset:'.6', 'stop-color':'#000', 'stop-opacity':'0'}, vg); E('stop', {offset:'1', 'stop-color':'#000', 'stop-opacity':'.25'}, vg);
+  var dirt = E('linearGradient', {id:id + 'dirt', x1:'0', y1:'0', x2:'0', y2:'1'}, d);
+  E('stop', {offset:'0', 'stop-color':'#c9925c'}, dirt); E('stop', {offset:'1', 'stop-color':'#b97e48'}, dirt);
+  this.gTurf = E('g', null, svg);
+  this.gZone = E('g', null, svg);
+  this.gMarks = E('g', null, svg);
+  this.gActors = E('g', null, svg);
+  this.gBall = E('g', null, svg);
+  this.gFx = E('g', null, svg);
+  this.actors = {};
+  this.draw(o);
+}
+Field.prototype.draw = function(o){
+  var g = this.gTurf, id = this.id, D = this.D, F = this.F, B = this.B, v = this.view;
+  var pad = 60;
+  E('rect', {x:v.x - pad, y:v.y - pad, width:v.w + 2*pad, height:v.h + 2*pad, fill:'#1b6340'}, g);
+  /* 페어 지역 잔디: 부채꼴 */
+  var fx = F * R2, fy = -F * R2;
+  var fan = 'M0 0 L' + (-fx) + ' ' + fy + ' A' + F + ' ' + F + ' 0 0 1 ' + fx + ' ' + fy + ' Z';
+  E('path', {d:fan, fill:'#2c8752'}, g);
+  /* 잔디 무늬 (동심원 띠) */
+  var clip = E('clipPath', {id:id + 'fan'}, g);
+  E('path', {d:fan}, clip);
+  var stripes = E('g', {'clip-path':'url(#' + id + 'fan)'}, g);
+  for(var r = 4; r < F; r += 4){
+    if((r / 4) % 2) E('circle', {cx:0, cy:0, r:r + 2, fill:'none', stroke:'#33935b', 'stroke-width':2}, stripes);
+  }
+  /* 내야 흙 */
+  var ir = D * 1.12;
+  E('path', {d:'M0 2.6 L' + (-ir*R2 - 1.2) + ' ' + (-ir*R2 + 1.2) + ' A' + (D*1.55) + ' ' + (D*1.55) + ' 0 0 1 ' + (ir*R2 + 1.2) + ' ' + (-ir*R2 + 1.2) + ' Z', fill:'url(#' + id + 'dirt)', opacity:.92}, g);
+  /* 안쪽 잔디 */
+  var ii = D * .78;
+  E('path', {d:'M0 ' + (-D*.2) + ' L' + (-ii*R2) + ' ' + (-ii*R2 - D*.2*R2) + ' L0 ' + (-ii*2*R2) + ' L' + (ii*R2) + ' ' + (-ii*R2 - D*.2*R2) + ' Z', fill:'#2f8b55'}, g);
+  /* 주로(베이스 사이 흙길)는 흙 위에 이미 포함. 파울라인 */
+  var ln = {stroke:'#f3f6ee', 'stroke-width':.22, 'stroke-linecap':'round', fill:'none'};
+  E('line', Object.assign({x1:0, y1:0, x2:-fx, y2:fy}, ln), g);
+  E('line', Object.assign({x1:0, y1:0, x2:fx, y2:fy}, ln), g);
+  /* 담장 */
+  E('path', {d:'M' + (-fx) + ' ' + fy + ' A' + F + ' ' + F + ' 0 0 1 ' + fx + ' ' + fy, fill:'none', stroke:'#ffd23f', 'stroke-width':.5, opacity:.85}, g);
+  /* 타자 서클 (반지름 3 m) */
+  this.circleEl = E('circle', {cx:0, cy:0, r:3, fill:'rgba(255,255,255,.08)', stroke:'#f3f6ee', 'stroke-width':.16}, g);
+  /* 베이스 */
+  var bs = 1.15;
+  [1,2,3].forEach(function(k){
+    var p = B[k];
+    E('rect', {x:p[0] - bs/2, y:p[1] - bs/2, width:bs, height:bs, fill:'#fff', stroke:'#6b5a44', 'stroke-width':.08, transform:'rotate(45 ' + p[0] + ' ' + p[1] + ')'}, g);
+  });
+  /* 홈플레이트 (오각형, 끝점이 원점) */
+  E('path', {d:'M0 0 L-.55 -.55 L-.55 -1.1 L.55 -1.1 L.55 -.55 Z', fill:'#fff', stroke:'#6b5a44', 'stroke-width':.07}, g);
+  /* 배팅티: 홈플레이트 뒤 */
+  this.teeG = E('g', {transform:'translate(0 .6)'}, g);
+  E('circle', {r:.42, fill:'#202826', stroke:'#000', 'stroke-width':.05}, this.teeG);
+  E('circle', {r:.18, fill:'#ff8a1f'}, this.teeG);
+  if(o.labels){
+    var tl = {'text-anchor':'middle', 'font-size':1.5 * this.S, 'font-family':'Black Han Sans, Pretendard', fill:'rgba(255,255,255,.9)', stroke:'rgba(0,0,0,.45)', 'stroke-width':.3, 'paint-order':'stroke'};
+    var S = this.S;
+    [['1', '1루', 2.4, 1.2], ['2', '2루', 0, -1.7], ['3', '3루', -2.4, 1.2]].forEach(function(a){
+      var p = B[a[0]], t = E('text', Object.assign({x:p[0] + a[2] * S, y:p[1] + a[3] * S}, tl), g); t.textContent = a[1];
+    });
+    var th = E('text', Object.assign({x:3.6 * S, y:1.9}, tl), g); th.textContent = '홈';
+  }
+  if(o.foulLabels){
+    var fl = {'font-size':1.3 * this.S, 'font-family':'Black Han Sans, Pretendard', fill:'rgba(255,255,255,.55)', 'text-anchor':'middle'};
+    var a = E('text', Object.assign({x:-fx * .62 - 3.2, y:fy * .62 + 1.0, transform:'rotate(45 ' + (-fx * .62 - 3.2) + ' ' + (fy * .62 + 1.0) + ')'}, fl), g); a.textContent = '파울 지역';
+    var b = E('text', Object.assign({x:fx * .62 + 3.2, y:fy * .62 + 1.0, transform:'rotate(-45 ' + (fx * .62 + 3.2) + ' ' + (fy * .62 + 1.0) + ')'}, fl), g); b.textContent = '파울 지역';
+    var c = E('text', Object.assign({x:0, y:-F * .72}, fl, {fill:'rgba(255,255,255,.5)'}), g); c.textContent = '페어 지역';
+  }
+  E('rect', {x:v.x - pad, y:v.y - pad, width:v.w + 2*pad, height:v.h + 2*pad, fill:'url(#' + id + 'vig)', 'pointer-events':'none'}, g);
+};
+Field.prototype.tee = function(on){ this.teeG.style.display = on === false ? 'none' : ''; };
+/* 페어 판정: 파울라인 위는 페어. 타자 서클 안(서클 라인은 페어)에 멈추면 파울 */
+Field.prototype.isFair = function(x, y, lineW){
+  var w = (lineW == null ? .05 : lineW) / 2;
+  if(-y < -w) return false;
+  var off = Math.abs(x) * R2 - (-y) * R2;
+  return off <= w;
+};
+Field.prototype.inCircle = function(x, y){ return Math.hypot(x, y) < 3 - .025; };
+Field.prototype.base = function(k){ return this.B[k]; };
+Field.prototype.player = function(id, team, label, o){ var a = new Actor(this, id, team, label, o || {}); this.actors[id] = a; return a; };
+Field.prototype.ball = function(){ return this._ball || (this._ball = new Ball(this)); };
+Field.prototype.toLocal = function(ev){
+  var pt = this.svg.createSVGPoint(); pt.x = ev.clientX; pt.y = ev.clientY;
+  var p = pt.matrixTransform(this.svg.getScreenCTM().inverse()); return {x:p.x, y:p.y};
+};
+Field.prototype.clearMarks = function(){ this.gMarks.replaceChildren(); };
+Field.prototype.zone = function(d, fill){ return E('path', {d:d, fill:fill}, this.gZone); };
+Field.prototype.label = function(x, y, text, color, anchor, size, parent){
+  var t = E('text', {x:x, y:y, 'text-anchor':anchor || 'middle', 'dominant-baseline':'middle', 'font-size':(size || 1.3) * this.S, 'font-family':'Black Han Sans, Pretendard', fill:color || '#fff', stroke:'rgba(0,0,0,.6)', 'stroke-width':.32 * this.S, 'paint-order':'stroke'}, parent || this.gMarks);
+  t.textContent = text; return t;
+};
+Field.prototype.arrow = function(a, c, color, text, parent, dash){
+  var g = parent || this.gMarks, s = this.S;
+  var dx = c[0] - a[0], dy = c[1] - a[1], d = Math.hypot(dx, dy) || 1, ux = dx/d, uy = dy/d;
+  E('line', {x1:a[0], y1:a[1], x2:c[0] - ux*.7*s, y2:c[1] - uy*.7*s, stroke:color, 'stroke-width':.3*s, 'stroke-linecap':'round', 'stroke-dasharray':dash || 'none'}, g);
+  E('path', {d:'M' + c[0] + ' ' + c[1] + ' L' + (c[0] - ux*1.1*s - uy*.6*s) + ' ' + (c[1] - uy*1.1*s + ux*.6*s) + ' L' + (c[0] - ux*1.1*s + uy*.6*s) + ' ' + (c[1] - uy*1.1*s - ux*.6*s) + ' Z', fill:color}, g);
+  if(text) this.label((a[0] + c[0]) / 2 - uy * 1.4 * s, (a[1] + c[1]) / 2 + ux * 1.4 * s, text, color, 'middle', 1.1, g);
+};
+Field.prototype.E = E;
+
+/* ---- 선수 ---- */
+function Actor(f, id, team, label, o){
+  this.f = f; this.id = id; this.team = team; this.x = 0; this.y = 0;
+  var s = f.S * (o.scale || 1);
+  this.s = s;
+  var t = TEAM[team], g = this.g = E('g', {'class':'actor'}, f.gActors);
+  this.ringEl = E('circle', {r:1.5*s, fill:'none', stroke:'#ffd23f', 'stroke-width':.2*s, 'stroke-dasharray':(.6*s) + ' ' + (.34*s), opacity:0}, g);
+  E('ellipse', {cx:.22*s, cy:.32*s, rx:.95*s, ry:.85*s, fill:'rgba(0,0,0,.26)'}, g);
+  this.bat = E('line', {x1:0, y1:0, x2:0, y2:0, stroke:'#ffcf5a', 'stroke-width':.34*s, 'stroke-linecap':'round', opacity:0}, g);
+  this.glove = E('circle', {r:.42*s, fill:'#8a4f22', stroke:'#4a2a10', 'stroke-width':.06*s, opacity:0}, g);
+  this.body = E('g', null, g);
+  E('circle', {r:.8*s, fill:'url(#' + f.id + team + ')', stroke:t.edge, 'stroke-width':.09*s}, this.body);
+  this.numEl = E('text', {x:0, y:.3*s, 'text-anchor':'middle', 'font-size':(label && String(label).length > 2 ? .58 : .78)*s, 'font-weight':800, fill:'#fff'}, this.body);
+  this.numEl.textContent = label != null ? label : '';
+  this.bub = null;
+  if(o.name){
+    var lb = E('text', {x:0, y:-1.3*s, 'text-anchor':'middle', 'font-size':.7*s, 'font-weight':800, fill:'#fff', stroke:'rgba(0,0,0,.55)', 'stroke-width':.18*s, 'paint-order':'stroke'}, g);
+    lb.textContent = o.name;
+  }
+  if(o.glove) this.glove.setAttribute('opacity', 1);
+  this.setGlove(o.glove ? 30 : null);
+}
+Actor.prototype.pos = function(x, y){
+  this.x = x; this.y = y; this.g.setAttribute('transform', 'translate(' + x.toFixed(3) + ' ' + y.toFixed(3) + ')');
+  if(this.bub) this.bub.setAttribute('transform', 'translate(' + x.toFixed(3) + ' ' + (y - 2.9*this.s).toFixed(3) + ')');
+};
+Actor.prototype.setGlove = function(ang){
+  if(ang == null){ this.glove.setAttribute('opacity', 0); return; }
+  var a = ang * Math.PI / 180, s = this.s;
+  this.glove.setAttribute('cx', (Math.cos(a) * .95 * s).toFixed(3)); this.glove.setAttribute('cy', (Math.sin(a) * .95 * s).toFixed(3));
+  this.glove.setAttribute('opacity', 1);
+};
+/* 스윙: u 0 → 1, 배트가 몸 뒤(3루 쪽)에서 앞(투수 방향)으로 돈다 */
+Actor.prototype.swing = function(u, dir){
+  if(u == null){ this.bat.setAttribute('opacity', 0); return; }
+  var s = this.s, a0 = 160, a1 = -60, a = (lerp(a0, a1, u) + (dir || 0)) * Math.PI / 180;
+  this.bat.setAttribute('x1', (Math.cos(a) * .6 * s).toFixed(3)); this.bat.setAttribute('y1', (-Math.sin(a) * .6 * s).toFixed(3));
+  this.bat.setAttribute('x2', (Math.cos(a) * 2.2 * s).toFixed(3)); this.bat.setAttribute('y2', (-Math.sin(a) * 2.2 * s).toFixed(3));
+  this.bat.setAttribute('opacity', 1);
+};
+/* 슬라이딩: 몸을 미끄러지는 방향으로 납작하게 */
+Actor.prototype.slide = function(ang){
+  if(ang == null){ if(this._sl){ this.body.removeAttribute('transform'); this._sl = false; } return; }
+  this.body.setAttribute('transform', 'rotate(' + ang.toFixed(1) + ') scale(1.55 .7)'); this._sl = true;
+};
+Actor.prototype.ring = function(on, color){
+  this.ringEl.setAttribute('opacity', on ? 1 : 0);
+  if(color) this.ringEl.setAttribute('stroke', color);
+};
+Actor.prototype.say = function(text, tone){
+  var s = this.s;
+  if(!text){ if(this.bub) this.bub.style.display = 'none'; return; }
+  if(!this.bub){
+    this.bub = E('g', {'pointer-events':'none'}, this.f.gFx);
+    this.bubR = E('rect', {y:-.95*s, height:1.55*s, rx:.5*s, fill:'#fff', stroke:'rgba(0,0,0,.25)', 'stroke-width':.05*s}, this.bub);
+    this.bubP = E('path', {d:'M' + (-.3*s) + ' ' + (.55*s) + ' L0 ' + (1.1*s) + ' L' + (.3*s) + ' ' + (.55*s) + ' Z', fill:'#fff'}, this.bub);
+    this.bubT = E('text', {x:0, y:.1*s, 'text-anchor':'middle', 'dominant-baseline':'middle', 'font-size':.95*s, 'font-family':'Black Han Sans, Pretendard', fill:'#14201a'}, this.bub);
+  }
+  this.bub.style.display = '';
+  if(this.bubT.textContent !== text){
+    this.bubT.textContent = text;
+    var w = Math.max(2.6, text.length * .98 + 1) * s;
+    this.bubR.setAttribute('x', -w/2); this.bubR.setAttribute('width', w);
+  }
+  var fill = tone === 'foul' ? '#ffe3df' : tone === 'volt' ? '#ffd23f' : tone === 'ok' ? '#dcf5e5' : '#fff';
+  this.bubR.setAttribute('fill', fill); this.bubP.setAttribute('fill', fill);
+  this.pos(this.x, this.y);
+};
+Actor.prototype.remove = function(){ this.g.remove(); if(this.bub) this.bub.remove(); delete this.f.actors[this.id]; };
+
+/* ---- 공 (h: 높이 m. 위에서 본 그림이라 그림자와 공 사이를 벌려 높이를 보여 준다) ---- */
+function Ball(f){
+  var s = f.S, g = this.g = E('g', {'pointer-events':'none'}, f.gBall);
+  this.f = f;
+  this.trail = E('polyline', {points:'', fill:'none', stroke:'rgba(255,255,255,.55)', 'stroke-width':.18*s, 'stroke-dasharray':(.3*s) + ' ' + (.3*s), 'stroke-linecap':'round'}, g);
+  this.sh = E('ellipse', {rx:.42*s, ry:.3*s, fill:'rgba(0,0,0,.32)'}, g);
+  this.body = E('g', null, g);
+  E('circle', {r:.42*s, fill:'url(#' + f.id + 'ball)', stroke:'#7d8473', 'stroke-width':.05*s}, this.body);
+  E('path', {d:'M' + (-.22*s) + ' ' + (-.34*s) + ' Q' + (-.05*s) + ' 0 ' + (-.22*s) + ' ' + (.34*s) + ' M' + (.22*s) + ' ' + (-.34*s) + ' Q' + (.05*s) + ' 0 ' + (.22*s) + ' ' + (.34*s), stroke:'#df4a2f', 'stroke-width':.07*s, fill:'none'}, this.body);
+  this.pts = [];
+}
+Ball.prototype.set = function(x, y, h){
+  h = Math.max(0, h || 0);
+  var s = this.f.S, lift = h * .55, sc = 1 + Math.min(1.2, h * .07);
+  this.x = x; this.y = y; this.h = h;
+  this.sh.setAttribute('cx', (x + .1).toFixed(3)); this.sh.setAttribute('cy', (y + .15).toFixed(3));
+  this.sh.setAttribute('opacity', (1 - Math.min(.65, h * .05)).toFixed(2));
+  this.body.setAttribute('transform', 'translate(' + x.toFixed(3) + ' ' + (y - lift).toFixed(3) + ') scale(' + sc.toFixed(3) + ')');
+};
+Ball.prototype.show = function(on){ this.g.style.display = on ? '' : 'none'; };
+Ball.prototype.setTrail = function(pts){ this.trail.setAttribute('points', pts.map(function(p){ return p[0].toFixed(2) + ',' + p[1].toFixed(2); }).join(' ')); };
+
+/* ---- 장면 재생 ----
+   scn = { dur,
+     actors:[{id, team, label, keys:[[t, x, y] | [t, '1'|'2'|'3'|'H'] ...], glove:true, name}],
+     ball:[{t0, t1, on:id} | {t0, t1, from:P, to:P, kind:'fly'|'ground'|'line'|'throw'|'roll', peak, bounces}],
+        P = [x, y] | 'tee' | actorId | '1'..'3','H'  (actorId면 그 시각의 선수 위치)
+     events:[{t, type:'say', who, text, tone, dur} | {t, type:'swing', who, dur, dir} | {t, type:'ring', who, until, color} | {t, type:'slide', who, until}
+             | {t, type:'call', text, tone, x, y, dur} | {t, type:'base', base, color, dur}],
+     marks:[{type:'arrow', from, to, color, label, at} | {type:'text', x, y, text, color, at} | {type:'force', bases:[..], at}
+            | {type:'lane', from:'1', to:'2', at} | {type:'ring', x, y, r, color, at} | {type:'trail', t0, t1, at}] } */
+function Scene(field, scn, o){
+  o = o || {};
+  this.f = field; this.s = scn; this.t = 0; this.speed = 1; this.playing = false;
+  this.loop = !!o.loop; this.marksOn = !!o.marks; this.hold = o.hold != null ? o.hold : 1.4;
+  this.onEnd = o.onEnd || null; this.onTick = o.onTick || null;
+  var self = this;
+  this.A = {};
+  scn.actors.forEach(function(a){ self.A[a.id] = field.player(a.id, a.team, a.label, {glove:a.glove, name:a.name, scale:a.scale}); });
+  this.ball = scn.ball ? field.ball() : null;
+  this.callG = E('g', {'pointer-events':'none'}, field.gFx);
+  this._mk = '';
+  this.render(0);
+}
+Scene.prototype.pt = function(p, t){
+  var B = this.f.B;
+  if(Array.isArray(p)) return {x:p[0], y:p[1]};
+  if(p === 'tee') return {x:0, y:.6};
+  if(B[p]) return {x:B[p][0], y:B[p][1]};
+  return this.posAt(p, t);
+};
+Scene.prototype.def = function(id){ for(var i = 0; i < this.s.actors.length; i++) if(this.s.actors[i].id === id) return this.s.actors[i]; };
+Scene.prototype.key = function(k){
+  if(typeof k[1] === 'string'){ var b = this.f.B[k[1]]; return [k[0], b[0], b[1]]; }
+  return k;
+};
+Scene.prototype.posAt = function(id, t){
+  var d = this.def(id); if(!d) return {x:0, y:0};
+  var ks = d.keys.map(this.key, this);
+  if(t <= ks[0][0]) return {x:ks[0][1], y:ks[0][2]};
+  for(var i = 0; i < ks.length - 1; i++){
+    if(t <= ks[i+1][0]){
+      var u = (t - ks[i][0]) / Math.max(1e-6, ks[i+1][0] - ks[i][0]);
+      /* 베이스를 도는 주자는 베이스 사이를 바깥으로 살짝 휘게 */
+      var x = lerp(ks[i][1], ks[i+1][1], u), y = lerp(ks[i][2], ks[i+1][2], u);
+      return {x:x, y:y};
+    }
+  }
+  var l = ks[ks.length - 1]; return {x:l[1], y:l[2]};
+};
+Scene.prototype.ballSeg = function(t){
+  var bs = this.s.ball; if(!bs) return null;
+  for(var i = 0; i < bs.length; i++) if(t >= bs[i].t0 && t <= bs[i].t1) return bs[i];
+  if(t < bs[0].t0) return {hold:true, at:bs[0]};
+  var last = null; for(var j = 0; j < bs.length; j++) if(bs[j].t1 <= t) last = bs[j];
+  return {after:true, seg:last};
+};
+Scene.prototype.segPos = function(s, t){
+  if(s.on){ var p = this.posAt(s.on, t); return {x:p.x + .7*this.f.S, y:p.y - .5*this.f.S, h:.6}; }
+  var u = clamp((t - s.t0) / Math.max(1e-6, s.t1 - s.t0), 0, 1);
+  var p0 = this.pt(s.from, s.t0), p1 = this.pt(s.to, s.t1);
+  var ue = s.kind === 'roll' ? 1 - Math.pow(1 - u, 1.8) : s.kind === 'ground' ? 1 - Math.pow(1 - u, 1.3) : u;
+  var x = lerp(p0.x, p1.x, ue), y = lerp(p0.y, p1.y, ue), h = 0;
+  var pk = s.peak != null ? s.peak : (s.kind === 'fly' ? 14 : s.kind === 'line' ? 2.4 : s.kind === 'throw' ? 1.6 : 0);
+  var h0 = s.h0 != null ? s.h0 : (s.from === 'tee' ? .7 : s.kind === 'throw' ? 1.3 : 0);
+  var h1 = s.h1 != null ? s.h1 : (s.kind === 'throw' ? 1.2 : 0);
+  if(s.kind === 'ground' || s.kind === 'roll'){
+    var nb = s.bounces || 3, ph = ue * nb, k = Math.floor(ph), fr = ph - k;
+    h = (pk || 1.2) * Math.pow(.45, k) * 4 * fr * (1 - fr);
+    if(k === 0 && s.from === 'tee') h = Math.max(h, h0 * (1 - fr));
+  } else {
+    h = lerp(h0, h1, u) + 4 * pk * u * (1 - u);
+  }
+  return {x:x, y:y, h:h};
+};
+Scene.prototype.ballPos = function(t){
+  var s = this.ballSeg(t); if(!s) return null;
+  if(s.hold){ var a = s.at; if(a.on) return this.segPos(a, t); var p = this.pt(a.from, t); return {x:p.x, y:p.y, h:a.from === 'tee' ? .7 : 0}; }
+  if(s.after){
+    var l = s.seg;
+    if(l.on) return this.segPos(l, t);
+    if(l.to && !Array.isArray(l.to) && this.def(l.to)) return this.segPos({on:l.to}, t);
+    var e = this.segPos(l, l.t1); return {x:e.x, y:e.y, h:0};
+  }
+  return this.segPos(s, t);
+};
+Scene.prototype.render = function(t){
+  var s = this.s, self = this, ev = s.events || [], f = this.f;
+  this.t = t;
+  s.actors.forEach(function(d){
+    var a = self.A[d.id], p = self.posAt(d.id, t);
+    a.pos(p.x, p.y);
+    var bubble = null, tone = null, ring = null, sw = null, swDir = 0, sl = null;
+    ev.forEach(function(e){
+      if(e.t > t || e.who !== d.id) return;
+      if(e.type === 'say' && t < e.t + (e.dur || 1.4)){ bubble = e.text; tone = e.tone; }
+      if(e.type === 'ring' && t < (e.until != null ? e.until : 1e9)) ring = e.color || '#ffd23f';
+      if(e.type === 'swing' && t < e.t + (e.dur || .35) + .5){ sw = clamp((t - e.t) / (e.dur || .35), 0, 1); swDir = e.dir || 0; }
+      if(e.type === 'slide' && t < (e.until != null ? e.until : 1e9)){ var q0 = self.posAt(d.id, e.t - .2), q1 = self.posAt(d.id, e.t); sl = Math.atan2(q1.y - q0.y, q1.x - q0.x) * 180 / Math.PI; }
+    });
+    a.say(bubble, tone); a.ring(!!ring, ring); a.swing(sw, swDir); a.slide(sl);
+    if(d.glove){
+      var bp = self.ballPos(t), ang = d.team === 'red' ? 90 : -90;
+      if(bp){ var dx = bp.x - p.x, dy = bp.y - p.y; if(Math.hypot(dx, dy) > .2) ang = Math.atan2(dy, dx) * 180 / Math.PI; }
+      a.setGlove(ang);
+    }
+  });
+  if(this.ball){
+    var bp = this.ballPos(t);
+    this.ball.set(bp.x, bp.y, bp.h);
+    var tr = (s.marks || []).filter(function(m){ return m.type === 'trail'; })[0];
+    if(tr && this.marksOn && t >= (tr.at || 0)){
+      var pts = []; for(var q = tr.t0; q <= Math.min(t, tr.t1) + 1e-6; q += .04){ var b = this.ballPos(q); pts.push([b.x, b.y]); }
+      this.ball.setTrail(pts);
+    } else this.ball.setTrail([]);
+  }
+  /* 판정 표시와 베이스 반짝임 */
+  var cg = this.callG; cg.replaceChildren();
+  ev.forEach(function(e){
+    if(e.t > t) return;
+    if(e.type === 'call' && t < e.t + (e.dur || 1.8)){
+      var w = Math.max(5, e.text.length * 1.5 + 1.6) * f.S, h = 2.6 * f.S;
+      var bg = e.tone === 'foul' ? '#d2372c' : e.tone === 'ok' ? '#ffffff' : '#ffd23f';
+      var fg = e.tone === 'foul' ? '#fff' : e.tone === 'ok' ? '#15834a' : '#071c15';
+      var gx = E('g', {transform:'translate(' + e.x + ' ' + e.y + ')'}, cg);
+      E('rect', {x:-w/2, y:-h/2, width:w, height:h, rx:h/2, fill:bg, stroke:'rgba(0,0,0,.3)', 'stroke-width':.08*f.S}, gx);
+      var tx = E('text', {x:0, y:.08*f.S, 'text-anchor':'middle', 'dominant-baseline':'middle', 'font-size':1.45*f.S, 'font-family':'Black Han Sans, Pretendard', fill:fg}, gx); tx.textContent = e.text;
+    }
+    if(e.type === 'base' && t < e.t + (e.dur || 1.2)){
+      var b = f.B[e.base], u = (t - e.t) / (e.dur || 1.2);
+      E('circle', {cx:b[0], cy:b[1], r:(1 + u * 1.6) * f.S, fill:'none', stroke:e.color || '#ffd23f', 'stroke-width':.3*f.S, opacity:(1 - u).toFixed(2)}, cg);
+    }
+  });
+  this.drawMarks(t);
+  if(this.onTick) this.onTick(t);
+};
+Scene.prototype.drawMarks = function(t){
+  var on = this.marksOn ? (this.s.marks || []).filter(function(m){ return m.type !== 'trail' && t >= (m.at || 0); }) : [];
+  var key = on.length + ':' + on.map(function(m){ return m.type; }).join(',');
+  if(key === this._mk) return;
+  this._mk = key;
+  var f = this.f, g = f.gMarks, B = f.B;
+  g.replaceChildren();
+  on.forEach(function(m){
+    if(m.type === 'arrow') f.arrow(m.from, m.to, m.color || '#ffd23f', m.label, g, m.dash);
+    if(m.type === 'text') f.label(m.x, m.y, m.text, m.color || '#fff', m.anchor, m.size, g);
+    if(m.type === 'ring') E('circle', {cx:m.x, cy:m.y, r:m.r || 2, fill:'none', stroke:m.color || '#ff6b52', 'stroke-width':.28*f.S}, g);
+    if(m.type === 'force'){
+      m.bases.forEach(function(k){
+        var b = B[k];
+        E('circle', {cx:b[0], cy:b[1], r:1.9*f.S, fill:'rgba(255,210,63,.18)', stroke:'#ffd23f', 'stroke-width':.24*f.S, 'stroke-dasharray':(.5*f.S) + ' ' + (.3*f.S)}, g);
+        f.label(b[0], b[1] - 2.8*f.S, '포스', '#ffd23f', 'middle', 1.1, g);
+      });
+    }
+    if(m.type === 'lane'){
+      var a = B[m.from], c = B[m.to], dx = c[0] - a[0], dy = c[1] - a[1], d = Math.hypot(dx, dy), nx = -dy/d, ny = dx/d, w = 1;
+      E('path', {d:'M' + (a[0] + nx*w) + ' ' + (a[1] + ny*w) + ' L' + (c[0] + nx*w) + ' ' + (c[1] + ny*w) + ' L' + (c[0] - nx*w) + ' ' + (c[1] - ny*w) + ' L' + (a[0] - nx*w) + ' ' + (a[1] - ny*w) + ' Z', fill:'rgba(255,255,255,.14)', stroke:'#fff', 'stroke-width':.12, 'stroke-dasharray':'.4 .3'}, g);
+      f.label((a[0] + c[0]) / 2 + nx * 2.6, (a[1] + c[1]) / 2 + ny * 2.6, '양쪽 1 m', '#fff', 'middle', 1.0, g);
+    }
+  });
+};
+Scene.prototype.play = function(speed){
+  var self = this;
+  if(speed != null) this.speed = speed;
+  if(this.t >= this.s.dur - 1e-3) this.t = 0;
+  this.playing = true;
+  var last = performance.now(), wait = 0;
+  cancelAnimationFrame(this._raf);
+  function step(now){
+    if(!self.playing) return;
+    var dt = Math.min(.05, (now - last) / 1000); last = now;
+    if(wait > 0){ wait -= dt; if(wait <= 0){ self.render(0); } self._raf = requestAnimationFrame(step); return; }
+    var t = self.t + dt * self.speed;
+    if(t >= self.s.dur){
+      self.render(self.s.dur);
+      if(self.loop){ wait = self.hold; self.t = 0; self._raf = requestAnimationFrame(step); return; }
+      self.playing = false; if(self.onEnd) self.onEnd(); return;
+    }
+    self.render(t);
+    self._raf = requestAnimationFrame(step);
+  }
+  this._raf = requestAnimationFrame(step);
+};
+Scene.prototype.pause = function(){ this.playing = false; cancelAnimationFrame(this._raf); };
+Scene.prototype.seek = function(t){ this.render(clamp(t, 0, this.s.dur)); };
+Scene.prototype.setMarks = function(on){ this.marksOn = on; this._mk = ''; this.render(this.t); };
+Scene.prototype.destroy = function(){
+  this.pause();
+  for(var k in this.A) this.A[k].remove();
+  this.callG.remove(); this.f.clearMarks();
+  if(this.ball){ this.ball.g.remove(); this.f._ball = null; }
+};
+
+/* 달리기 키 만들기: 베이스 순서대로 일정한 속력(m/s)으로 */
+function runKeys(f, t0, from, to, speed, startXY){
+  var order = ['H', '1', '2', '3', 'H2'], B = f.B;
+  var pos = function(k){ return k === 'H2' ? B.H : B[k]; };
+  var i = order.indexOf(from), j = order.indexOf(to === 'H' && from !== 'H' ? 'H2' : to);
+  var keys = [], t = t0, cur = startXY || pos(from);
+  keys.push([t, cur[0], cur[1]]);
+  for(var k = i + 1; k <= j; k++){
+    var p = pos(order[k]), d = Math.hypot(p[0] - cur[0], p[1] - cur[1]);
+    t += d / speed; keys.push([t, p[0], p[1]]); cur = p;
+  }
+  return keys;
+}
+
+window.FD = {Field:Field, Scene:Scene, E:E, lerp:lerp, clamp:clamp, ease:ease, TEAM:TEAM, POS:POS, runKeys:runKeys};
+
+/* 화면에 보일 때만 반복 재생하는 작은 장면 */
+FD.loopWhenVisible = function(scene, el){
+  var vis = false;
+  function check(){
+    var r = el.getBoundingClientRect();
+    var v = r.width > 0 && r.right > 4 && r.left < window.innerWidth - 4 && r.bottom > 0 && r.top < window.innerHeight;
+    if(v && !vis){ vis = true; if(!PE.reduce) scene.play(); else scene.seek(scene.s.dur); }
+    if(!v && vis){ vis = false; scene.pause(); }
+  }
+  setInterval(check, 400); check();
+};
+})();
+
+</script>
+
+<script>
+/* ===== 선생님이 고치기 쉬운 데이터 ===== */
+var GLOSSARY = {
+  '페어': '두 파울라인 사이(선 위 포함)로 들어간 타구. 주자가 달릴 수 있어요.',
+  '포스아웃': '주자가 꼭 가야 하는 베이스를 공을 가진 수비가 먼저 밟아서 만드는 아웃이에요.',
+  '태그아웃': '공을 가진 수비가 베이스 밖에 있는 주자를 공이나 공을 쥔 손(글러브)으로 터치해서 만드는 아웃이에요.',
+  '루반칙': '타자가 치기 전에 주자가 베이스를 떠난 것. 그 주자가 아웃되고 경기가 멈춰요.',
+  '태그업': '뜬공이 잡힐 때 베이스를 밟고 있다가, 공이 수비에게 닿은 뒤 다음 베이스로 출발하는 것이에요.',
+  '잔루': '공격이 끝났을 때 베이스에 남아 있는 주자. 티볼 전원 타격제에서는 다음 회에 이어져요.'
+};
+var QUIZ = {
+  q1: {type:'ox', q:'친 공이 3루 쪽 파울라인 <b>위</b>에 멈추면 파울이다.', a:false,
+       ex:'파울라인은 페어 지역에 들어가요. 선 위에 멈추면 페어예요.'},
+  q2: {type:'mc', src:'스트라이크', q:'스트라이크가 <b>2개</b>인 타자가 친 공이 파울이 됐어요. 어떻게 될까요?',
+       opts:['파울은 몇 번이든 괜찮으니 다시 친다', '타자 아웃', '볼넷처럼 1루로 걸어 나간다'], a:1,
+       ex:'티볼에서는 2스트라이크 뒤의 파울도 아웃이에요. 야구와 다른 점이에요.'},
+  q3: {type:'mc', q:'타자가 배팅 티를 세게 쳐서 공이 앞으로 굴러갔어요(스트라이크 0개). 판정은?',
+       opts:['페어 타구라서 1루로 달린다', '스트라이크 하나', '다시 치기(카운트 없음)'], a:1,
+       ex:'배팅 티를 치면 공이 굴러가도 스트라이크예요.'},
+  q4: {type:'mc', src:'주자', q:'1루에 있는 주자는 언제 2루로 출발할 수 있을까요?',
+       opts:['본루수가 공을 티에 올려놓을 때', '타자가 공을 친 뒤', '수비가 한눈팔 때 언제든지'], a:1,
+       ex:'티볼에는 도루가 없어요. 치기 전에 떠나면 루반칙으로 아웃이에요.'},
+  q5: {type:'mc', src:'포스아웃', q:'주자가 1루와 2루에 있어요. 타자가 3루 쪽으로 땅볼을 쳤고, 3루수가 공을 잡고 3루를 밟았어요. 누가 아웃일까요?',
+       opts:['2루에서 달려오던 주자', '타자', '아무도 아니다(태그해야 한다)'], a:0,
+       ex:'타자가 1루로, 1루 주자가 2루로 오니 2루 주자는 3루로 꼭 가야 해요(포스). 그래서 3루를 먼저 밟으면 2루 주자가 아웃이에요.'},
+  q6: {type:'ox', q:'3루 주자가 홈으로 달려와요. 본루수는 공을 잡고 주자를 직접 터치해야 아웃시킬 수 있다.', a:false,
+       ex:'티볼은 충돌을 막으려고 홈을 언제나 포스아웃으로 판정해요. 공을 잡고 홈을 밟으면 돼요.'},
+  q7: {type:'chips', q:'전원 타격제에서는 10명이 모두 한 번씩 치면 [[0]]하고, 베이스에 남은 주자는 [[1]].',
+       chips:['공수 교대', '한 번 더 공격', '다음 회에 그대로 이어져요', '모두 아웃이에요'], a:['공수 교대', '다음 회에 그대로 이어져요'],
+       ex:'전원 타격제와 잔루 인정제는 짝이에요(마지막 회는 제외). 3아웃제로 할 때는 남은 주자가 없어져요.'}
+};
+</script>
+
+<script>
+try{
+  var deck = PE.deck(document.getElementById('deck'));
+  PE.glossary(GLOSSARY);
+  var MSG = ['모두 맞혔어요. 이제 규칙 놀이터에서 직접 판단해 봐요!', '잘했어요. 틀린 문제를 한 번 더 보고 가요.', '틀린 문제를 다시 보고, 그림을 한 번 더 살펴봐요.'];
+  var quiz = PE.quiz(QUIZ, {onAnswer:function(){ PE.renderScore(document.getElementById('score'), quiz, deck, MSG); }});
+  PE.renderScore(document.getElementById('score'), quiz, deck, MSG);
+}catch(e){ PE_ERR(e, '읽기·퀴즈'); }
+</script>
+
+<script>
+/* ===== 장면 그림 ===== */
+var D = 18.29, r = D * Math.SQRT1_2;
+var B1 = [r, -r], B2 = [0, -2*r], B3 = [-r, -r], BH = [0, 0];
+var VIN = {x:-25, y:-31.5, w:50, h:37.5};
+var BAT = [-1.3, .5];
+function at(a, b, u){ return [a[0] + (b[0] - a[0]) * u, a[1] + (b[1] - a[1]) * u]; }
+function mk(id, view, scn, o){
+  o = o || {};
+  var f = new FD.Field(document.getElementById(id), {view:view, foulLabels:o.foulLabels});
+  var s = new FD.Scene(f, scn, {loop:true, marks:true, hold:o.hold || 1.6});
+  FD.loopWhenVisible(s, document.getElementById(id));
+  return s;
+}
+/* 달리기: 시작 시각, 출발 위치, 거쳐 갈 점들, 속력 → [[t,x,y]...] */
+function run(t0, pts, v, stopAt){
+  var k = [[t0, pts[0][0], pts[0][1]]], t = t0;
+  for(var i = 1; i < pts.length; i++){
+    var d = Math.hypot(pts[i][0] - pts[i-1][0], pts[i][1] - pts[i-1][1]);
+    t += d / v; k.push([t, pts[i][0], pts[i][1]]);
+  }
+  return k;
+}
+function fielder(id, key, extra){ var p = FD.POS[key]; return Object.assign({id:id, team:'red', label:key, glove:true, keys:[[0, p.x, p.y]]}, extra || {}); }
+
+/* 1. 표지: 땅볼 → 제1유격수가 잡아 1루로 → 아웃 */
+try{
+  var g1 = [-6.6, -18.4];
+  mk('sIntro', VIN, {dur:5.0, actors:[
+    {id:'bat', team:'blue', label:'7', keys:[[0, BAT[0], BAT[1]], [.75, BAT[0], BAT[1]]].concat(run(.75, [BAT, [5, -5.6], [9.2, -9.8]], 6.2).slice(1))},
+    fielder('ss', '1SS', {keys:[[0, -7.2, -22.2], [.5, -7.2, -22.2], [1.45, g1[0] - .4, g1[1] - .6]]}),
+    fielder('fb', '1B', {keys:[[0, 13.6, -14.6], [.8, 13.6, -14.6], [1.7, r + .2, -r - 1.0]]}),
+    fielder('sb', '2B'), fielder('tb', '3B'), fielder('s2', '2SS'), fielder('c', 'C')
+  ], ball:[
+    {t0:.62, t1:1.55, from:'tee', to:g1, kind:'ground', bounces:3, peak:1.4},
+    {t0:1.55, t1:2.05, on:'ss'},
+    {t0:2.05, t1:2.85, from:'ss', to:'fb', kind:'throw'},
+    {t0:2.85, t1:5.0, on:'fb'}
+  ], events:[
+    {t:.45, type:'swing', who:'bat', dur:.3},
+    {t:2.9, type:'base', base:'1', color:'#ff6b52'},
+    {t:2.95, type:'call', text:'아웃!', tone:'foul', x:r + 5, y:-r - 4.5, dur:2}
+  ]});
+}catch(e){ PE_ERR(e, '표지 그림'); }
+
+/* 2. 경기장과 수비 위치 */
+try{
+  (function(){
+    var svg = document.getElementById('tField');
+    function draw(Dm){
+      svg.replaceChildren();
+      var k = Dm / 18.29, F = 45 * k;
+      var view = {x:-F * .76 - 3, y:-F - 3, w:F * 1.52 + 6, h:F + 9};
+      var f = new FD.Field(svg, {view:view, base:Dm, fence:F, labels:true, size:k});
+      Object.keys(FD.POS).forEach(function(key){
+        var p = FD.POS[key];
+        f.player('p' + key, 'red', key, {glove:true}).pos(p.x * k, p.y * k);
+      });
+      f.label(f.B[1][0] / 2 + 1.6 * k, f.B[1][1] / 2 + 1.6 * k, Dm + ' m', '#ffd23f', 'middle', 1.2);
+      document.getElementById('dBase').textContent = Dm + ' m';
+      document.getElementById('dDiag').textContent = (Dm * Math.SQRT2).toFixed(2) + ' m';
+    }
+    draw(18.29);
+    Array.prototype.forEach.call(document.querySelectorAll('[data-fd]'), function(b){
+      b.onclick = function(){
+        Array.prototype.forEach.call(document.querySelectorAll('[data-fd]'), function(x){ x.classList.toggle('on', x === b); });
+        draw(+b.dataset.fd);
+        document.getElementById('fdNote').textContent = +b.dataset.fd === 18.29 ? '협회 기본 거리예요. 초등부 남자 경기와 같아요.' : '대구광역시티볼협회 대회 규격의 중학교 거리예요.';
+      };
+    });
+  })();
+}catch(e){ PE_ERR(e, '경기장 그림'); }
+
+/* 3. 페어와 파울: 눌러서 판정 */
+try{
+  (function(){
+    var svg = document.getElementById('tFair');
+    var f = new FD.Field(svg, {view:{x:-27, y:-36, w:54, h:40}, foulLabels:true, labels:true});
+    var mark = FD.E('g', {'pointer-events':'none'}, f.gFx), dot = null;
+    var v = document.getElementById('fairVerdict'), cap = document.getElementById('fairCap');
+    function judge(x, y){
+      var nearBase = [f.B[1], f.B[3]].some(function(b){ return Math.hypot(x - b[0], y - b[1]) < .75; });
+      if(nearBase) return {fair:true, why:'베이스에 닿은 공은 페어예요.'};
+      if(f.inCircle(x, y)) return {fair:false, why:'타자 서클 안에서 멈춘 공은 파울이에요.'};
+      var d = Math.abs(Math.abs(x) - (-y));
+      if(f.isFair(x, y)) return {fair:true, why:d * Math.SQRT1_2 < .35 ? '파울라인 위예요. 선은 페어 지역에 들어가요.' : '두 파울라인 사이예요.'};
+      if(-y < 0) return {fair:false, why:'홈플레이트 뒤쪽은 파울 지역이에요.'};
+      return {fair:false, why:'파울라인 바깥이에요.'};
+    }
+    svg.addEventListener('pointerdown', function(ev){
+      var p = f.toLocal(ev), j = judge(p.x, p.y);
+      mark.replaceChildren();
+      FD.E('circle', {cx:p.x, cy:p.y, r:1.3, fill:'none', stroke:j.fair ? '#3fcf7f' : '#ff6b52', 'stroke-width':.22}, mark);
+      FD.E('circle', {cx:p.x, cy:p.y, r:.45, fill:'#fff', stroke:'#7d8473', 'stroke-width':.06}, mark);
+      v.className = 'verdict ' + (j.fair ? 'ok' : 'foul');
+      v.textContent = j.fair ? '페어' : '파울';
+      cap.textContent = j.why;
+    });
+  })();
+}catch(e){ PE_ERR(e, '페어 판정'); }
+
+/* 4. 스트라이크 전광판 */
+try{
+  (function(){
+    var s = 0, o = 0, batter = 7;
+    var sl = document.querySelectorAll('.lp.s i'), ol = document.querySelectorAll('.lp.o i'), msg = document.getElementById('sbMsg');
+    var NAME = {miss:'헛스윙', tee:'배팅 티를 쳤어요', foul:'파울', bunt:'번트', late:'10초가 지났어요'};
+    function paint(){
+      sl[0].classList.toggle('on', s >= 1); sl[1].classList.toggle('on', s >= 2); ol[0].classList.toggle('on', o >= 1);
+      document.getElementById('sbBat').innerHTML = '타자 <em>' + batter + '번</em> 타석';
+    }
+    function next(){ batter = batter % 10 + 1; s = 0; o = 0; }
+    Array.prototype.forEach.call(document.querySelectorAll('.sb [data-k]'), function(b){
+      b.onclick = function(){
+        var k = b.dataset.k;
+        if(o){ next(); }
+        if(k === 'fair'){ msg.innerHTML = '<b>페어 타구!</b> 배트를 서클 안에 내려놓고 1루로 달려요. 다음 타자가 타석에 들어와요.'; next(); paint(); return; }
+        if(s < 2){ s++; msg.innerHTML = NAME[k] + ' → <b>스트라이크 ' + s + '</b>' + (s === 2 ? '. 이제 한 번만 더 스트라이크면 아웃이에요.' : ''); }
+        else { o = 1; msg.innerHTML = '2스트라이크에서 ' + NAME[k] + ' → <b>타자 아웃!</b>' + (k === 'foul' ? ' 야구와 달리 파울도 아웃이에요.' : '') + ' 다음 버튼을 누르면 다음 타자가 나와요.'; }
+        paint();
+      };
+    });
+    paint();
+  })();
+}catch(e){ PE_ERR(e, '스트라이크'); }
+
+/* 6. 친 뒤에 출발 (루반칙) */
+try{
+  mk('sEarly', VIN, {dur:3.4, actors:[
+    {id:'bat', team:'blue', label:'4', keys:[[0, BAT[0], BAT[1]]]},
+    {id:'r1', team:'blue', label:'주자', keys:[[0, B1[0] + .2, B1[1] - .2], [.3, B1[0] + .2, B1[1] - .2], [1.2, 9.6, -15.6], [1.6, 9.0, -16.2]]},
+    fielder('fb', '1B'), fielder('sb', '2B'), fielder('s2', '2SS'), fielder('ss', '1SS'), fielder('tb', '3B'), fielder('c', 'C')
+  ], ball:[
+    {t0:0, t1:1.0, from:'tee', to:'tee', kind:'line', peak:0, h0:.7, h1:.7},
+    {t0:1.0, t1:1.8, from:'tee', to:[1.5, -16], kind:'ground', bounces:2, peak:1.2}
+  ], events:[
+    {t:.3, type:'say', who:'r1', text:'미리 출발', dur:1.2, tone:'foul'},
+    {t:.3, type:'ring', who:'r1', until:3.4, color:'#ff6b52'},
+    {t:.85, type:'swing', who:'bat', dur:.3},
+    {t:1.6, type:'call', text:'루반칙 아웃', tone:'foul', x:6, y:-21, dur:1.8},
+    {t:1.6, type:'base', base:'1', color:'#ff6b52'}
+  ], marks:[{type:'text', x:B1[0] + 3.5, y:B1[1] + 2.4, text:'치기 전에 떠남', color:'#ffb4a6', at:.6}]});
+}catch(e){ PE_ERR(e, '루반칙 그림'); }
+
+/* 7. 포스아웃: 1루 주자, 2루수 땅볼 → 2루 밟기 */
+try{
+  var g7 = [6.2, -18.6], r7a = run(.65, [[B1[0] + .2, B1[1] - .2], B2], 6);
+  var rp = at(B1, B2, (2.45 - .65) / 3.05);
+  mk('sForce', VIN, {dur:4.6, actors:[
+    {id:'bat', team:'blue', label:'5', keys:[[0, BAT[0], BAT[1]], [.8, BAT[0], BAT[1]]].concat(run(.8, [BAT, [r + .1, -r + .1]], 6.2).slice(1))},
+    {id:'r1', team:'blue', label:'주자', keys:[[0, B1[0] + .2, B1[1] - .2], [.65, B1[0] + .2, B1[1] - .2], [2.45, rp[0], rp[1]], [3.0, rp[0] + .6, rp[1] - .2]]},
+    fielder('sb', '2B', {keys:[[0, 7.2, -22.2], [.6, 7.2, -22.2], [1.45, g7[0] + .3, g7[1] - .7]]}),
+    fielder('s2', '2SS', {keys:[[0, 2.8, -15.4], [.7, 2.8, -15.4], [1.75, .8, -25.0]]}),
+    fielder('fb', '1B'), fielder('ss', '1SS'), fielder('tb', '3B'), fielder('c', 'C')
+  ], ball:[
+    {t0:.62, t1:1.5, from:'tee', to:g7, kind:'ground', bounces:3, peak:1.3},
+    {t0:1.5, t1:1.85, on:'sb'},
+    {t0:1.85, t1:2.35, from:'sb', to:'s2', kind:'throw'},
+    {t0:2.35, t1:4.6, on:'s2'}
+  ], events:[
+    {t:.45, type:'swing', who:'bat', dur:.3},
+    {t:2.4, type:'base', base:'2', color:'#ff6b52'},
+    {t:2.4, type:'call', text:'포스아웃', tone:'foul', x:-4, y:-28.5, dur:2},
+    {t:3.6, type:'call', text:'타자 세이프', tone:'ok', x:r + 2, y:-r + 4.2, dur:1}
+  ], marks:[{type:'force', bases:['1', '2'], at:.65}]});
+}catch(e){ PE_ERR(e, '포스아웃 그림'); }
+
+/* 8. 태그아웃: 2루 주자, 제1유격수 땅볼 → 3루로 던져 태그 */
+try{
+  var g8 = [-6.0, -17.6], tp = at(B2, B3, (2.55 - .65) / 3.05);
+  mk('sTag', VIN, {dur:4.4, actors:[
+    {id:'bat', team:'blue', label:'6', keys:[[0, BAT[0], BAT[1]], [.8, BAT[0], BAT[1]]].concat(run(.8, [BAT, [r + .1, -r + .1]], 6.2).slice(1))},
+    {id:'r2', team:'blue', label:'주자', keys:[[0, .4, B2[1]], [.65, .4, B2[1]], [2.55, tp[0], tp[1]], [2.9, tp[0] - .2, tp[1] + .1]]},
+    fielder('ss', '1SS', {keys:[[0, -7.2, -22.2], [.5, -7.2, -22.2], [1.4, g8[0] - .3, g8[1] - .7]]}),
+    fielder('tb', '3B', {keys:[[0, -13.6, -14.6], [.8, -13.6, -14.6], [1.6, -12.4, -13.9], [2.3, -12.4, -13.9], [2.55, tp[0] - 1.1, tp[1] + 1.0]]}),
+    fielder('fb', '1B'), fielder('sb', '2B'), fielder('s2', '2SS'), fielder('c', 'C')
+  ], ball:[
+    {t0:.62, t1:1.45, from:'tee', to:g8, kind:'ground', bounces:3, peak:1.3},
+    {t0:1.45, t1:1.75, on:'ss'},
+    {t0:1.75, t1:2.25, from:'ss', to:'tb', kind:'throw'},
+    {t0:2.25, t1:4.4, on:'tb'}
+  ], events:[
+    {t:.45, type:'swing', who:'bat', dur:.3},
+    {t:2.55, type:'ring', who:'r2', until:4.4, color:'#ff6b52'},
+    {t:2.6, type:'call', text:'태그아웃', tone:'foul', x:-6.5, y:-24.5, dur:1.8}
+  ], marks:[{type:'lane', from:'2', to:'3', at:.65}, {type:'text', x:-6, y:-28.6, text:'포스 아님', color:'#fff', at:.65}]});
+}catch(e){ PE_ERR(e, '태그아웃 그림'); }
+
+/* 9. 홈은 포스아웃 */
+try{
+  var g9 = [2.4, -12.4], hp = at(B3, BH, (2.35 - .65) / 3.05);
+  mk('sHome', {x:-22, y:-27, w:44, h:33}, {dur:4.4, actors:[
+    {id:'bat', team:'blue', label:'8', keys:[[0, BAT[0], BAT[1]], [.8, BAT[0], BAT[1]]].concat(run(.8, [BAT, [6.5, -6.8]], 6.2).slice(1))},
+    {id:'r3', team:'blue', label:'주자', keys:[[0, B3[0] - .2, B3[1] - .2], [.65, B3[0] - .2, B3[1] - .2], [2.35, hp[0], hp[1]], [2.9, hp[0] + .2, hp[1] + .4]]},
+    fielder('s2', '2SS', {keys:[[0, 2.8, -15.4], [.55, 2.8, -15.4], [1.3, g9[0] + .3, g9[1] - .8]]}),
+    fielder('c', 'C', {keys:[[0, 0, 4.2], [.9, 0, 4.2], [1.6, .9, -.2]]}),
+    fielder('fb', '1B'), fielder('tb', '3B'), fielder('ss', '1SS')
+  ], ball:[
+    {t0:.62, t1:1.35, from:'tee', to:g9, kind:'ground', bounces:2, peak:1.1},
+    {t0:1.35, t1:1.7, on:'s2'},
+    {t0:1.7, t1:2.25, from:'s2', to:'c', kind:'throw'},
+    {t0:2.25, t1:4.4, on:'c'}
+  ], events:[
+    {t:.45, type:'swing', who:'bat', dur:.3},
+    {t:2.3, type:'base', base:'H', color:'#ff6b52'},
+    {t:2.3, type:'call', text:'홈 포스아웃', tone:'foul', x:-8, y:2.2, dur:2},
+    {t:2.6, type:'say', who:'c', text:'밟기만!', dur:1.4, tone:'volt'}
+  ], marks:[{type:'force', bases:['H'], at:.65}]});
+}catch(e){ PE_ERR(e, '홈 그림'); }
+
+/* 10. 뜬공과 태그업 */
+try{
+  var fl = [-6.5, -35.5], sp = at(B3, BH, 0);
+  mk('sFly', {x:-27, y:-42, w:54, h:46}, {dur:6.6, hold:1.2, actors:[
+    {id:'bat', team:'blue', label:'9', keys:[[0, BAT[0], BAT[1]], [.8, BAT[0], BAT[1]], [2.6, 7.5, -7.9], [3.0, 8.1, -8.5]]},
+    {id:'r3', team:'blue', label:'주자', keys:[[0, B3[0] - .2, B3[1] - .2], [2.75, B3[0] - .2, B3[1] - .2]].concat(run(2.75, [[B3[0] - .2, B3[1] - .2], [-.6, -.6]], 6).slice(1))},
+    fielder('cf', '1CF', {keys:[[0, -7, -38], [.7, -7, -38], [2.3, fl[0] - .2, fl[1] - .9]]}),
+    fielder('lf', 'LF'), fielder('c2', '2CF'), fielder('tb', '3B'), fielder('ss', '1SS'), fielder('c', 'C')
+  ], ball:[
+    {t0:.62, t1:2.7, from:'tee', to:fl, kind:'fly', peak:15},
+    {t0:2.7, t1:3.3, on:'cf'},
+    {t0:3.3, t1:5.2, from:'cf', to:[-2, -4], kind:'throw', peak:3},
+    {t0:5.2, t1:6.6, from:[-2, -4], to:[-.8, -1.6], kind:'roll', bounces:2, peak:.5}
+  ], events:[
+    {t:.45, type:'swing', who:'bat', dur:.3},
+    {t:.7, type:'ring', who:'r3', until:2.75},
+    {t:.9, type:'say', who:'r3', text:'기다려', dur:1.6},
+    {t:2.72, type:'call', text:'플라이 아웃', tone:'foul', x:-6.5, y:-30.5, dur:1.5},
+    {t:2.8, type:'say', who:'r3', text:'출발!', dur:1, tone:'volt'},
+    {t:5.25, type:'call', text:'득점!', tone:'volt', x:-7, y:3, dur:1.4}
+  ], marks:[{type:'trail', t0:.62, t1:2.7, at:.62}]});
+}catch(e){ PE_ERR(e, '뜬공 그림'); }
+
+/* 11. 공수 교대 (전원 타격제 + 잔루) */
+try{
+  (function(){
+    var svg = document.getElementById('tLine');
+    var f = new FD.Field(svg, {view:{x:-21, y:-29, w:42, h:34}, labels:true});
+    var order = document.getElementById('lineOrder'), msg = document.getElementById('lineMsg');
+    /* 미리 정한 10명의 결과: 1 안타, 0 아웃 */
+    var PLAN = [1, 0, 1, 1, 0, 0, 1, 0, 1, 0];
+    var n = 0, bases = [false, false, false], runs = 0, outs = 0, pieces = [];
+    var spots = [[B1[0] - .2, B1[1] + 1.4], [B2[0] + 1.4, B2[1] + .3], [B3[0] + .2, B3[1] + 1.4]];
+    function draw(){
+      order.innerHTML = PLAN.map(function(_, i){ return '<span class="' + (i < n ? 'done' : i === n ? 'now' : '') + '">' + (i + 1) + '</span>'; }).join('');
+      pieces.forEach(function(p){ p.remove(); }); pieces = [];
+      bases.forEach(function(on, i){ if(on){ var a = f.player('rb' + i, 'blue', '주자'); a.pos(spots[i][0], spots[i][1]); pieces.push(a); } });
+      if(n < 10){ var b = f.player('bt', 'blue', String(n + 1)); b.pos(BAT[0], BAT[1]); pieces.push(b); }
+      document.getElementById('lineNext').textContent = n < 10 ? (n + 1) + '번 타자 치기 →' : '다음 회 시작 →';
+    }
+    function hit(){
+      if(bases[2]){ runs++; } bases = [true, bases[0], bases[1]];
+    }
+    document.getElementById('lineNext').onclick = function(){
+      if(n >= 10){ n = 0; outs = 0; msg.innerHTML = '다음 회예요. 남아 있던 주자가 <b>그대로 베이스에 있는 채로</b> 1번 타자부터 다시 쳐요(잔루 인정).'; draw(); return; }
+      var res = PLAN[n];
+      if(res){ hit(); msg.innerHTML = (n + 1) + '번 타자 <b>안타</b>. 주자가 한 베이스씩 나아가요.' + (runs ? ' 지금까지 ' + runs + '점.' : ''); }
+      else { outs++; msg.innerHTML = (n + 1) + '번 타자 <b>아웃</b>(' + outs + '아웃). 전원 타격제라서 아웃이 3개가 넘어도 10번까지 계속 쳐요.'; }
+      n++;
+      if(n === 10){ var left = bases.filter(Boolean).length; msg.innerHTML += '<br>10명이 모두 쳤어요. <b>공수 교대!</b> 베이스에 남은 주자 ' + left + '명은 다음 회 공격에 그대로 이어져요.'; }
+      draw();
+    };
+    document.getElementById('lineReset').onclick = function(){ n = 0; bases = [false, false, false]; runs = 0; outs = 0; msg.textContent = '버튼을 눌러 타자가 한 명씩 치게 해 보세요.'; draw(); };
+    draw();
+  })();
+}catch(e){ PE_ERR(e, '공수 교대'); }
+</script>
+</body>
+</html>
